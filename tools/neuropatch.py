@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-NeuroPatch v3.0
+NeuroPatch v3.1
 
 Transaction patch engine:
 - validation
+- external transaction storage
 - git safety check
 - backups
 - rollback
 - dry run
 - reports
 - history
+- optional auto commit
 """
 
 import argparse
@@ -22,9 +24,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 PATCH_DIR = Path.home() / "Downloads"
 
-DATA_DIR = PROJECT_ROOT / ".neuropatch"
-TRANSACTION_DIR = DATA_DIR / "transactions"
-HISTORY_FILE = DATA_DIR / "history.json"
+NEUROPATCH_HOME = Path.home() / ".neuropatch" / PROJECT_ROOT.name
+TRANSACTION_DIR = NEUROPATCH_HOME / "transactions"
+HISTORY_FILE = NEUROPATCH_HOME / "history.json"
 
 
 class PatchError(Exception):
@@ -51,6 +53,20 @@ def git_status():
 		capture_output=True
 	)
 	return result.stdout.strip()
+
+
+def git_commit(message):
+	subprocess.run(
+		["git", "add", "."],
+		cwd=PROJECT_ROOT,
+		check=True
+	)
+
+	subprocess.run(
+		["git", "commit", "-m", message],
+		cwd=PROJECT_ROOT,
+		check=True
+	)
 
 
 def load_patch():
@@ -80,29 +96,37 @@ def create_transaction(patch_id):
 
 
 def backup_files(transaction, operations):
+	created = []
+
 	for operation in operations:
 		file = PROJECT_ROOT / operation["file"]
+
+		if operation["type"] == "create_file":
+			created.append(operation["file"])
+			continue
 
 		if file.exists():
 			target = transaction / "before" / operation["file"]
 			target.parent.mkdir(parents=True, exist_ok=True)
 			shutil.copy2(file, target)
 
+	save_json(transaction / "created.json", created)
+
 
 def rollback(transaction):
-	before = transaction / "before"
+	source = transaction / "before"
 
-	if before.exists():
-		for file in before.rglob("*"):
+	if source.exists():
+		for file in source.rglob("*"):
 			if file.is_file():
-				target = PROJECT_ROOT / file.relative_to(before)
+				target = PROJECT_ROOT / file.relative_to(source)
 				target.parent.mkdir(parents=True, exist_ok=True)
 				shutil.copy2(file, target)
 
-	created = transaction / "created.json"
+	created_file = transaction / "created.json"
 
-	if created.exists():
-		for file in read_json(created):
+	if created_file.exists():
+		for file in read_json(created_file):
 			target = PROJECT_ROOT / file
 			if target.exists():
 				target.unlink()
@@ -125,7 +149,7 @@ def check_allowed_files(patch):
 			raise PatchError(f"File not allowed: {operation['file']}")
 
 
-def apply_operation(operation, created):
+def apply_operation(operation):
 	target = PROJECT_ROOT / operation["file"]
 
 	if operation["type"] == "create_file":
@@ -133,19 +157,19 @@ def apply_operation(operation, created):
 			raise PatchError(f"File already exists: {operation['file']}")
 
 		target.parent.mkdir(parents=True, exist_ok=True)
-		target.write_text(operation["content"], encoding="utf-8")
-		created.append(operation["file"])
+		target.write_text(
+			operation["content"],
+			encoding="utf-8"
+		)
 
 	elif operation["type"] == "replace":
 		if not target.exists():
-			raise PatchError(f"File missing: {operation['file']}")
+			raise PatchError(f"Missing file: {operation['file']}")
 
 		old = target.read_text(encoding="utf-8")
 
 		if old.count(operation["old"]) != 1:
-			raise PatchError(
-				f"Replace mismatch: {operation['file']}"
-			)
+			raise PatchError(f"Replace mismatch: {operation['file']}")
 
 		target.write_text(
 			old.replace(operation["old"], operation["new"], 1),
@@ -156,9 +180,7 @@ def apply_operation(operation, created):
 		target.unlink(missing_ok=True)
 
 	else:
-		raise PatchError(
-			f"Unsupported operation: {operation['type']}"
-		)
+		raise PatchError(f"Unsupported operation: {operation['type']}")
 
 
 def run_tests(patch):
@@ -185,28 +207,23 @@ def main():
 	check_allowed_files(patch)
 
 	if git_status() and not args.force:
-		raise PatchError(
-			"Git working tree dirty. Commit changes or use --force."
-		)
+		raise PatchError("Git working tree dirty. Commit changes or use --force.")
 
 	transaction = create_transaction(patch["patch_id"])
 
 	report = {
 		"patch": patch["patch_id"],
 		"started": datetime.datetime.now().isoformat(),
-		"status": "FAILED"
+		"status": "FAILED",
+		"transaction": str(transaction)
 	}
 
 	try:
 		if not args.dry_run:
 			backup_files(transaction, patch["operations"])
 
-			created = []
-
 			for operation in patch["operations"]:
-				apply_operation(operation, created)
-
-			save_json(transaction / "created.json", created)
+				apply_operation(operation)
 
 			run_tests(patch)
 
@@ -220,6 +237,9 @@ def main():
 
 			save_json(HISTORY_FILE, history)
 
+			if patch.get("git", {}).get("auto_commit"):
+				git_commit(f"[auto-patch] {patch['patch_id']}")
+
 		report["status"] = "SUCCESS"
 
 	except Exception as error:
@@ -228,6 +248,7 @@ def main():
 
 	finally:
 		save_json(transaction / "report.json", report)
+
 		print(json.dumps(report, indent=2, ensure_ascii=False))
 
 
