@@ -23,8 +23,12 @@ Phase 1: Poker Domain Core.
 
 - Basic game state container.
 
+## Added in this step
+
+- Hand evaluation module foundation.
+
 ## Next steps
 
-- Hand evaluator.
+- Real combination detection.
 - Betting rounds.
 - Full Texas Hold'em flow.
