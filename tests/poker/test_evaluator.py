@@ -38,3 +38,27 @@ def test_evaluator_detects_full_house():
 	])
 
 	assert result.rank == HandRank.FULL_HOUSE
+
+
+def test_evaluator_detects_straight_flush():
+	result = evaluate([
+		Card(Rank.ACE, Suit.SPADES),
+		Card(Rank.KING, Suit.SPADES),
+		Card(Rank.QUEEN, Suit.SPADES),
+		Card(Rank.JACK, Suit.SPADES),
+		Card(Rank.TEN, Suit.SPADES),
+	])
+
+	assert result.rank == HandRank.STRAIGHT_FLUSH
+
+
+def test_evaluator_detects_straight():
+	result = evaluate([
+		Card(Rank.TEN, Suit.SPADES),
+		Card(Rank.NINE, Suit.HEARTS),
+		Card(Rank.EIGHT, Suit.CLUBS),
+		Card(Rank.SEVEN, Suit.DIAMONDS),
+		Card(Rank.SIX, Suit.SPADES),
+	])
+
+	assert result.rank == HandRank.STRAIGHT
