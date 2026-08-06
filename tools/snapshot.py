@@ -11,7 +11,6 @@ import subprocess
 import zipfile
 from pathlib import Path
 
-
 TOOLS_DIR = Path(__file__).parent
 PROJECT_ROOT = TOOLS_DIR.parent
 SNAPSHOT_DIR = TOOLS_DIR / "snapshots"

@@ -142,3 +142,4 @@ Thumbs.db
 tools/neuropatch_data/
 tools/snapshots/
 config/simulation.json
+.neuropatch/

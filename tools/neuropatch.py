@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
-
 """
-NeuroPatch v2.2
+NeuroPatch v3.0
 
-Transaction engine:
-- preflight validation
-- full backup before apply
-- atomic-ish apply flow
-- automatic rollback on failure
-- transaction reports
-- history only after success
+Transaction patch engine:
+- validation
+- git safety check
+- backups
+- rollback
+- dry run
+- reports
+- history
 """
 
 import argparse
 import datetime
-import difflib
 import json
 import shutil
 import subprocess
 from pathlib import Path
-
 
 PROJECT_ROOT = Path(__file__).parent.parent
 PATCH_DIR = Path.home() / "Downloads"
@@ -34,25 +32,13 @@ class PatchError(Exception):
 
 
 def read_json(path):
-	return json.loads(
-		path.read_text(
-			encoding="utf-8"
-		)
-	)
+	return json.loads(path.read_text(encoding="utf-8"))
 
 
 def save_json(path, data):
-	path.parent.mkdir(
-		parents=True,
-		exist_ok=True
-	)
-
+	path.parent.mkdir(parents=True, exist_ok=True)
 	path.write_text(
-		json.dumps(
-			data,
-			indent=2,
-			ensure_ascii=False
-		),
+		json.dumps(data, indent=2, ensure_ascii=False),
 		encoding="utf-8"
 	)
 
@@ -64,7 +50,6 @@ def git_status():
 		text=True,
 		capture_output=True
 	)
-
 	return result.stdout.strip()
 
 
@@ -90,12 +75,7 @@ def load_history():
 
 def create_transaction(patch_id):
 	path = TRANSACTION_DIR / patch_id
-
-	path.mkdir(
-		parents=True,
-		exist_ok=True
-	)
-
+	path.mkdir(parents=True, exist_ok=True)
 	return path
 
 
@@ -105,43 +85,33 @@ def backup_files(transaction, operations):
 
 		if file.exists():
 			target = transaction / "before" / operation["file"]
-			target.parent.mkdir(
-				parents=True,
-				exist_ok=True
-			)
-
-			shutil.copy2(
-				file,
-				target
-			)
+			target.parent.mkdir(parents=True, exist_ok=True)
+			shutil.copy2(file, target)
 
 
 def rollback(transaction):
-	source = transaction / "before"
+	before = transaction / "before"
 
-	if not source.exists():
-		return
+	if before.exists():
+		for file in before.rglob("*"):
+			if file.is_file():
+				target = PROJECT_ROOT / file.relative_to(before)
+				target.parent.mkdir(parents=True, exist_ok=True)
+				shutil.copy2(file, target)
 
-	for file in source.rglob("*"):
-		if file.is_file():
-			target = PROJECT_ROOT / file.relative_to(source)
-			target.parent.mkdir(
-				parents=True,
-				exist_ok=True
-			)
+	created = transaction / "created.json"
 
-			shutil.copy2(
-				file,
-				target
-			)
+	if created.exists():
+		for file in read_json(created):
+			target = PROJECT_ROOT / file
+			if target.exists():
+				target.unlink()
 
 
 def validate_patch(patch):
 	for key in ["patch_id", "goal", "operations"]:
 		if key not in patch:
-			raise PatchError(
-				f"Missing {key}"
-			)
+			raise PatchError(f"Missing {key}")
 
 
 def check_allowed_files(patch):
@@ -152,29 +122,25 @@ def check_allowed_files(patch):
 
 	for operation in patch["operations"]:
 		if operation["file"] not in allowed:
-			raise PatchError(
-				f"File not allowed: {operation['file']}"
-			)
+			raise PatchError(f"File not allowed: {operation['file']}")
 
 
-def apply_operation(operation):
+def apply_operation(operation, created):
 	target = PROJECT_ROOT / operation["file"]
 
 	if operation["type"] == "create_file":
-		target.parent.mkdir(
-			parents=True,
-			exist_ok=True
-		)
+		if target.exists():
+			raise PatchError(f"File already exists: {operation['file']}")
 
-		target.write_text(
-			operation["content"],
-			encoding="utf-8"
-		)
+		target.parent.mkdir(parents=True, exist_ok=True)
+		target.write_text(operation["content"], encoding="utf-8")
+		created.append(operation["file"])
 
 	elif operation["type"] == "replace":
-		old = target.read_text(
-			encoding="utf-8"
-		)
+		if not target.exists():
+			raise PatchError(f"File missing: {operation['file']}")
+
+		old = target.read_text(encoding="utf-8")
 
 		if old.count(operation["old"]) != 1:
 			raise PatchError(
@@ -182,18 +148,12 @@ def apply_operation(operation):
 			)
 
 		target.write_text(
-			old.replace(
-				operation["old"],
-				operation["new"],
-				1
-			),
+			old.replace(operation["old"], operation["new"], 1),
 			encoding="utf-8"
 		)
 
 	elif operation["type"] == "delete_file":
-		target.unlink(
-			missing_ok=True
-		)
+		target.unlink(missing_ok=True)
 
 	else:
 		raise PatchError(
@@ -210,31 +170,26 @@ def run_tests(patch):
 		)
 
 		if result.returncode:
-			raise PatchError(
-				f"Test failed: {command}"
-			)
+			raise PatchError(f"Test failed: {command}")
 
 
 def main():
 	parser = argparse.ArgumentParser()
-
-	parser.add_argument(
-		"--dry-run",
-		action="store_true"
-	)
-
+	parser.add_argument("--dry-run", action="store_true")
+	parser.add_argument("--force", action="store_true")
 	args = parser.parse_args()
 
-	patch = read_json(
-		load_patch()
-	)
+	patch = read_json(load_patch())
 
 	validate_patch(patch)
 	check_allowed_files(patch)
 
-	transaction = create_transaction(
-		patch["patch_id"]
-	)
+	if git_status() and not args.force:
+		raise PatchError(
+			"Git working tree dirty. Commit changes or use --force."
+		)
+
+	transaction = create_transaction(patch["patch_id"])
 
 	report = {
 		"patch": patch["patch_id"],
@@ -244,17 +199,16 @@ def main():
 
 	try:
 		if not args.dry_run:
-			backup_files(
-				transaction,
-				patch["operations"]
-			)
+			backup_files(transaction, patch["operations"])
+
+			created = []
 
 			for operation in patch["operations"]:
-				apply_operation(operation)
+				apply_operation(operation, created)
 
-			run_tests(
-				patch
-			)
+			save_json(transaction / "created.json", created)
+
+			run_tests(patch)
 
 			history = load_history()
 			history.append(
@@ -264,10 +218,7 @@ def main():
 				}
 			)
 
-			save_json(
-				HISTORY_FILE,
-				history
-			)
+			save_json(HISTORY_FILE, history)
 
 		report["status"] = "SUCCESS"
 
@@ -276,18 +227,8 @@ def main():
 		report["error"] = str(error)
 
 	finally:
-		save_json(
-			transaction / "report.json",
-			report
-		)
-
-		print(
-			json.dumps(
-				report,
-				indent=2,
-				ensure_ascii=False
-			)
-		)
+		save_json(transaction / "report.json", report)
+		print(json.dumps(report, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":
