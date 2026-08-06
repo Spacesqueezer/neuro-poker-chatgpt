@@ -15,8 +15,12 @@ Phase 1: Poker Domain Core.
 - Card symbols for display.
 - Texas Hold'em hand model.
 
+## Added in this step
+
+- Community cards board model.
+
 ## Next steps
 
-- Community cards.
 - Game state.
 - Hand evaluator.
+- Betting rounds.
