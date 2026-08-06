@@ -34,7 +34,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/poker_ai"]
+packages = ["src/poker"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -51,4 +51,4 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-packages = ["poker_ai"]
+packages = ["poker"]
