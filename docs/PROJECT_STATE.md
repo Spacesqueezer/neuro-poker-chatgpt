@@ -19,8 +19,12 @@ Phase 1: Poker Domain Core.
 
 - Community cards board model.
 
+## Added in this step
+
+- Basic game state container.
+
 ## Next steps
 
-- Game state.
 - Hand evaluator.
 - Betting rounds.
+- Full Texas Hold'em flow.
