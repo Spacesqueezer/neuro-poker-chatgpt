@@ -1,0 +1,144 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.so
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =========================
+# Virtual environments
+# =========================
+
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# IDE
+# =========================
+
+.idea/
+.vscode/
+
+# PyCharm
+*.iml
+
+# =========================
+# Tests / Coverage
+# =========================
+
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# =========================
+# Datasets
+# =========================
+
+data/datasets/*.jsonl
+data/datasets/**/*.jsonl
+
+data/datasets/*_binary/
+data/datasets/**/*.f32
+data/datasets/**/*.u8
+data/datasets/**/*.i64
+
+# если будут большие архивы датасетов
+*.dataset
+*.bin
+*.dat
+
+# =========================
+# Training artifacts
+# =========================
+
+models/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+
+checkpoints/
+
+# =========================
+# Reports
+# =========================
+
+artifacts/
+reports/
+
+*.report.json
+
+# =========================
+# Logs
+# =========================
+
+*.log
+logs/
+
+# =========================
+# Temporary files
+# =========================
+
+tmp/
+temp/
+*.tmp
+
+# =========================
+# OS
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+# Local configs
+# =========================
+
+.env
+.env.*
+
+# =========================
+# Generated caches
+# =========================
+
+.cache/
+.cache-*/
+
+*.pickle
+*.pkl
+
+tools/neuropatch_data/
+tools/snapshots/
+config/simulation.json
