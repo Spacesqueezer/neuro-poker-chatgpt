@@ -9,8 +9,8 @@ def test_evaluator_returns_high_card():
 		Card(Rank.ACE, Suit.SPADES),
 		Card(Rank.KING, Suit.HEARTS),
 		Card(Rank.QUEEN, Suit.CLUBS),
-		Card(Rank.JACK, Suit.DIAMONDS),
-		Card(Rank.TEN, Suit.SPADES),
+		Card(Rank.NINE, Suit.DIAMONDS),
+		Card(Rank.TWO, Suit.SPADES),
 	])
 
 	assert result.rank == HandRank.HIGH_CARD
