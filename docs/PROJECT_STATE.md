@@ -12,7 +12,11 @@ Phase 1: Poker Domain Core.
 - Texas Hold'em player hand model.
 - Community cards board model.
 - Basic game state container.
-- Hand evaluation module foundation.
+- Hand evaluation system.
+- Hand comparison foundation.
+- Category-specific tiebreaker generation.
+- Seven-card hand evaluation.
+- Player model with stack and betting state foundation.
 
 ## Current architecture
 
@@ -27,20 +31,26 @@ src/poker/
 │   └── board.py
 ├── game/
 │   └── game_state.py
+├── player/
+│   └── player.py
 └── evaluation/
     ├── hand_rank.py
-    └── evaluator.py
+    ├── evaluator.py
+    ├── evaluation_result.py
+    ├── hand_value.py
+    ├── comparator.py
+    └── seven_card.py
 ```
 
 ## Current focus
 
-Hand comparison and kicker calculation.
+Building the game flow layer.
 
-Category-specific tiebreaker generation implemented for main hand types.
+The rules engine can evaluate hands, compare results, and store player state. The next stage is connecting these systems into actual Texas Hold'em rounds.
 
 ## Next steps
 
-1. Seven-card hand evaluation implemented.
-2. Player and betting state foundation.
-3. Betting rounds.
+1. Betting rounds.
+2. Pot management.
+3. Turn order and actions.
 4. Full Texas Hold'em game flow.
