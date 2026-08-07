@@ -34,11 +34,9 @@ src/poker/
 
 ## Current focus
 
-Building a reliable pure poker rules engine before adding AI.
-
-## Current focus
-
 Hand comparison and kicker calculation.
+
+The evaluator now needs category-specific tiebreaker generation.
 
 ## Next steps
 

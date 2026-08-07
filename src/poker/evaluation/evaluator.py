@@ -2,6 +2,7 @@ from collections import Counter
 
 from poker.evaluation.evaluation_result import EvaluationResult
 from poker.evaluation.hand_rank import HandRank
+from poker.evaluation.hand_value import build_tiebreaker
 
 
 def has_straight(ranks):
@@ -46,5 +47,5 @@ def evaluate(cards):
 	return EvaluationResult(
 		rank=rank,
 		cards=tuple(cards),
-		tiebreaker=tuple(sorted(ranks, reverse=True))
+		tiebreaker=build_tiebreaker(cards, rank)
 	)
