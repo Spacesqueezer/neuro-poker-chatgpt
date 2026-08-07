@@ -12,6 +12,7 @@ Phase 1: Poker Domain Core.
 - Texas Hold'em player hand model.
 - Community cards board model.
 - Basic game state container.
+- Game state connected with betting, turn order and round flow.
 - Hand evaluation system.
 - Hand comparison foundation.
 - Category-specific tiebreaker generation.
