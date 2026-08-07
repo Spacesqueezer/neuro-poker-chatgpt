@@ -1,43 +1,72 @@
 # Development Rules
 
-This file contains persistent instructions for AI agents working on this project.
+This file is the single source of truth for AI-assisted development standards.
 
-Every future patch MUST follow these rules.
+Every future patch MUST follow this document.
 
 ## Documentation requirements
 
 1. Any patch that changes architecture, project structure, completed features, current focus or next steps MUST update docs/PROJECT_STATE.md.
-2. PROJECT_STATE.md synchronization is a mandatory development step, not an optional documentation task.
-3. The documentation synchronization rule must remain in PROJECT_STATE.md after every update.
+2. PROJECT_STATE.md synchronization is a mandatory development step.
+3. The synchronization rule must remain in PROJECT_STATE.md after updates.
+
+## Project continuation requirements
+
+Before creating any patch:
+
+1. Read docs/DEV_RULES.md.
+2. Read docs/PROJECT_STATE.md.
+3. Inspect the current source tree.
+4. Verify assumptions against the current snapshot.
+
+Do not assume previous architecture if the current project differs.
 
 ## Project state requirements
 
-1. The Current focus section must describe the actual development stage.
-2. The Next steps section is written primarily for the next AI agent, not for human readers.
-3. Next steps must contain enough technical context to continue development without guessing:
-   - current architectural assumptions;
-   - files or systems involved;
-   - known limitations;
+1. Current focus must describe the real development stage.
+2. Next steps are written primarily for the next AI developer.
+3. Next steps must include:
+   - affected systems;
+   - files or modules involved;
+   - architectural assumptions;
    - migration risks;
-   - expected implementation direction.
-4. Avoid vague instructions like "continue development" or "add features".
+   - validation expectations.
+4. Avoid vague instructions.
 
 ## Patch quality rules
 
-1. Inspect the current project state before creating a patch.
-2. Do not assume previous architecture if the current snapshot differs.
-3. Prefer small verified changes over large speculative rewrites.
-4. Every patch must include validation commands.
-5. Tests must represent the intended architecture, not a temporary incorrect assumption.
-6. Preserve backwards compatibility unless migration is explicitly planned.
+1. Prefer small verified patches over speculative rewrites.
+2. Every patch must include validation commands.
+3. Tests must describe the intended architecture.
+4. Preserve compatibility unless migration is explicitly planned.
+5. Avoid unnecessary files and duplicate systems.
+
+## Development workflow
+
+After changes run:
+
+- ruff
+- pyright
+- pytest
+- coverage
 
 ## Architecture rules
 
 1. Keep responsibilities separated.
-2. Avoid adding new systems when existing systems can be connected.
-3. Before introducing a new abstraction, check whether it belongs to an existing domain object.
-4. When temporary architecture exists, document migration requirements.
+2. Connect existing systems before creating new abstractions.
+3. Use explicit interfaces.
+4. Avoid hidden dependencies.
+5. Temporary architecture must include migration notes.
 
-## AI continuation rules
+## Reproducibility rules
 
-Future AI agents should treat this file and PROJECT_STATE.md as the source of truth for project continuation.
+Experiments, simulations and AI training workflows must be reproducible.
+
+## Rule file ownership
+
+Do not create additional development rule files.
+
+If useful rules are discovered in old documents, migrate them into DEV_RULES.md.
+
+DEV_RULES.md defines how changes are made.
+PROJECT_STATE.md defines current project state.
