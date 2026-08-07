@@ -31,3 +31,19 @@ def test_kicker_wins_when_rank_equal():
 	)
 
 	assert compare_hands(first, second) == 1
+
+
+def test_evaluation_result_can_compare_real_kickers():
+	first = EvaluationResult(
+		rank=HandRank.HIGH_CARD,
+		cards=(),
+		tiebreaker=(14, 13, 10),
+	)
+
+	second = EvaluationResult(
+		rank=HandRank.HIGH_CARD,
+		cards=(),
+		tiebreaker=(14, 12, 10),
+	)
+
+	assert compare_hands(first, second) == 1

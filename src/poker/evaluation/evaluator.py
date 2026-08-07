@@ -45,5 +45,6 @@ def evaluate(cards):
 
 	return EvaluationResult(
 		rank=rank,
-		cards=tuple(cards)
+		cards=tuple(cards),
+		tiebreaker=tuple(sorted(ranks, reverse=True))
 	)

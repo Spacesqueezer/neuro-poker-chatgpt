@@ -36,9 +36,12 @@ src/poker/
 
 Building a reliable pure poker rules engine before adding AI.
 
+## Current focus
+
+Hand comparison and kicker calculation.
+
 ## Next steps
 
-1. Hand comparison and kickers.
-2. Seven-card hand evaluation.
-3. Betting rounds.
-4. Full Texas Hold'em game flow.
+1. Seven-card hand evaluation.
+2. Betting rounds.
+3. Full Texas Hold'em game flow.
