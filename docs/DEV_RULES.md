@@ -54,6 +54,23 @@ Every patch must:
 - include validation commands;
 - update documentation when required.
 
+## Git commit rules
+
+A successfully applied patch MUST create a git commit automatically.
+
+Manual commits after successful patch application are not part of the workflow.
+
+The patch process is considered incomplete if:
+- files were changed but no commit was created;
+- the working tree remains dirty after successful validation.
+
+Every successful patch commit must:
+- include only changes from the current patch;
+- use an automatic commit message identifying the patch;
+- report the created commit hash in the patch result.
+
+The next patch must start from a clean git working tree created by the previous successful patch.
+
 ## Documentation rules
 
 Any patch that changes:
