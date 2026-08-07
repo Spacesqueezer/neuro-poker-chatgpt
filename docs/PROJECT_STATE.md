@@ -50,7 +50,7 @@ The rules engine can evaluate hands, compare results, and store player state. Th
 
 ## Next steps
 
-1. Betting rounds.
-2. Pot management.
-3. Turn order and actions.
+1. Betting state and pot management.
+2. Turn order and player actions.
+3. Betting rounds.
 4. Full Texas Hold'em game flow.
