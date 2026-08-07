@@ -2,6 +2,98 @@
 
 This file is the single source of truth for AI-assisted development standards.
 
+All future patches MUST follow this document.
+
+## Source of truth
+
+The repository is the source of truth. Do not rely on previous chat history.
+
+Before creating a patch:
+
+1. Read docs/DEV_RULES.md.
+2. Read docs/PROJECT_STATE.md.
+3. Inspect the current source tree.
+4. Verify assumptions against the current snapshot.
+
+## NeuroPatch rules
+
+All project changes must be delivered through NeuroPatch.
+
+Supported operations must match the current patcher implementation.
+
+Do not invent unsupported operations.
+
+Typical supported operations:
+- create_file
+- replace
+- delete_file
+
+Every patch must:
+- target existing project state;
+- avoid speculative rewrites;
+- include validation commands;
+- update documentation when required.
+
+## Documentation rules
+
+Any patch that changes:
+- architecture;
+- project structure;
+- completed features;
+- current focus;
+- next steps;
+
+MUST update docs/PROJECT_STATE.md.
+
+PROJECT_STATE.md synchronization is a mandatory development step.
+
+## Project continuation rules
+
+Next steps in PROJECT_STATE.md are instructions for the next AI developer.
+
+They must include:
+- affected files or systems;
+- current architectural assumptions;
+- implementation direction;
+- migration risks;
+- validation expectations.
+
+Avoid vague instructions.
+
+## Architecture rules
+
+- Connect existing systems before creating new abstractions.
+- Keep responsibilities separated.
+- Avoid hidden dependencies.
+- Temporary architecture must include migration notes.
+- Do not perform partial migrations.
+
+## Project documentation structure
+
+DEV_RULES.md:
+How changes are made.
+
+PROJECT_STATE.md:
+Current state and next AI instructions.
+
+ARCHITECTURE.md:
+System structure.
+
+DECISIONS.md:
+Reasons behind important choices.
+
+ROADMAP.md:
+Long-term direction.
+
+## Rule file ownership
+
+Do not create duplicate development rule files.
+
+Legacy development rules must be migrated into DEV_RULES.md.
+
+
+This file is the single source of truth for AI-assisted development standards.
+
 Every future patch MUST follow this document.
 
 ## Documentation requirements
