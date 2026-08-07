@@ -17,6 +17,8 @@ Phase 1: Poker Domain Core.
 - Category-specific tiebreaker generation.
 - Seven-card hand evaluation.
 - Player model with stack and betting state foundation.
+- Betting state and pot foundation.
+- Player turn order foundation.
 
 ## Current architecture
 
@@ -30,7 +32,9 @@ src/poker/
 ├── board/
 │   └── board.py
 ├── game/
-│   └── game_state.py
+│   ├── game_state.py
+│   ├── betting.py
+│   └── turn_order.py
 ├── player/
 │   └── player.py
 └── evaluation/
