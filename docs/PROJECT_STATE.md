@@ -54,6 +54,6 @@ The rules engine can evaluate hands, compare results, and store player state. Th
 
 ## Next steps
 
-1. Betting rounds.
+1. Connect round flow with betting and player actions.
 2. Side pots and all-in handling.
 3. Full Texas Hold'em game flow.
