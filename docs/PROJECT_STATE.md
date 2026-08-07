@@ -40,6 +40,6 @@ Category-specific tiebreaker generation implemented for main hand types.
 
 ## Next steps
 
-1. Seven-card hand evaluation.
+1. Seven-card hand evaluation implemented.
 2. Betting rounds.
 3. Full Texas Hold'em game flow.
