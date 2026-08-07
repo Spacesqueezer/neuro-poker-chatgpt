@@ -51,12 +51,16 @@ src/poker/
 
 ## Current focus
 
-Building the game flow layer.
+Building complete hand flow with betting rounds.
 
-The rules engine can evaluate hands, compare results, and store player state. The next stage is connecting these systems into actual Texas Hold'em rounds.
+The rules engine can evaluate hands, compare results, store player state, deal cards and track streets. The next stage is connecting actions and betting into complete rounds.
+
+## Documentation synchronization rule
+
+Every patch that changes project structure, architecture, completed features or next steps MUST update this file. This reminder must be preserved and copied forward into future PROJECT_STATE.md versions to prevent documentation drift.
 
 ## Next steps
 
-1. Connect dealing flow with rounds and player actions.
+1. Connect betting rounds with HandController.
 2. Side pots and all-in handling.
 3. Full Texas Hold'em game flow.
