@@ -38,7 +38,7 @@ Building a reliable pure poker rules engine before adding AI.
 
 ## Next steps
 
-1. Expand combination detection (straight, flush, straight flush).
-2. Hand comparison and kickers.
+1. Hand comparison and kickers.
+2. Seven-card hand evaluation.
 3. Betting rounds.
 4. Full Texas Hold'em game flow.

@@ -8,3 +8,4 @@ from poker.evaluation.hand_rank import HandRank
 class EvaluationResult:
 	rank: HandRank
 	cards: tuple[Card, ...]
+	tiebreaker: tuple[int, ...] = ()
