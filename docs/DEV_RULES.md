@@ -15,6 +15,26 @@ Before creating a patch:
 3. Inspect the current source tree.
 4. Verify assumptions against the current snapshot.
 
+## NeuroPatch format
+
+Patch files are JSON.
+
+Required fields:
+
+- patch_id
+- goal
+- allowed_files
+- operations
+- validation
+- git
+
+Supported operations must be verified against tools/neuropatch.py.
+
+Never invent unsupported operations.
+
+A patch must be generated for the current snapshot.
+Never generate patches based only on memory.
+
 ## NeuroPatch rules
 
 All project changes must be delivered through NeuroPatch.

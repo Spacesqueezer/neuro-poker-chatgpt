@@ -1,5 +1,21 @@
 # Project State
 
+## AI Bootstrap Instructions
+
+This project is maintained through AI-assisted patches.
+
+Before making any changes:
+
+1. Read docs/DEV_RULES.md.
+2. Read docs/PROJECT_STATE.md.
+3. Read docs/CURRENT_LIMITATIONS.md.
+4. Read docs/ARCHITECTURE.md.
+5. Inspect the current source tree.
+
+The repository documentation is the source of truth.
+Do not rely on previous conversation history.
+
+
 ## Current step
 
 Phase 1: Poker Domain Core.
@@ -67,6 +83,11 @@ Note: the current GameState player collection temporarily uses Hand objects as p
 Project development standards are defined in docs/DEV_RULES.md.
 
 Every patch MUST follow DEV_RULES.md as the project development standard.
+
+## Related documentation
+
+Known temporary constraints:
+docs/CURRENT_LIMITATIONS.md
 
 ## Documentation synchronization rule
 
