@@ -1,5 +1,9 @@
 # Development Rules
 
+Current AI patch standards are maintained in docs/DEV_RULES.md.
+
+Future patches MUST follow docs/DEV_RULES.md as the source of truth.
+
 ## Before Changes
 
 - Analyze existing architecture.

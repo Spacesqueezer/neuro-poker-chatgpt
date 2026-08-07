@@ -36,8 +36,13 @@ src/poker/
 ├── game/
 │   ├── game_state.py
 │   ├── betting.py
+│   ├── betting_round.py
 │   ├── turn_order.py
-│   └── dealer.py
+│   ├── round_manager.py
+│   ├── dealer.py
+│   ├── hand_controller.py
+│   ├── actions.py
+│   └── action_resolver.py
 ├── player/
 │   └── player.py
 └── evaluation/
@@ -53,7 +58,7 @@ src/poker/
 
 Building complete hand flow with betting rounds.
 
-The rules engine can evaluate hands, compare results, store player state, deal cards and track streets. The next stage is connecting actions and betting into complete rounds.
+The rules engine can evaluate hands, compare results, store player state, deal cards, track streets and process basic betting flow. The next stage is integrating actions, turn order and betting rounds into complete hand progression.
 
 Note: the current GameState player collection temporarily uses Hand objects as participants. Migration to full Player entities must update betting, actions and controllers together.
 
@@ -77,10 +82,11 @@ Before implementing the next step:
 - verify that the current GameState player model is still based on temporary Hand objects;
 - avoid migrating to Player entities partially.
 
-1. Connect betting rounds with HandController.
-   - Integrate BettingRound lifecycle into the existing hand flow.
-   - Connect actions, turn order and street transitions.
+1. Complete betting round integration with HandController.
+   - Connect BettingRound lifecycle with ActionResolver and TurnOrder.
+   - Ensure street transitions happen only after valid betting completion.
    - Keep the temporary Hand-based participant model in mind.
+   - Do not migrate to Player entities partially; update dependent systems together.
 
 2. Side pots and all-in handling.
    - Design this only after betting flow is stable.
