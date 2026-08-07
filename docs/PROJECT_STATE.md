@@ -36,7 +36,7 @@ src/poker/
 
 Hand comparison and kicker calculation.
 
-The evaluator now needs category-specific tiebreaker generation.
+Category-specific tiebreaker generation implemented for main hand types.
 
 ## Next steps
 
