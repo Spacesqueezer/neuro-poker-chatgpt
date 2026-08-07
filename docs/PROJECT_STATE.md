@@ -20,6 +20,7 @@ Phase 1: Poker Domain Core.
 - Player model with stack and betting state foundation.
 - Betting state and pot foundation.
 - Player turn order foundation.
+- Dealer card dealing flow foundation.
 
 ## Current architecture
 
@@ -35,7 +36,8 @@ src/poker/
 ├── game/
 │   ├── game_state.py
 │   ├── betting.py
-│   └── turn_order.py
+│   ├── turn_order.py
+│   └── dealer.py
 ├── player/
 │   └── player.py
 └── evaluation/
@@ -55,6 +57,6 @@ The rules engine can evaluate hands, compare results, and store player state. Th
 
 ## Next steps
 
-1. Connect round flow with betting and player actions.
+1. Connect dealing flow with rounds and player actions.
 2. Side pots and all-in handling.
 3. Full Texas Hold'em game flow.
