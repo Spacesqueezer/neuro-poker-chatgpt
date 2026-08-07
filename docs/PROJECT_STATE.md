@@ -55,6 +55,8 @@ Building complete hand flow with betting rounds.
 
 The rules engine can evaluate hands, compare results, store player state, deal cards and track streets. The next stage is connecting actions and betting into complete rounds.
 
+Note: the current GameState player collection temporarily uses Hand objects as participants. Migration to full Player entities must update betting, actions and controllers together.
+
 ## Documentation synchronization rule
 
 Every patch that changes project structure, architecture, completed features or next steps MUST update this file. This reminder must be preserved and copied forward into future PROJECT_STATE.md versions to prevent documentation drift.

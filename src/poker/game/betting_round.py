@@ -9,7 +9,7 @@ class BettingRound:
 	def is_complete(self):
 		active_players = [
 			player for player in self.players
-			if not player.folded
+			if not getattr(player, "folded", False)
 		]
 
 		return bool(active_players) and all(
