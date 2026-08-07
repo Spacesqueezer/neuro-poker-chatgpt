@@ -22,5 +22,10 @@ class BettingState:
 		self.pot += amount
 		self.current_bet += amount
 
+	def collect_player_bet(self, player):
+		amount = player.collect_bet()
+		self.pot += amount
+		return amount
+
 	def reset_round(self):
 		self.current_bet = 0

@@ -25,3 +25,12 @@ def test_player_fold():
 	player.fold()
 
 	assert player.folded
+
+
+def test_player_collects_bet():
+	player = Player("Alice", 100)
+
+	player.bet(25)
+
+	assert player.collect_bet() == 25
+	assert player.current_bet == 0

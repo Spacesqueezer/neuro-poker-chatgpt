@@ -16,6 +16,11 @@ class Player:
 		self.chips -= amount
 		self.current_bet += amount
 
+	def collect_bet(self):
+		amount = self.current_bet
+		self.current_bet = 0
+		return amount
+
 	def fold(self):
 		self.folded = True
 
