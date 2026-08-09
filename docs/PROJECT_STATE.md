@@ -18,7 +18,7 @@ Do not rely on previous conversation history.
 
 ## Current step
 
-Phase 1: Poker Domain Core.
+Phase 2: Game Engine foundation.
 
 ## Completed
 
@@ -34,10 +34,15 @@ Phase 1: Poker Domain Core.
 - Category-specific tiebreaker generation.
 - Seven-card hand evaluation.
 - Player model with stack and betting state foundation.
-- GameState now stores full Player entities with nested Hand state.
+- GameState stores full Player entities with nested Hand state.
 - Betting state and pot foundation.
-- Player turn order foundation.
+- Player turn order foundation with folded-player skipping.
 - Dealer card dealing flow foundation.
+- HandController betting-round integration.
+- Basic check, call, bet, raise, fold and supported all-in processing.
+- Raises reopen action for previously acted players.
+- Completed betting rounds collect contributions and advance streets automatically.
+- Deterministic manual console hand runner in tools/manual_hand.py.
 
 ## Current architecture
 
@@ -69,15 +74,18 @@ src/poker/
     ├── hand_value.py
     ├── comparator.py
     └── seven_card.py
+
+tools/
+└── manual_hand.py
 ```
 
 ## Current focus
 
-Building complete hand flow with betting rounds.
+Complete the playable Texas Hold'em hand before AI integration.
 
-The rules engine can evaluate hands, compare results, store full Player entities, deal cards into each player hand, track streets and process basic betting flow. The next stage is integrating actions, turn order and betting rounds into complete hand progression.
+The engine can now run betting rounds through HandController, enforce turn order, reopen action after raises, collect street contributions into the pot and automatically deal the next street. A console runner allows manual inspection of a deterministic three-player hand.
 
-GameState player ownership now follows the target structure: GameState -> Player -> Hand. Dealer resets per-hand player state before dealing new hole cards.
+The next missing terminal feature is showdown resolution and payout. Position/blind rules and side pots remain intentionally deferred until the basic hand can resolve a winner and transfer the pot correctly.
 
 ## Development rules reference
 
@@ -99,21 +107,28 @@ Every patch that changes project structure, architecture, completed features or 
 The following instructions are written for the next AI developer.
 
 Before implementing the next step:
-- read DEV_RULES.md;
-- inspect current architecture;
-- verify that GameState players are full Player entities and hole cards live in player.hand;
-- preserve the GameState -> Player -> Hand ownership model.
+- read DEV_RULES.md and CURRENT_LIMITATIONS.md;
+- inspect HandController, BettingRound, BettingState and evaluation modules;
+- preserve GameState -> Player -> Hand ownership;
+- preserve raise action reopening and automatic street progression;
+- use tools/manual_hand.py as a human-readable smoke test in addition to pytest.
 
-1. Complete betting round integration with HandController.
-   - Connect BettingRound lifecycle with ActionResolver and TurnOrder.
-   - Ensure street transitions happen only after valid betting completion.
-   - Use Player entities directly for actions and turn order.
-   - Keep hole-card access through player.hand.
+1. Implement showdown resolution and main-pot payout.
+   - Reuse the existing seven-card evaluation and comparison systems.
+   - Evaluate only non-folded players.
+   - Support a single winner and equal-hand split of the main pot.
+   - Keep side pots out of scope for this step.
+   - Define deterministic handling for indivisible split-pot remainder chips.
+   - Add tests covering winner payout, tied payout and folded-player exclusion.
 
-2. Side pots and all-in handling.
-   - Design this only after betting flow is stable.
-   - Build chip ownership and contributions on the existing Player entities.
+2. Improve manual verification.
+   - Extend tools/manual_hand.py to print showdown hand values and awarded chips after resolver integration.
+   - Keep the runner deterministic by default.
 
-3. Full Texas Hold'em game flow.
-   - Build on existing Dealer, RoundManager, HandController and betting systems.
-   - Preserve test coverage after every architectural change.
+3. Add positions and blinds only after showdown payout is stable.
+   - Dealer button, small blind, big blind and street-first-action rules belong together.
+   - Do not partially introduce position behavior before that migration.
+
+4. Side pots and short all-ins.
+   - Design contribution accounting only after the main-pot hand flow is stable.
+   - Remove the current short-all-in rejection when side-pot accounting is implemented.

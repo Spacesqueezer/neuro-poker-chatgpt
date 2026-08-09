@@ -60,3 +60,24 @@ GameState stores Player entities, not bare Hand objects.
 Hole cards are owned by `Player.hand`.
 Betting and action systems operate on the same Player entities used by turn order and dealing.
 
+
+## Hand Flow Coordination
+
+`HandController` coordinates one active hand:
+
+```text
+HandController
+├── Dealer
+├── ActionResolver
+└── BettingRound
+     └── Player[]
+```
+
+Responsibilities:
+- `HandController` owns betting-round lifecycle and street progression.
+- `ActionResolver` applies a validated player action to Player state.
+- `BettingRound` tracks who still owes action and reopens action after a bet increase.
+- `TurnOrder` selects the acting Player and skips folded players.
+- `BettingState` stores the accumulated pot and current street target bet.
+
+Completed betting rounds collect each `Player.current_bet` into the pot before the next street begins.

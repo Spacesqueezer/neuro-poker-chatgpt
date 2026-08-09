@@ -13,11 +13,13 @@ class ActionResolver:
 			player.fold()
 			return
 
-		if action in (PlayerAction.BET, PlayerAction.RAISE, PlayerAction.ALL_IN):
-			player.bet(amount)
+		if action == PlayerAction.CHECK:
 			return
 
-		if action in (PlayerAction.CHECK, PlayerAction.CALL):
+		if action in (PlayerAction.CALL, PlayerAction.BET, PlayerAction.RAISE, PlayerAction.ALL_IN):
+			if amount <= 0:
+				raise ValueError("Action amount must be positive")
+			player.bet(amount)
 			return
 
 		raise ValueError("Unsupported action")

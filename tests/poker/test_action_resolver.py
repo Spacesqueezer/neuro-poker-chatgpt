@@ -20,3 +20,13 @@ def test_action_resolver_fold():
 	resolver.apply(player, PlayerAction.FOLD)
 
 	assert player.folded
+
+
+def test_action_resolver_call_moves_chips_to_current_bet():
+	player = Player("Alice", 100)
+	resolver = ActionResolver()
+
+	resolver.apply(player, PlayerAction.CALL, 15)
+
+	assert player.chips == 85
+	assert player.current_bet == 15

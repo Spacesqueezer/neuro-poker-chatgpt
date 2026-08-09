@@ -16,5 +16,16 @@ class TurnOrder:
 		self.position = (self.position + 1) % len(self.players)
 		return self.current_player()
 
+	def next_active_player(self):
+		if not self.players:
+			return None
+
+		for _ in range(len(self.players)):
+			player = self.next_player()
+			if not getattr(player, "folded", False):
+				return player
+
+		return None
+
 	def reset(self):
 		self.position = 0

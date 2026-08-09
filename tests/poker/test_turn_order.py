@@ -28,3 +28,14 @@ def test_turn_order_wraps_around():
 
 	order.next_player()
 	assert order.next_player() == first
+
+
+def test_turn_order_skips_folded_players():
+	first = Player("Alice", 100)
+	second = Player("Bob", 100)
+	third = Player("Carol", 100)
+	second.fold()
+
+	order = TurnOrder([first, second, third])
+
+	assert order.next_active_player() == third
