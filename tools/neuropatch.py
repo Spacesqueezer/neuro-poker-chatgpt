@@ -68,6 +68,16 @@ def git_commit(message):
 		check=True
 	)
 
+	result = subprocess.run(
+		["git", "rev-parse", "HEAD"],
+		cwd=PROJECT_ROOT,
+		text=True,
+		capture_output=True,
+		check=True
+	)
+
+	return result.stdout.strip()
+
 
 def load_patch():
 	patches = sorted(
@@ -237,8 +247,11 @@ def main():
 
 			save_json(HISTORY_FILE, history)
 
-			if patch.get("git", {}).get("auto_commit"):
-				git_commit(f"[auto-patch] {patch['patch_id']}")
+			commit_hash = None
+
+			if patch.get("git", {}).get("auto_commit", True):
+				commit_hash = git_commit(f"[auto-patch] {patch['patch_id']}")
+				report["commit"] = commit_hash
 
 		report["status"] = "SUCCESS"
 
