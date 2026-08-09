@@ -39,6 +39,54 @@ def print_help():
 	print("  state | players | deal | help | quit")
 
 
+def print_showdown(controller):
+	if not controller.showdown_results:
+		return
+
+	print("Showdown:")
+	for player, result in controller.showdown_results.items():
+		marker = "WIN" if player in controller.showdown_winners else "   "
+		payout = controller.showdown_payouts.get(player, 0)
+		print(
+			f"  {marker} {player.name}: {result.rank.name.lower().replace('_', ' ')} "
+			f"[{format_cards(result.cards)}] payout={payout}"
+		)
+	print()
+
+
+def prepare_next_hand(state):
+	if len(state.players) < 2:
+		raise ValueError("At least two players are required")
+
+	old_players = list(state.players)
+	old_dealer_index = state.dealer_button_index
+	survivors = [player for player in old_players if player.chips > 0]
+
+	if len(survivors) < 2:
+		raise ValueError("Not enough players with chips for another hand")
+
+	if len(survivors) == len(old_players):
+		return
+
+	if old_dealer_index is None:
+		state.players[:] = survivors
+		state.dealer_button_index = None
+		state.turn_order.players = state.players
+		return
+
+	next_dealer = None
+	for offset in range(1, len(old_players) + 1):
+		candidate = old_players[(old_dealer_index + offset) % len(old_players)]
+		if candidate.chips > 0:
+			next_dealer = candidate
+			break
+
+	state.players[:] = survivors
+	state.turn_order.players = state.players
+	next_index = state.players.index(next_dealer)
+	state.dealer_button_index = (next_index - 1) % len(state.players)
+
+
 def print_state(state, controller):
 	print()
 	print(f"Street: {state.round_manager.street.value}")
@@ -60,6 +108,8 @@ def print_state(state, controller):
 
 	print()
 	print_players(state, controller)
+	if state.round_manager.street == GameStreet.SHOWDOWN:
+		print_showdown(controller)
 
 
 def print_players(state, controller):
@@ -139,8 +189,12 @@ def main():
 			print_players(state, controller)
 			continue
 		if name == "deal":
-			controller.start_hand(state)
-			print_state(state, controller)
+			try:
+				prepare_next_hand(state)
+				controller.start_hand(state)
+				print_state(state, controller)
+			except ValueError as error:
+				print(f"Error: {error}")
 			continue
 		if state.round_manager.street in {GameStreet.SHOWDOWN, GameStreet.COMPLETE}:
 			status = "showdown" if state.round_manager.street == GameStreet.SHOWDOWN else "complete"

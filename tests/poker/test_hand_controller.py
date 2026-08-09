@@ -1,5 +1,7 @@
 import pytest
 
+from poker.cards.card import Card
+from poker.enums import Rank, Suit
 from poker.game.actions import PlayerAction
 from poker.game.dealer import Dealer
 from poker.game.game_state import GameState
@@ -289,6 +291,9 @@ def test_all_in_call_runs_remaining_board_directly_to_showdown():
 	assert state.round_manager.street == GameStreet.SHOWDOWN
 	assert len(state.board.cards) == 5
 	assert state.betting.current_bet == 0
+	assert state.betting.pot == 0
+	assert controller.showdown_winners
+	assert sum(player.chips for player in state.players) == 300
 	assert all(player.current_bet == 0 for player in state.players)
 
 
@@ -304,5 +309,67 @@ def test_one_funded_player_and_one_all_in_player_also_runs_out():
 
 	assert street == GameStreet.SHOWDOWN
 	assert len(state.board.cards) == 5
-	assert state.players[0].chips > 0
-	assert state.players[1].chips == 0
+	assert state.betting.pot == 0
+	assert controller.showdown_winners
+	assert sum(player.chips for player in state.players) == 120
+
+
+def test_showdown_pays_best_hand_and_clears_pot():
+	state = GameState()
+	alice = Player("Alice", 0)
+	carol = Player("Carol", 0)
+	state.add_player(alice)
+	state.add_player(carol)
+	state.dealer_button_index = 0
+	alice.hand.add_card(Card(Rank.THREE, Suit.SPADES))
+	alice.hand.add_card(Card(Rank.TEN, Suit.SPADES))
+	carol.hand.add_card(Card(Rank.THREE, Suit.CLUBS))
+	carol.hand.add_card(Card(Rank.FOUR, Suit.DIAMONDS))
+	state.board.cards = [
+		Card(Rank.TEN, Suit.CLUBS),
+		Card(Rank.EIGHT, Suit.CLUBS),
+		Card(Rank.TEN, Suit.HEARTS),
+		Card(Rank.KING, Suit.HEARTS),
+		Card(Rank.FOUR, Suit.CLUBS),
+	]
+	state.betting.pot = 205
+	controller = HandController(Dealer())
+
+	controller._resolve_showdown(state)
+
+	assert controller.showdown_winners == [alice]
+	assert controller.showdown_payouts[alice] == 205
+	assert alice.chips == 205
+	assert carol.chips == 0
+	assert state.betting.pot == 0
+
+
+def test_showdown_splits_tied_pot_and_awards_odd_chip_left_of_dealer():
+	state = GameState()
+	alice = Player("Alice", 0)
+	bob = Player("Bob", 0)
+	carol = Player("Carol", 0)
+	for player in (alice, bob, carol):
+		state.add_player(player)
+	state.dealer_button_index = 0
+
+	alice.hand.cards = [Card(Rank.TWO, Suit.CLUBS), Card(Rank.THREE, Suit.DIAMONDS)]
+	bob.hand.cards = [Card(Rank.FOUR, Suit.CLUBS), Card(Rank.FIVE, Suit.DIAMONDS)]
+	carol.hand.cards = [Card(Rank.SIX, Suit.CLUBS), Card(Rank.SEVEN, Suit.DIAMONDS)]
+	state.board.cards = [
+		Card(Rank.TEN, Suit.SPADES),
+		Card(Rank.JACK, Suit.SPADES),
+		Card(Rank.QUEEN, Suit.SPADES),
+		Card(Rank.KING, Suit.SPADES),
+		Card(Rank.ACE, Suit.SPADES),
+	]
+	state.betting.pot = 101
+	controller = HandController(Dealer())
+
+	controller._resolve_showdown(state)
+
+	assert controller.showdown_winners == [bob, carol, alice]
+	assert controller.showdown_payouts[bob] == 34
+	assert controller.showdown_payouts[carol] == 34
+	assert controller.showdown_payouts[alice] == 33
+	assert state.betting.pot == 0

@@ -1,6 +1,7 @@
 from poker.game.action_resolver import ActionResolver
 from poker.game.actions import PlayerAction
 from poker.game.betting_round import BettingRound
+from poker.evaluation.seven_card import evaluate_seven_cards
 from poker.game.round_manager import GameStreet
 
 
@@ -19,6 +20,9 @@ class HandController:
 		self.betting_round = None
 		self.small_blind_index = None
 		self.big_blind_index = None
+		self.showdown_results = {}
+		self.showdown_winners = []
+		self.showdown_payouts = {}
 
 	def start_hand(self, game_state):
 		if len(game_state.players) < 2:
@@ -31,6 +35,9 @@ class HandController:
 		game_state.round_manager.reset()
 		game_state.turn_order.reset()
 		self.minimum_raise = self.big_blind
+		self.showdown_results = {}
+		self.showdown_winners = []
+		self.showdown_payouts = {}
 
 		game_state.advance_dealer_button()
 		self.dealer.start_hand(game_state)
@@ -229,7 +236,9 @@ class HandController:
 
 		street = self.advance_street(game_state)
 
-		if street != GameStreet.SHOWDOWN:
+		if street == GameStreet.SHOWDOWN:
+			self._resolve_showdown(game_state)
+		else:
 			self.minimum_raise = self.big_blind
 			self.betting_round = BettingRound(game_state.players)
 			self._set_postflop_first_player(game_state)
@@ -243,4 +252,53 @@ class HandController:
 		while game_state.round_manager.street not in {GameStreet.SHOWDOWN, GameStreet.COMPLETE}:
 			self.advance_street(game_state)
 
+		if game_state.round_manager.street == GameStreet.SHOWDOWN:
+			self._resolve_showdown(game_state)
+
 		return game_state.round_manager.street
+
+	def _resolve_showdown(self, game_state):
+		if len(game_state.board.cards) != 5:
+			raise RuntimeError("Showdown requires five community cards")
+
+		contenders = [player for player in game_state.players if not player.folded]
+		if len(contenders) < 2:
+			raise RuntimeError("Showdown requires at least two active players")
+
+		self.showdown_results = {
+			player: evaluate_seven_cards([*player.hand.cards, *game_state.board.cards])
+			for player in contenders
+		}
+		best_key = max(
+			(result.rank, result.tiebreaker)
+			for result in self.showdown_results.values()
+		)
+		winners = [
+			player
+			for player, result in self.showdown_results.items()
+			if (result.rank, result.tiebreaker) == best_key
+		]
+
+		ordered_winners = self._winners_left_of_dealer(game_state, winners)
+		share, remainder = divmod(game_state.betting.pot, len(ordered_winners))
+		self.showdown_payouts = {}
+		for index, player in enumerate(ordered_winners):
+			payout = share + (1 if index < remainder else 0)
+			player.chips += payout
+			self.showdown_payouts[player] = payout
+
+		self.showdown_winners = ordered_winners
+		game_state.betting.pot = 0
+
+	def _winners_left_of_dealer(self, game_state, winners):
+		winner_set = set(winners)
+		ordered = []
+		player_count = len(game_state.players)
+
+		for offset in range(1, player_count + 1):
+			index = (game_state.dealer_button_index + offset) % player_count
+			player = game_state.players[index]
+			if player in winner_set:
+				ordered.append(player)
+
+		return ordered
