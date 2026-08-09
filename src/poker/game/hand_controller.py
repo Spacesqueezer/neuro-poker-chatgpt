@@ -224,6 +224,9 @@ class HandController:
 			game_state.round_manager.street = GameStreet.COMPLETE
 			return GameStreet.COMPLETE
 
+		if self._betting_is_closed_by_all_in(active_players):
+			return self._run_out_to_showdown(game_state)
+
 		street = self.advance_street(game_state)
 
 		if street != GameStreet.SHOWDOWN:
@@ -232,3 +235,12 @@ class HandController:
 			self._set_postflop_first_player(game_state)
 
 		return street
+
+	def _betting_is_closed_by_all_in(self, active_players):
+		return sum(player.chips > 0 for player in active_players) <= 1
+
+	def _run_out_to_showdown(self, game_state):
+		while game_state.round_manager.street not in {GameStreet.SHOWDOWN, GameStreet.COMPLETE}:
+			self.advance_street(game_state)
+
+		return game_state.round_manager.street

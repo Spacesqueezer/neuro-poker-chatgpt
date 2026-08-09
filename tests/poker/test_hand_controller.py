@@ -267,3 +267,42 @@ def test_total_pot_includes_uncollected_current_bets():
 
 	controller.process_action(state, PlayerAction.CALL)
 	assert controller.total_pot(state) == 5
+
+
+def test_all_in_call_runs_remaining_board_directly_to_showdown():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CHECK)
+
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.BET, 10)
+	controller.process_action(state, PlayerAction.RAISE, 20)
+	controller.process_action(state, PlayerAction.FOLD)
+	controller.process_action(state, PlayerAction.ALL_IN)
+	street = controller.process_action(state, PlayerAction.CALL)
+
+	assert street == GameStreet.SHOWDOWN
+	assert state.round_manager.street == GameStreet.SHOWDOWN
+	assert len(state.board.cards) == 5
+	assert state.betting.current_bet == 0
+	assert all(player.current_bet == 0 for player in state.players)
+
+
+def test_one_funded_player_and_one_all_in_player_also_runs_out():
+	state = GameState()
+	state.add_player(Player("Alice", 100))
+	state.add_player(Player("Bob", 20))
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.RAISE, 20)
+	street = controller.process_action(state, PlayerAction.CALL)
+
+	assert street == GameStreet.SHOWDOWN
+	assert len(state.board.cards) == 5
+	assert state.players[0].chips > 0
+	assert state.players[1].chips == 0
