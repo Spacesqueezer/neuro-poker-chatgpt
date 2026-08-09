@@ -155,3 +155,18 @@ def test_blind_configuration_is_validated():
 
 	with pytest.raises(ValueError, match="Big blind"):
 		HandController(Dealer(), small_blind=2, big_blind=2)
+
+
+def test_last_active_player_wins_uncontested_pot():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.FOLD)
+	controller.process_action(state, PlayerAction.RAISE, 10)
+	street = controller.process_action(state, PlayerAction.FOLD)
+
+	assert street == GameStreet.SHOWDOWN
+	assert state.players[1].chips == 102
+	assert state.betting.pot == 0
+	assert all(player.current_bet == 0 for player in state.players)

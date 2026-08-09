@@ -164,6 +164,9 @@ class HandController:
 
 		active_players = self.betting_round.active_players()
 		if len(active_players) == 1:
+			winner = active_players[0]
+			winner.chips += game_state.betting.pot
+			game_state.betting.pot = 0
 			game_state.round_manager.street = GameStreet.SHOWDOWN
 			return GameStreet.SHOWDOWN
 
