@@ -25,12 +25,12 @@ Current state:
 - a one-player remainder moves the hand to SHOWDOWN as a temporary terminal state.
 
 Known limitations:
-- blinds and dealer/button positions are not implemented;
 - minimum raise sizing is not implemented;
 - side pots are not implemented;
 - short all-ins while facing a larger bet are rejected until side-pot accounting exists;
 - showdown winner resolution and pot payout are not implemented;
-- street action currently restarts from the first active player because position rules do not exist yet.
+- blind posting requires each blind player to have enough chips; short blind all-ins are deferred until side-pot accounting exists;
+- named positions beyond BTN/SB/BB are not exposed yet.
 
 ## Manual verification
 
@@ -42,9 +42,14 @@ Supported commands:
 - bet N
 - raise N
 - fold
-- all-in
+- all-in / allin
 - state
+- players
+- deal
+- help
 - quit
+
+The runner prints BTN/SB/BB, blind amounts, current actor and all hole cards. `deal` starts another debug hand and rotates the dealer button; until showdown payout exists, it is a diagnostic reset rather than a complete cash-game hand transition.
 
 The tool intentionally exposes all hole cards for engine debugging.
 

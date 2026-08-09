@@ -5,10 +5,19 @@ from poker.game.round_manager import GameStreet
 
 
 class HandController:
-	def __init__(self, dealer, action_resolver=None):
+	def __init__(self, dealer, action_resolver=None, small_blind=1, big_blind=2):
+		if small_blind <= 0:
+			raise ValueError("Small blind must be positive")
+		if big_blind <= small_blind:
+			raise ValueError("Big blind must exceed small blind")
+
 		self.dealer = dealer
 		self.action_resolver = action_resolver or ActionResolver()
+		self.small_blind = small_blind
+		self.big_blind = big_blind
 		self.betting_round = None
+		self.small_blind_index = None
+		self.big_blind_index = None
 
 	def start_hand(self, game_state):
 		if len(game_state.players) < 2:
@@ -21,8 +30,12 @@ class HandController:
 		game_state.round_manager.reset()
 		game_state.turn_order.reset()
 
+		game_state.advance_dealer_button()
 		self.dealer.start_hand(game_state)
+		self._assign_blinds(game_state)
+		self._post_blinds(game_state)
 		self.betting_round = BettingRound(game_state.players)
+		self._set_preflop_first_player(game_state)
 
 	def current_player(self, game_state):
 		return game_state.turn_order.current_player()
@@ -99,6 +112,50 @@ class HandController:
 
 		return street
 
+	def position_name(self, game_state, player_index):
+		if player_index == game_state.dealer_button_index:
+			return "BTN"
+		if player_index == self.small_blind_index:
+			return "SB"
+		if player_index == self.big_blind_index:
+			return "BB"
+		return ""
+
+	def _assign_blinds(self, game_state):
+		player_count = len(game_state.players)
+		dealer_index = game_state.dealer_button_index
+
+		if player_count == 2:
+			self.small_blind_index = dealer_index
+			self.big_blind_index = (dealer_index + 1) % player_count
+			return
+
+		self.small_blind_index = (dealer_index + 1) % player_count
+		self.big_blind_index = (dealer_index + 2) % player_count
+
+	def _post_blinds(self, game_state):
+		small_blind_player = game_state.players[self.small_blind_index]
+		big_blind_player = game_state.players[self.big_blind_index]
+
+		if small_blind_player.chips < self.small_blind:
+			raise ValueError("Small blind player does not have enough chips")
+		if big_blind_player.chips < self.big_blind:
+			raise ValueError("Big blind player does not have enough chips")
+
+		small_blind_player.bet(self.small_blind)
+		big_blind_player.bet(self.big_blind)
+		game_state.betting.current_bet = self.big_blind
+
+	def _set_preflop_first_player(self, game_state):
+		if len(game_state.players) == 2:
+			game_state.turn_order.set_position(game_state.dealer_button_index)
+			return
+
+		game_state.turn_order.set_to_next_active_after(self.big_blind_index)
+
+	def _set_postflop_first_player(self, game_state):
+		game_state.turn_order.set_to_next_active_after(game_state.dealer_button_index)
+
 	def _finish_betting_round(self, game_state):
 		for player in game_state.players:
 			game_state.betting.collect_player_bet(player)
@@ -114,8 +171,6 @@ class HandController:
 
 		if street != GameStreet.SHOWDOWN:
 			self.betting_round = BettingRound(game_state.players)
-			game_state.turn_order.reset()
-			while game_state.turn_order.current_player().folded:
-				game_state.turn_order.next_active_player()
+			self._set_postflop_first_player(game_state)
 
 		return street

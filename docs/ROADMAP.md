@@ -22,7 +22,7 @@ Goals:
 - deck
 - combinations
 - hand evaluation
-- positions
+- positions ✅ BTN/SB/BB foundation
 
 No AI.
 
@@ -90,7 +90,7 @@ Extract:
 - cards
 - stacks
 - actions
-- positions
+- positions ✅ BTN/SB/BB foundation
 - pot size
 
 ## Phase 9 — Advanced Strategy

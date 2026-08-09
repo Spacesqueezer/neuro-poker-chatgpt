@@ -14,6 +14,7 @@ class GameState:
 		self.betting = BettingState()
 		self.round_manager = RoundManager()
 		self.turn_order = TurnOrder()
+		self.dealer_button_index = None
 
 	def add_player(self, player: Player):
 		self.players.append(player)
@@ -22,6 +23,17 @@ class GameState:
 	def player_count(self):
 		return len(self.players)
 
+	def advance_dealer_button(self):
+		if not self.players:
+			raise ValueError("Cannot advance dealer button without players")
+
+		if self.dealer_button_index is None:
+			self.dealer_button_index = 0
+		else:
+			self.dealer_button_index = (self.dealer_button_index + 1) % len(self.players)
+
+		return self.dealer_button_index
+
 	def reset(self):
 		self.deck.reset()
 		self.board = Board()
@@ -29,3 +41,4 @@ class GameState:
 		self.betting = BettingState()
 		self.round_manager.reset()
 		self.turn_order.reset()
+		self.dealer_button_index = None

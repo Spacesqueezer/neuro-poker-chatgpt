@@ -15,8 +15,28 @@ from poker.game.round_manager import GameStreet
 from poker.player.player import Player
 
 
+ACTION_COMMANDS = {
+	"fold": PlayerAction.FOLD,
+	"check": PlayerAction.CHECK,
+	"call": PlayerAction.CALL,
+	"bet": PlayerAction.BET,
+	"raise": PlayerAction.RAISE,
+	"all-in": PlayerAction.ALL_IN,
+	"allin": PlayerAction.ALL_IN,
+}
+
+AMOUNT_COMMANDS = {"bet", "raise"}
+
+
 def format_cards(cards):
 	return " ".join(str(card) for card in cards) or "-"
+
+
+def print_help():
+	print("Commands:")
+	print("  check | call | fold | all-in")
+	print("  bet N | raise N")
+	print("  state | players | deal | help | quit")
 
 
 def print_state(state, controller):
@@ -25,18 +45,30 @@ def print_state(state, controller):
 	print(f"Board:  {format_cards(state.board.cards)}")
 	print(f"Pot:    {state.betting.pot}")
 	print(f"Target: {state.betting.current_bet}")
-	print()
 
+	if state.dealer_button_index is not None:
+		dealer = state.players[state.dealer_button_index]
+		small_blind = state.players[controller.small_blind_index]
+		big_blind = state.players[controller.big_blind_index]
+		print(f"Dealer: {dealer.name}")
+		print(f"Blinds: {small_blind.name} {controller.small_blind} / {big_blind.name} {controller.big_blind}")
+
+	print()
+	print_players(state, controller)
+
+
+def print_players(state, controller):
 	current_player = controller.current_player(state)
-	for player in state.players:
+	for index, player in enumerate(state.players):
 		marker = ">" if player is current_player and state.round_manager.street != GameStreet.SHOWDOWN else " "
 		status = "folded" if player.folded else "active"
+		position = controller.position_name(state, index)
+		position_text = f" {position}" if position else ""
 		print(
-			f"{marker} {player.name}: chips={player.chips} "
+			f"{marker} {player.name}{position_text}: chips={player.chips} "
 			f"bet={player.current_bet} status={status} "
 			f"hand=[{format_cards(player.hand.cards)}]"
 		)
-
 	print()
 
 
@@ -46,22 +78,24 @@ def parse_action(command):
 		return None, 0
 
 	name = parts[0]
-	amount = int(parts[1]) if len(parts) > 1 else 0
+	if name not in ACTION_COMMANDS:
+		raise ValueError("Unknown command. Type 'help' for available commands")
 
-	actions = {
-		"fold": PlayerAction.FOLD,
-		"check": PlayerAction.CHECK,
-		"call": PlayerAction.CALL,
-		"bet": PlayerAction.BET,
-		"raise": PlayerAction.RAISE,
-		"all-in": PlayerAction.ALL_IN,
-		"allin": PlayerAction.ALL_IN,
-	}
+	if name in AMOUNT_COMMANDS:
+		if len(parts) != 2:
+			raise ValueError(f"Usage: {name} N")
+		try:
+			amount = int(parts[1])
+		except ValueError as error:
+			raise ValueError(f"Usage: {name} N, where N is a positive integer") from error
+		if amount <= 0:
+			raise ValueError(f"{name.capitalize()} amount must be positive")
+		return ACTION_COMMANDS[name], amount
 
-	if name not in actions:
-		raise ValueError("Unknown command")
+	if len(parts) != 1:
+		raise ValueError(f"Usage: {name}")
 
-	return actions[name], amount
+	return ACTION_COMMANDS[name], 0
 
 
 def main():
@@ -72,24 +106,38 @@ def main():
 	state.add_player(Player("Bob", 100))
 	state.add_player(Player("Carol", 100))
 
-	controller = HandController(Dealer())
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
 	controller.start_hand(state)
 
 	print("Manual Texas Hold'em hand")
-	print("Commands: check, call, bet N, raise N, fold, all-in, state, quit")
+	print_help()
 	print_state(state, controller)
 
-	while state.round_manager.street != GameStreet.SHOWDOWN:
+	while True:
 		try:
 			command = input("action> ").strip()
 		except (EOFError, KeyboardInterrupt):
 			print()
 			break
 
-		if command.lower() in {"quit", "exit"}:
+		name = command.lower()
+		if name in {"quit", "exit"}:
 			break
-		if command.lower() == "state":
+		if name == "help":
+			print_help()
+			continue
+		if name == "state":
 			print_state(state, controller)
+			continue
+		if name == "players":
+			print_players(state, controller)
+			continue
+		if name == "deal":
+			controller.start_hand(state)
+			print_state(state, controller)
+			continue
+		if state.round_manager.street == GameStreet.SHOWDOWN:
+			print("Hand is at showdown. Type 'deal' for the next hand or 'quit'.")
 			continue
 
 		try:
@@ -100,9 +148,6 @@ def main():
 			print_state(state, controller)
 		except (ValueError, RuntimeError) as error:
 			print(f"Error: {error}")
-
-	if state.round_manager.street == GameStreet.SHOWDOWN:
-		print("Hand reached showdown. Winner resolution is not implemented yet.")
 
 
 if __name__ == "__main__":

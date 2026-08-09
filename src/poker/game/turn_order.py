@@ -27,5 +27,20 @@ class TurnOrder:
 
 		return None
 
+	def set_position(self, position):
+		if not self.players:
+			self.position = 0
+			return None
+
+		self.position = position % len(self.players)
+		return self.current_player()
+
+	def set_to_next_active_after(self, position):
+		if not self.players:
+			return None
+
+		self.position = position % len(self.players)
+		return self.next_active_player()
+
 	def reset(self):
 		self.position = 0

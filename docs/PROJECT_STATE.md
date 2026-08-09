@@ -43,6 +43,10 @@ Phase 2: Game Engine foundation.
 - Raises reopen action for previously acted players.
 - Completed betting rounds collect contributions and advance streets automatically.
 - Deterministic manual console hand runner in tools/manual_hand.py.
+- Dealer button, small blind and big blind assignment.
+- Automatic blind posting at hand start.
+- Correct preflop and postflop first-action order, including heads-up rules.
+- Dealer button rotation between hands.
 
 ## Current architecture
 
@@ -85,7 +89,7 @@ Complete the playable Texas Hold'em hand before AI integration.
 
 The engine can now run betting rounds through HandController, enforce turn order, reopen action after raises, collect street contributions into the pot and automatically deal the next street. A console runner allows manual inspection of a deterministic three-player hand.
 
-The next missing terminal feature is showdown resolution and payout. Position/blind rules and side pots remain intentionally deferred until the basic hand can resolve a winner and transfer the pot correctly.
+The engine now includes position-aware blind posting and action order. The next missing terminal feature is showdown resolution and payout. Side pots remain intentionally deferred until the basic hand can resolve a winner and transfer the pot correctly.
 
 ## Development rules reference
 
@@ -125,9 +129,11 @@ Before implementing the next step:
    - Extend tools/manual_hand.py to print showdown hand values and awarded chips after resolver integration.
    - Keep the runner deterministic by default.
 
-3. Add positions and blinds only after showdown payout is stable.
-   - Dealer button, small blind, big blind and street-first-action rules belong together.
-   - Do not partially introduce position behavior before that migration.
+3. Preserve and extend position/blind rules.
+   - Dealer button rotates at each new hand.
+   - Heads-up uses BTN=SB, with BTN acting first preflop and BB first postflop.
+   - Multi-player preflop action starts left of BB; postflop action starts left of BTN.
+   - Add named non-blind positions only when table-size semantics are needed.
 
 4. Side pots and short all-ins.
    - Design contribution accounting only after the main-pot hand flow is stable.
