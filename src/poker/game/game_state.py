@@ -3,7 +3,7 @@ from poker.cards.deck import Deck
 from poker.game.betting import BettingState
 from poker.game.round_manager import RoundManager
 from poker.game.turn_order import TurnOrder
-from poker.hand.hand import Hand
+from poker.player.player import Player
 
 
 class GameState:
@@ -15,8 +15,8 @@ class GameState:
 		self.round_manager = RoundManager()
 		self.turn_order = TurnOrder()
 
-	def add_player(self, hand=None):
-		self.players.append(hand or Hand())
+	def add_player(self, player: Player):
+		self.players.append(player)
 		self.turn_order.players = self.players
 
 	def player_count(self):

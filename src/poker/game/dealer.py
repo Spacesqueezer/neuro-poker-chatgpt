@@ -2,12 +2,12 @@ class Dealer:
 	def start_hand(self, game_state):
 		game_state.deck.shuffle()
 
-		for hand in game_state.players:
-			hand.cards.clear()
+		for player in game_state.players:
+			player.reset_for_hand()
 
 		for _ in range(2):
-			for hand in game_state.players:
-				hand.add_card(game_state.deck.draw())
+			for player in game_state.players:
+				player.hand.add_card(game_state.deck.draw())
 
 	def deal_flop(self, game_state):
 		game_state.deck.draw()

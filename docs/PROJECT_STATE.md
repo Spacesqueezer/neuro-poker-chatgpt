@@ -34,6 +34,7 @@ Phase 1: Poker Domain Core.
 - Category-specific tiebreaker generation.
 - Seven-card hand evaluation.
 - Player model with stack and betting state foundation.
+- GameState now stores full Player entities with nested Hand state.
 - Betting state and pot foundation.
 - Player turn order foundation.
 - Dealer card dealing flow foundation.
@@ -74,9 +75,9 @@ src/poker/
 
 Building complete hand flow with betting rounds.
 
-The rules engine can evaluate hands, compare results, store player state, deal cards, track streets and process basic betting flow. The next stage is integrating actions, turn order and betting rounds into complete hand progression.
+The rules engine can evaluate hands, compare results, store full Player entities, deal cards into each player hand, track streets and process basic betting flow. The next stage is integrating actions, turn order and betting rounds into complete hand progression.
 
-Note: the current GameState player collection temporarily uses Hand objects as participants. Migration to full Player entities must update betting, actions and controllers together.
+GameState player ownership now follows the target structure: GameState -> Player -> Hand. Dealer resets per-hand player state before dealing new hole cards.
 
 ## Development rules reference
 
@@ -100,18 +101,18 @@ The following instructions are written for the next AI developer.
 Before implementing the next step:
 - read DEV_RULES.md;
 - inspect current architecture;
-- verify that the current GameState player model is still based on temporary Hand objects;
-- avoid migrating to Player entities partially.
+- verify that GameState players are full Player entities and hole cards live in player.hand;
+- preserve the GameState -> Player -> Hand ownership model.
 
 1. Complete betting round integration with HandController.
    - Connect BettingRound lifecycle with ActionResolver and TurnOrder.
    - Ensure street transitions happen only after valid betting completion.
-   - Keep the temporary Hand-based participant model in mind.
-   - Do not migrate to Player entities partially; update dependent systems together.
+   - Use Player entities directly for actions and turn order.
+   - Keep hole-card access through player.hand.
 
 2. Side pots and all-in handling.
    - Design this only after betting flow is stable.
-   - Consider future Player entity migration before finalizing chip ownership.
+   - Build chip ownership and contributions on the existing Player entities.
 
 3. Full Texas Hold'em game flow.
    - Build on existing Dealer, RoundManager, HandController and betting systems.

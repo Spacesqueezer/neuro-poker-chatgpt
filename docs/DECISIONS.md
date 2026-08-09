@@ -30,3 +30,14 @@ Use multiple specialized components instead of one giant model.
 
 Reason:
 Better debugging, evaluation and improvement.
+
+## ADR-004: Player Owns Hand
+
+Date:
+2026-08-09
+
+Decision:
+GameState stores full Player entities, and each Player owns its Hand.
+
+Reason:
+Betting, action resolution, turn order and card dealing must operate on one participant model. Keeping bare Hand objects in GameState would split identity, chips and hole cards across incompatible representations.

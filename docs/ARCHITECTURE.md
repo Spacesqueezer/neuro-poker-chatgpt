@@ -40,3 +40,23 @@ Recommended modular approach:
 - Strategy Network
 - Decision Engine
 - Memory System
+
+## Poker Domain Ownership
+
+Core runtime ownership:
+
+```text
+GameState
+├── Deck
+├── Board
+├── BettingState
+├── RoundManager
+├── TurnOrder
+└── Player[]
+    └── Hand
+```
+
+GameState stores Player entities, not bare Hand objects.
+Hole cards are owned by `Player.hand`.
+Betting and action systems operate on the same Player entities used by turn order and dealing.
+

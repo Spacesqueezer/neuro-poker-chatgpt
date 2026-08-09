@@ -4,23 +4,15 @@ This file describes known temporary constraints and architectural risks.
 
 ## Player model
 
-Current GameState uses Hand objects as temporary participants.
-
-Target architecture:
+GameState now stores full Player entities. Hole cards belong to each player's nested Hand:
 
 GameState
  └── Player
       └── Hand
 
-Migration must update together:
+Dealer resets per-hand Player state before dealing new hole cards.
 
-- GameState
-- BettingRound
-- HandController
-- ActionResolver
-- tests
-
-Do not perform partial migration.
+Remaining player-model work belongs to betting integration rather than ownership migration.
 
 ## Betting flow
 
