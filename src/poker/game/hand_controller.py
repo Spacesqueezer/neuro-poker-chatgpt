@@ -15,6 +15,7 @@ class HandController:
 		self.action_resolver = action_resolver or ActionResolver()
 		self.small_blind = small_blind
 		self.big_blind = big_blind
+		self.minimum_raise = big_blind
 		self.betting_round = None
 		self.small_blind_index = None
 		self.big_blind_index = None
@@ -29,6 +30,7 @@ class HandController:
 		game_state.betting.current_bet = 0
 		game_state.round_manager.reset()
 		game_state.turn_order.reset()
+		self.minimum_raise = self.big_blind
 
 		game_state.advance_dealer_button()
 		self.dealer.start_hand(game_state)
@@ -48,8 +50,12 @@ class HandController:
 
 		if player is None:
 			raise RuntimeError("No player available to act")
+		if player.chips <= 0:
+			raise ValueError("All-in player cannot act")
 
 		previous_bet = game_state.betting.current_bet
+		full_raise = False
+		short_raise = False
 
 		if action == PlayerAction.FOLD:
 			self.action_resolver.apply(player, action)
@@ -61,38 +67,76 @@ class HandController:
 			call_amount = previous_bet - player.current_bet
 			if call_amount <= 0:
 				raise ValueError("Nothing to call")
+			if call_amount > player.chips:
+				raise ValueError("Short call all-in requires side pot support")
 			self.action_resolver.apply(player, action, call_amount)
 		elif action == PlayerAction.BET:
 			if previous_bet != 0:
 				raise ValueError("Cannot bet while facing an existing bet")
-			if amount <= 0:
-				raise ValueError("Bet amount must be positive")
+			if amount < self.big_blind:
+				raise ValueError(f"Minimum bet is {self.big_blind}")
+			self._ensure_target_does_not_create_side_pot(game_state, player, amount)
 			self.action_resolver.apply(player, action, amount)
 			game_state.betting.current_bet = player.current_bet
+			self.minimum_raise = amount
+			full_raise = True
 		elif action == PlayerAction.RAISE:
 			if previous_bet == 0:
 				raise ValueError("Cannot raise without an existing bet")
+			if not self.betting_round.can_raise(player):
+				raise ValueError("Betting was not reopened by the short all-in")
 			if amount <= previous_bet:
 				raise ValueError("Raise target must exceed the current bet")
+
+			raise_size = amount - previous_bet
+			minimum_target = previous_bet + self.minimum_raise
+			if raise_size < self.minimum_raise:
+				raise ValueError(f"Minimum raise target is {minimum_target}")
+
+			self._ensure_target_does_not_create_side_pot(game_state, player, amount)
 			contribution = amount - player.current_bet
 			self.action_resolver.apply(player, action, contribution)
 			game_state.betting.current_bet = player.current_bet
+			self.minimum_raise = raise_size
+			full_raise = True
 		elif action == PlayerAction.ALL_IN:
 			all_in_amount = player.chips
 			if all_in_amount <= 0:
 				raise ValueError("Player has no chips")
-			if player.current_bet + all_in_amount < previous_bet:
-				raise ValueError("Short all-in requires side pot support")
+
+			all_in_target = player.current_bet + all_in_amount
+			if all_in_target < previous_bet:
+				raise ValueError("Short call all-in requires side pot support")
+			if all_in_target > previous_bet:
+				self._ensure_target_does_not_create_side_pot(game_state, player, all_in_target)
+
 			self.action_resolver.apply(player, action, all_in_amount)
-			game_state.betting.current_bet = max(
-				game_state.betting.current_bet,
-				player.current_bet,
-			)
+
+			if all_in_target > previous_bet:
+				increase = all_in_target - previous_bet
+				game_state.betting.current_bet = all_in_target
+
+				if previous_bet == 0:
+					if all_in_target >= self.big_blind:
+						self.minimum_raise = all_in_target
+						full_raise = True
+					else:
+						short_raise = True
+				elif increase >= self.minimum_raise:
+					self.minimum_raise = increase
+					full_raise = True
+				else:
+					short_raise = True
 		else:
 			raise ValueError("Unsupported action")
 
 		bet_increased = game_state.betting.current_bet > previous_bet
-		self.betting_round.mark_action(player, bet_increased=bet_increased)
+		self.betting_round.mark_action(
+			player,
+			bet_increased=bet_increased,
+			full_raise=full_raise,
+			short_raise=short_raise,
+		)
 
 		if self.betting_round.is_complete():
 			return self._finish_betting_round(game_state)
@@ -120,6 +164,9 @@ class HandController:
 		if player_index == self.big_blind_index:
 			return "BB"
 		return ""
+
+	def total_pot(self, game_state):
+		return game_state.betting.pot + sum(player.current_bet for player in game_state.players)
 
 	def _assign_blinds(self, game_state):
 		player_count = len(game_state.players)
@@ -156,6 +203,13 @@ class HandController:
 	def _set_postflop_first_player(self, game_state):
 		game_state.turn_order.set_to_next_active_after(game_state.dealer_button_index)
 
+	def _ensure_target_does_not_create_side_pot(self, game_state, player, target):
+		for other in game_state.players:
+			if other is player or other.folded:
+				continue
+			if other.chips == 0 and other.current_bet < target:
+				raise ValueError("Further betting requires side pot support")
+
 	def _finish_betting_round(self, game_state):
 		for player in game_state.players:
 			game_state.betting.collect_player_bet(player)
@@ -167,12 +221,13 @@ class HandController:
 			winner = active_players[0]
 			winner.chips += game_state.betting.pot
 			game_state.betting.pot = 0
-			game_state.round_manager.street = GameStreet.SHOWDOWN
-			return GameStreet.SHOWDOWN
+			game_state.round_manager.street = GameStreet.COMPLETE
+			return GameStreet.COMPLETE
 
 		street = self.advance_street(game_state)
 
 		if street != GameStreet.SHOWDOWN:
+			self.minimum_raise = self.big_blind
 			self.betting_round = BettingRound(game_state.players)
 			self._set_postflop_first_player(game_state)
 

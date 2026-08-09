@@ -166,7 +166,104 @@ def test_last_active_player_wins_uncontested_pot():
 	controller.process_action(state, PlayerAction.RAISE, 10)
 	street = controller.process_action(state, PlayerAction.FOLD)
 
-	assert street == GameStreet.SHOWDOWN
+	assert street == GameStreet.COMPLETE
 	assert state.players[1].chips == 102
 	assert state.betting.pot == 0
 	assert all(player.current_bet == 0 for player in state.players)
+
+
+def test_postflop_bet_must_be_at_least_big_blind():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CHECK)
+
+	with pytest.raises(ValueError, match="Minimum bet is 2"):
+		controller.process_action(state, PlayerAction.BET, 1)
+
+
+def test_raise_must_match_last_full_raise_size():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CHECK)
+
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.BET, 10)
+
+	with pytest.raises(ValueError, match="Minimum raise target is 20"):
+		controller.process_action(state, PlayerAction.RAISE, 12)
+
+	controller.process_action(state, PlayerAction.RAISE, 20)
+	assert state.betting.current_bet == 20
+	assert controller.minimum_raise == 10
+
+
+def test_full_raise_updates_next_minimum_raise_increment():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.RAISE, 6)
+	assert controller.minimum_raise == 4
+
+	controller.process_action(state, PlayerAction.RAISE, 10)
+	assert controller.minimum_raise == 4
+
+	with pytest.raises(ValueError, match="Minimum raise target is 14"):
+		controller.process_action(state, PlayerAction.RAISE, 12)
+
+
+def test_short_all_in_raise_does_not_reopen_action_for_previous_player():
+	state = GameState()
+	state.add_player(Player("Alice", 100))
+	state.add_player(Player("Bob", 15))
+	state.add_player(Player("Carol", 100))
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.RAISE, 10)
+	controller.process_action(state, PlayerAction.ALL_IN)
+
+	assert state.betting.current_bet == 15
+	assert controller.minimum_raise == 8
+
+	controller.process_action(state, PlayerAction.CALL)
+
+	with pytest.raises(ValueError, match="not reopened"):
+		controller.process_action(state, PlayerAction.RAISE, 23)
+
+	street = controller.process_action(state, PlayerAction.CALL)
+	assert street == GameStreet.FLOP
+	assert state.betting.pot == 45
+
+
+def test_uncontested_hand_ends_as_complete_not_showdown():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.FOLD)
+	controller.process_action(state, PlayerAction.RAISE, 10)
+	street = controller.process_action(state, PlayerAction.FOLD)
+
+	assert street == GameStreet.COMPLETE
+	assert state.round_manager.street == GameStreet.COMPLETE
+
+
+def test_total_pot_includes_uncollected_current_bets():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	assert state.betting.pot == 0
+	assert controller.total_pot(state) == 3
+
+	controller.process_action(state, PlayerAction.CALL)
+	assert controller.total_pot(state) == 5

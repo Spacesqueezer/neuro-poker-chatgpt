@@ -48,3 +48,32 @@ def test_raise_requires_previous_players_to_act_again():
 	round_state.mark_action(second)
 
 	assert round_state.is_complete()
+
+
+def test_short_raise_locks_players_who_already_acted():
+	first = Player("Alice", 100)
+	second = Player("Bob", 100)
+	third = Player("Carol", 100)
+	round_state = BettingRound([first, second, third])
+
+	round_state.mark_action(first)
+	round_state.mark_action(second, short_raise=True)
+
+	assert not round_state.can_raise(first)
+	assert round_state.can_raise(third)
+
+
+def test_full_raise_reopens_raise_rights_after_short_raise():
+	first = Player("Alice", 100)
+	second = Player("Bob", 100)
+	third = Player("Carol", 100)
+	round_state = BettingRound([first, second, third])
+
+	round_state.mark_action(first)
+	round_state.mark_action(second, short_raise=True)
+	assert not round_state.can_raise(first)
+
+	round_state.mark_action(third, full_raise=True)
+
+	assert round_state.can_raise(first)
+	assert round_state.can_raise(second)

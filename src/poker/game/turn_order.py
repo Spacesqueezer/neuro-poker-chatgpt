@@ -22,7 +22,7 @@ class TurnOrder:
 
 		for _ in range(len(self.players)):
 			player = self.next_player()
-			if not getattr(player, "folded", False):
+			if not getattr(player, "folded", False) and getattr(player, "chips", 1) > 0:
 				return player
 
 		return None

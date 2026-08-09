@@ -43,7 +43,12 @@ def print_state(state, controller):
 	print()
 	print(f"Street: {state.round_manager.street.value}")
 	print(f"Board:  {format_cards(state.board.cards)}")
-	print(f"Pot:    {state.betting.pot}")
+	committed = sum(player.current_bet for player in state.players)
+	total_pot = controller.total_pot(state)
+	if committed:
+		print(f"Pot:    {total_pot} ({state.betting.pot} collected + {committed} committed)")
+	else:
+		print(f"Pot:    {total_pot}")
 	print(f"Target: {state.betting.current_bet}")
 
 	if state.dealer_button_index is not None:
@@ -60,7 +65,8 @@ def print_state(state, controller):
 def print_players(state, controller):
 	current_player = controller.current_player(state)
 	for index, player in enumerate(state.players):
-		marker = ">" if player is current_player and state.round_manager.street != GameStreet.SHOWDOWN else " "
+		terminal_streets = {GameStreet.SHOWDOWN, GameStreet.COMPLETE}
+		marker = ">" if player is current_player and state.round_manager.street not in terminal_streets else " "
 		status = "folded" if player.folded else "active"
 		position = controller.position_name(state, index)
 		position_text = f" {position}" if position else ""
@@ -136,8 +142,9 @@ def main():
 			controller.start_hand(state)
 			print_state(state, controller)
 			continue
-		if state.round_manager.street == GameStreet.SHOWDOWN:
-			print("Hand is at showdown. Type 'deal' for the next hand or 'quit'.")
+		if state.round_manager.street in {GameStreet.SHOWDOWN, GameStreet.COMPLETE}:
+			status = "showdown" if state.round_manager.street == GameStreet.SHOWDOWN else "complete"
+			print(f"Hand is {status}. Type 'deal' for the next hand or 'quit'.")
 			continue
 
 		try:

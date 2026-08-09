@@ -7,6 +7,7 @@ class GameStreet(Enum):
 	TURN = "turn"
 	RIVER = "river"
 	SHOWDOWN = "showdown"
+	COMPLETE = "complete"
 
 
 class RoundManager:
