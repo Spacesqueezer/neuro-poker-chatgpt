@@ -8,13 +8,14 @@ Supported:
 - check, call, bet, raise, fold and all-in;
 - minimum bets and full-raise sizing;
 - short raises without incorrect action reopening;
+- cumulative multiple short all-ins reopening action once a specific player is facing at least one full raise since that player's last action;
 - short all-in calls below the current target;
+- short SB/BB posting with the full BB preserved as the preflop target;
 - dealer/SB/BB assignment and heads-up action order;
 - automatic all-in board runout.
 
 Known gaps:
-- a player with fewer chips than the required SB/BB currently causes blind posting to reject hand start;
-- cumulative short-raise reopen behavior needs broader deterministic coverage.
+- no currently known betting/blind correctness gap is intentionally accepted here; new gaps should be added when deterministic scenarios, replay verification or stress runs expose them.
 
 ## Pot accounting
 
@@ -78,6 +79,6 @@ Any failure prints the exact hand seed before exiting.
 
 `python tools/manual_hand.py` starts a random default hand. Use `--seed N` to reproduce it exactly.
 
-Named deterministic scenarios remain available through `--scenario NAME` or `scenario NAME` inside the runner.
+Named deterministic scenarios remain available through `--scenario NAME` or `scenario NAME` inside the runner. Betting-specific scenarios include `short-bb` and `cumulative-reopen`.
 
 The runner intentionally exposes all hole cards for engine debugging.

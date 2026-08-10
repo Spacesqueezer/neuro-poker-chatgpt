@@ -77,3 +77,48 @@ def test_full_raise_reopens_raise_rights_after_short_raise():
 
 	assert round_state.can_raise(first)
 	assert round_state.can_raise(second)
+
+def test_cumulative_short_all_ins_reopen_for_player_facing_full_raise():
+	alice = Player("Alice", 100)
+	bob = Player("Bob", 0)
+	carol = Player("Carol", 100)
+	dave = Player("Dave", 0)
+	round_state = BettingRound([alice, bob, carol, dave])
+
+	alice.current_bet = 100
+	round_state.mark_action(alice, target_bet=100)
+
+	bob.current_bet = 125
+	round_state.mark_action(bob, short_raise=True, target_bet=125)
+
+	carol.current_bet = 125
+	round_state.mark_action(carol, target_bet=125)
+
+	dave.current_bet = 200
+	round_state.mark_action(dave, short_raise=True, target_bet=200)
+
+	assert round_state.can_raise(alice, current_target=200, minimum_raise=100)
+	assert not round_state.can_raise(carol, current_target=200, minimum_raise=100)
+
+
+def test_call_after_cumulative_reopen_resets_player_reopen_baseline():
+	alice = Player("Alice", 100)
+	bob = Player("Bob", 0)
+	carol = Player("Carol", 0)
+	round_state = BettingRound([alice, bob, carol])
+
+	alice.current_bet = 100
+	round_state.mark_action(alice, target_bet=100)
+
+	bob.current_bet = 150
+	round_state.mark_action(bob, short_raise=True, target_bet=150)
+	carol.current_bet = 200
+	round_state.mark_action(carol, short_raise=True, target_bet=200)
+
+	assert round_state.can_raise(alice, current_target=200, minimum_raise=100)
+
+	alice.current_bet = 200
+	round_state.mark_action(alice, target_bet=200)
+
+	assert not round_state.can_raise(alice, current_target=250, minimum_raise=100)
+

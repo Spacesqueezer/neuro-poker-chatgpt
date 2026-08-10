@@ -55,6 +55,9 @@ class HandController:
 		self.betting_round = BettingRound(game_state.players)
 		self._set_preflop_first_player(game_state)
 
+		if self._betting_is_closed_by_all_in(self.betting_round.active_players()):
+			self._finish_betting_round(game_state)
+
 	def current_player(self, game_state):
 		return game_state.turn_order.current_player()
 
@@ -99,7 +102,11 @@ class HandController:
 		elif action == PlayerAction.RAISE:
 			if previous_bet == 0:
 				raise ValueError("Cannot raise without an existing bet")
-			if not self.betting_round.can_raise(player):
+			if not self.betting_round.can_raise(
+				player,
+				current_target=previous_bet,
+				minimum_raise=self.minimum_raise,
+			):
 				raise ValueError("Betting was not reopened by the short all-in")
 			if amount <= previous_bet:
 				raise ValueError("Raise target must exceed the current bet")
@@ -156,6 +163,7 @@ class HandController:
 			bet_increased=bet_increased,
 			full_raise=full_raise,
 			short_raise=short_raise,
+			target_bet=game_state.betting.current_bet,
 		)
 
 		if self.betting_round.is_complete():
@@ -207,13 +215,14 @@ class HandController:
 		small_blind_player = game_state.players[self.small_blind_index]
 		big_blind_player = game_state.players[self.big_blind_index]
 
-		if small_blind_player.chips < self.small_blind:
-			raise ValueError("Small blind player does not have enough chips")
-		if big_blind_player.chips < self.big_blind:
-			raise ValueError("Big blind player does not have enough chips")
+		small_blind_amount = min(self.small_blind, small_blind_player.chips)
+		big_blind_amount = min(self.big_blind, big_blind_player.chips)
 
-		small_blind_player.bet(self.small_blind)
-		big_blind_player.bet(self.big_blind)
+		if small_blind_amount > 0:
+			small_blind_player.bet(small_blind_amount)
+		if big_blind_amount > 0:
+			big_blind_player.bet(big_blind_amount)
+
 		game_state.betting.current_bet = self.big_blind
 
 	def _set_preflop_first_player(self, game_state):

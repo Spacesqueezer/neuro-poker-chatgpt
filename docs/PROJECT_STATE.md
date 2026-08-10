@@ -11,9 +11,9 @@ The Texas Hold'em engine is playable from blind posting through betting, all-ins
 - 52-card deck, hole cards and community board.
 - Seven-card Texas Hold'em evaluation and comparison.
 - Full `Player` entities owned by `GameState`.
-- Dealer button, SB/BB, heads-up order and street progression.
+- Dealer button, SB/BB, short-blind all-ins, heads-up order and street progression.
 - Check, call, bet, raise, fold and all-in actions.
-- Minimum bet/full-raise sizing and short-raise reopen handling.
+- Minimum bet/full-raise sizing, single short raises and cumulative short-all-in reopen handling.
 - Per-player hand contributions.
 - Main pot, multiple side pots, unmatched refunds, per-layer ties and deterministic odd chips through `PotManager`.
 - Automatic board runout when betting is closed by all-ins.
@@ -55,8 +55,6 @@ Verification tools
 
 ## Known gaps
 
-- Short SB/BB all-ins are still rejected during blind posting.
-- Multiple cumulative short raises need additional reopen-rule verification.
 - Busted-player removal still belongs to the manual runner instead of an explicit table/seat lifecycle model.
 - Scripted manual scenarios have no replay seed, so they receive structural rather than exact replay verification.
 - There is no stable headless agent API yet; the stress runner owns a minimal random legal-action policy only for engine verification.
@@ -66,21 +64,7 @@ Verification tools
 
 Complete engine hardening, then introduce a headless simulation API.
 
-### 1. Close remaining betting edge cases
-
-Affected systems:
-- `HandController`
-- `BettingRound`
-- blind posting
-- deterministic manual scenarios
-
-Work:
-- support short SB/BB all-ins;
-- verify first-to-act behavior when a blind starts all-in;
-- add cumulative-short-raise reopen scenarios/tests;
-- keep chip conservation explicit.
-
-### 2. Move table lifecycle out of debug tooling
+### 1. Move table lifecycle out of debug tooling
 
 Affected systems:
 - new table/seat lifecycle component;
@@ -90,9 +74,11 @@ Affected systems:
 Work:
 - represent funded, busted and inactive seats explicitly;
 - move dealer button across unavailable seats correctly;
-- stop deleting busted players directly inside the manual runner.
+- stop deleting busted players directly inside the manual runner;
+- preserve short-blind behavior when a funded seat has less than the required blind.
 
-### 3. Promote simulation into a stable API
+### 2. Promote simulation into a stable API
+
 
 Direction:
 
@@ -102,7 +88,7 @@ play_hand(players/agents, seed) -> HandHistory/HandResult
 
 The engine must remain independent from AI implementations. Baseline agents should consume a legal-action/state interface rather than calling `HandController` internals directly.
 
-### 4. Stress before Arena
+### 3. Stress before Arena
 
 Before Arena work, repeatedly run:
 

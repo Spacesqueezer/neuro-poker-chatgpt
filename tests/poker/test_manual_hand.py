@@ -64,7 +64,20 @@ from tools.manual_scenarios import create_scenario, get_scenario, parse_card, sc
 
 
 def test_scenario_catalog_contains_core_debug_cases():
-	assert {"default", "headsup", "minraise", "short-allin", "sidepot", "splitpot", "cascade", "sidepot-fold", "sidepot-split", "oddchip"} <= set(scenario_names())
+	assert {
+		"default",
+		"headsup",
+		"minraise",
+		"short-allin",
+		"short-bb",
+		"cumulative-reopen",
+		"sidepot",
+		"splitpot",
+		"cascade",
+		"sidepot-fold",
+		"sidepot-split",
+		"oddchip",
+	} <= set(scenario_names())
 
 
 def test_sidepot_scenario_has_unequal_stacks_and_fixed_cards():
@@ -117,3 +130,35 @@ def test_sidepot_split_uses_board_that_forces_tie():
 	_, _, scenario = create_scenario("sidepot-split")
 
 	assert scenario.board == ("10H", "JH", "QH", "KH", "AH")
+
+def test_short_big_blind_scenario_keeps_full_preflop_target():
+	state, controller, _ = create_scenario("short-bb")
+
+	assert state.players[2].chips == 0
+	assert state.players[2].current_bet == 1
+	assert state.betting.current_bet == 2
+	assert controller.current_player(state) is state.players[0]
+
+
+def test_cumulative_reopen_scenario_has_expected_stack_geometry():
+	state, controller, scenario = create_scenario("cumulative-reopen")
+
+	assert [player.chips + player.current_bet for player in state.players] == [100, 18, 100, 100, 13]
+	assert controller.current_player(state).name == "Dave"
+	assert scenario.board == ("8S", "9S", "10S", "JC", "QH")
+
+def test_cumulative_reopen_scenario_allows_original_raiser_to_raise_again():
+	state, controller, _ = create_scenario("cumulative-reopen")
+
+	controller.process_action(state, PlayerAction.RAISE, 10)
+	controller.process_action(state, PlayerAction.ALL_IN)
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.ALL_IN)
+	controller.process_action(state, PlayerAction.CALL)
+
+	assert controller.current_player(state).name == "Dave"
+	controller.process_action(state, PlayerAction.RAISE, 26)
+
+	assert state.betting.current_bet == 26
+	assert controller.minimum_raise == 8
+

@@ -36,6 +36,70 @@ def test_hand_controller_deals_first_cards_and_posts_heads_up_blinds():
 	assert controller.current_player(state) is state.players[0]
 
 
+def test_short_small_blind_posts_remaining_stack_and_is_skipped_for_action():
+	state = GameState()
+	state.add_player(Player("Alice", 100))
+	state.add_player(Player("Bob", 1))
+	state.add_player(Player("Carol", 100))
+	controller = HandController(Dealer(seed=11), small_blind=2, big_blind=4)
+
+	controller.start_hand(state)
+
+	assert state.players[1].chips == 0
+	assert state.players[1].current_bet == 1
+	assert state.players[1].total_contribution == 1
+	assert state.players[2].current_bet == 4
+	assert state.betting.current_bet == 4
+	assert controller.current_player(state) is state.players[0]
+
+	controller.process_action(state, PlayerAction.CALL)
+	street = controller.process_action(state, PlayerAction.CHECK)
+
+	assert street == GameStreet.FLOP
+	assert state.betting.pot == 9
+	assert controller.current_player(state) is state.players[2]
+	assert sum(player.chips for player in state.players) + state.betting.pot == 201
+
+
+def test_short_big_blind_does_not_reduce_preflop_target():
+	state = GameState()
+	state.add_player(Player("Alice", 100))
+	state.add_player(Player("Bob", 100))
+	state.add_player(Player("Carol", 1))
+	controller = HandController(Dealer(seed=12), small_blind=1, big_blind=2)
+
+	controller.start_hand(state)
+
+	assert state.players[2].chips == 0
+	assert state.players[2].current_bet == 1
+	assert state.players[2].total_contribution == 1
+	assert state.betting.current_bet == 2
+	assert controller.current_player(state) is state.players[0]
+
+	controller.process_action(state, PlayerAction.CALL)
+	street = controller.process_action(state, PlayerAction.CALL)
+
+	assert street == GameStreet.FLOP
+	assert state.betting.pot == 5
+	assert controller.current_player(state) is state.players[1]
+	assert sum(player.chips for player in state.players) + state.betting.pot == 201
+
+
+def test_heads_up_short_blind_all_in_runs_out_without_requesting_action():
+	state = GameState()
+	state.add_player(Player("Alice", 1))
+	state.add_player(Player("Bob", 100))
+	controller = HandController(Dealer(seed=13), small_blind=2, big_blind=4)
+
+	controller.start_hand(state)
+
+	assert state.round_manager.street == GameStreet.SHOWDOWN
+	assert len(state.board.cards) == 5
+	assert state.betting.pot == 0
+	assert controller.showdown_winners
+	assert sum(player.chips for player in state.players) == 101
+
+
 def test_hand_controller_requires_two_players():
 	state = make_state(player_count=1)
 	controller = HandController(Dealer())

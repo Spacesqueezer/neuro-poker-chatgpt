@@ -27,9 +27,11 @@ Implemented:
 - refunds
 - showdown and payout
 
-Still hardening:
+Hardened:
 - short blind all-ins
-- cumulative short-raise reopen edge cases
+- cumulative short-all-in reopen semantics
+
+Still hardening:
 - explicit table/seat lifecycle
 
 ## Phase 3 — Deterministic Verification 🟡 current
@@ -44,9 +46,9 @@ Implemented:
 - randomized engine stress runner
 
 Next:
+- explicit table/seat lifecycle
 - replay/stress larger corpora
 - promote a stable headless `play_hand` simulation API
-- table lifecycle integration
 
 ## Phase 4 — Baseline Agents
 
