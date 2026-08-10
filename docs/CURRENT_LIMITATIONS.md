@@ -1,76 +1,83 @@
 # Current Limitations
 
-This file describes known temporary constraints and architectural risks.
+This document lists known temporary constraints and verification boundaries.
 
-## Player model
+## Betting and blinds
 
-GameState stores full Player entities. Hole cards belong to each player's nested Hand:
+Supported:
+- check, call, bet, raise, fold and all-in;
+- minimum bets and full-raise sizing;
+- short raises without incorrect action reopening;
+- short all-in calls below the current target;
+- dealer/SB/BB assignment and heads-up action order;
+- automatic all-in board runout.
 
-GameState
- └── Player
-      └── Hand
+Known gaps:
+- a player with fewer chips than the required SB/BB currently causes blind posting to reject hand start;
+- cumulative short-raise reopen behavior needs broader deterministic coverage.
 
-Dealer resets per-hand Player state before dealing new hole cards.
+## Pot accounting
 
-## Betting flow
+`Player.total_contribution` is the source of truth for hand-level contribution. `PotManager` supports:
+- main pots;
+- multiple side pots;
+- folded contributors;
+- unmatched refunds;
+- ties in individual pot layers;
+- deterministic odd-chip assignment.
 
-Current state:
-- HandController owns the active BettingRound lifecycle;
-- check, call, bet, raise, fold and supported all-in actions are playable;
-- minimum bet and full-raise sizing are enforced;
-- short raises do not incorrectly reopen betting;
-- blinds, dealer rotation and heads-up action order are implemented;
-- completed rounds collect chips and automatically advance streets;
-- when further betting is impossible because of all-ins, the board runs out automatically;
-- showdown evaluates active players, pays a single winner or splits the main pot on ties;
-- uncontested pots are paid immediately.
+Chip conservation must remain an invariant in every new pot/betting test.
 
-Known limitations:
-- per-hand contribution accounting is separated from street-local bets through `Player.total_contribution`;
-- main/side pots are derived by `PotManager` from per-player hand contribution levels;
-- multiple side-pot levels, folded contributors, per-layer ties and deterministic odd-chip assignment are supported;
-- short all-in calls below the current target are supported;
-- unmatched excess contribution is returned at settlement;
-- short blind all-ins are not supported;
-- manual busted-player removal is a debug-runner behavior, not yet a table/seat lifecycle model.
+## Table lifecycle
+
+Busted-player removal is still performed by `tools/manual_hand.py` before the next debug hand. This is not the intended final architecture.
+
+A future explicit table/seat component must own:
+- funded/busted/inactive seat state;
+- participation in the next hand;
+- dealer-button movement across unavailable seats.
+
+## Hand history and replay
+
+Completed hands can be stored as JSONL HandHistory records.
+
+- Seed-based random histories support exact replay through `HandReplayVerifier`.
+- Histories from scripted scenarios currently have `seed=None`; they receive structural verification only.
+- Exact replay compares the regenerated HandHistory payload (except the random hand id), including cards, actions, streets, pots and final stacks.
+
+Commands:
+
+```text
+python tools/hand_history_viewer.py
+python tools/verify_history.py
+```
+
+## Stress verification
+
+`tools/stress_poker.py` creates independent seeded hands and chooses from legal actions using a minimal random smoke policy.
+
+It currently verifies:
+- hand termination;
+- chip conservation;
+- non-negative stacks;
+- zero collected pot after terminal settlement;
+- completed HandHistory;
+- unique visible cards.
+
+It is not an Arena and its random policy is not a poker strategy API.
+
+Example:
+
+```text
+python tools/stress_poker.py --hands 10000 --seed 42
+```
+
+Any failure prints the exact hand seed before exiting.
 
 ## Manual verification
 
-`python tools/manual_hand.py` starts the deterministic `default` scenario.
+`python tools/manual_hand.py` starts a random default hand. Use `--seed N` to reproduce it exactly.
 
-A scenario can be selected at launch:
+Named deterministic scenarios remain available through `--scenario NAME` or `scenario NAME` inside the runner.
 
-`python tools/manual_hand.py --scenario sidepot`
-
-Or switched while the runner is open:
-- `scenario list`
-- `scenario headsup`
-- `scenario minraise`
-- `scenario short-allin`
-- `scenario sidepot`
-- `scenario splitpot`
-- `scenario cascade`
-- `scenario sidepot-fold`
-- `scenario sidepot-split`
-- `scenario oddchip`
-
-Every named scenario fixes starting stacks, hole cards, future board runout and initial dealer position. The tool intentionally exposes all hole cards for engine debugging.
-
-Supported play/debug commands:
-- check
-- call
-- bet N
-- raise N
-- fold
-- all-in / allin
-- state
-- players
-- deal
-- scenario list
-- scenario NAME
-- help
-- quit
-
-## AI continuation rule
-
-Before changing any limitation described here, update this file and PROJECT_STATE.md.
+The runner intentionally exposes all hole cards for engine debugging.

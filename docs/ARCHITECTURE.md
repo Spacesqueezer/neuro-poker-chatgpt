@@ -111,3 +111,27 @@ Folded players still fund layers through their contribution but are removed from
 ## HandHistory
 
 `poker.game.hand_history` is the structured event record for a completed hand. `HandController` records domain events; persistence is handled separately by `HandHistoryStore`. Debug tooling may serialize histories to JSONL without making the poker engine depend on filesystem storage.
+
+## Verification Layer
+
+Verification tooling depends on the poker engine, never the reverse.
+
+```text
+HandHistory
+    |
+    +--> HandReplayVerifier
+    |       +--> exact replay for seed-based hands
+    |       +--> structural checks for scripted histories
+    |
+    +--> hand_history_viewer.py
+
+HandController + Dealer
+    |
+    +--> stress_poker.py
+            random legal actions
+            invariant checks
+```
+
+`HandReplayVerifier` reconstructs seed-based hands from starting stacks, dealer position, blinds, seed and recorded actions. The replayed structured history must match the recorded history except for the generated hand id.
+
+`stress_poker.py` is verification tooling, not an agent/Arena abstraction. Its legal-action policy must not become a dependency of the engine.

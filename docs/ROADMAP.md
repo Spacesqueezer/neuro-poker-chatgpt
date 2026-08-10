@@ -1,66 +1,66 @@
 # Neuro Poker Roadmap
 
-## Phase 0 — Foundation
+## Phase 0 — Foundation ✅
 
-Status: Current
+- project structure
+- NeuroPatch workflow
+- Ruff / Pyright / Pytest / coverage configuration
+- development documentation
 
-- Project infrastructure
-- NeuroPatch
-- Ruff
-- Pyright
-- Pytest
-- Coverage
-- Documentation
-- Deterministic experiments
+## Phase 1 — Poker Domain Core ✅
 
-## Phase 1 — Poker Domain Core
-
-Create pure poker rules.
-
-Goals:
-- cards
-- deck
-- combinations
+- cards and deck
+- player hand and board
 - hand evaluation
-- positions ✅ BTN/SB/BB foundation
+- seven-card comparison
+- positions foundation
 
-No AI.
+## Phase 2 — Game Engine ✅ foundation complete
 
-## Phase 2 — Game Engine
-
-Implement:
-
-- tables
-- players
+Implemented:
+- players and stacks
 - betting rounds
-- pots
-- side pots
-- showdown ✅ main-pot payout foundation
+- dealer button and blinds
+- street progression
+- all-ins
+- main and side pots
+- refunds
+- showdown and payout
 
-## Phase 3 — Deterministic Simulation
+Still hardening:
+- short blind all-ins
+- cumulative short-raise reopen edge cases
+- explicit table/seat lifecycle
 
-Required:
+## Phase 3 — Deterministic Verification 🟡 current
 
-- seed-based generation
-- reproducible hands
-- hand replay
-- scenario generation ✅ named deterministic manual scenarios foundation
-- experiment tracking
+Implemented:
+- seeded random dealing
+- deterministic manual scenarios
+- structured HandHistory
+- JSONL history viewer
+- exact seed-based hand replay verification
+- structural verification for scripted histories
+- randomized engine stress runner
+
+Next:
+- replay/stress larger corpora
+- promote a stable headless `play_hand` simulation API
+- table lifecycle integration
 
 ## Phase 4 — Baseline Agents
 
-Create:
-
-- random agent
+Create agents against a stable legal-action/state interface:
+- random
+- calling station
 - nit
 - TAG
 - LAG
 - maniac
-- calling station
+
+Then add Arena statistics and long-run comparison.
 
 ## Phase 5 — Mathematical Agent
-
-Implement:
 
 - equity calculation
 - pot odds
@@ -69,9 +69,7 @@ Implement:
 
 ## Phase 6 — Learning System
 
-Training pipeline:
-
-Human-like data / generated data
+Generated / curated data
         ↓
 Imitation learning
         ↓
@@ -81,17 +79,20 @@ Reinforcement learning
 
 ## Phase 7 — Opponent Modeling
 
-Database-backed player profiles.
+- persistent player profiles
+- tendencies and statistics
+- adaptive strategy inputs
 
-## Phase 8 — Computer Vision
+## Phase 8 — External State Extraction
 
-Extract:
-
-- cards
+Only after the internal simulation/agent stack is stable:
+- card recognition
 - stacks
 - actions
-- positions ✅ BTN/SB/BB foundation
+- positions
 - pot size
+
+Vision must remain separate from poker decisions.
 
 ## Phase 9 — Advanced Strategy
 
