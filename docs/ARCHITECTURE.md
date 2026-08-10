@@ -141,3 +141,26 @@ HandController + Dealer
 `HandReplayVerifier` reconstructs seed-based hands from starting stacks, dealer position, blinds, seed and recorded actions. The replayed structured history must match the recorded history except for the generated hand id.
 
 `stress_poker.py` is verification tooling, not an agent/Arena abstraction. Its legal-action policy must not become a dependency of the engine.
+
+## Public Simulation Boundary
+
+Agent and Arena code must use `poker.api`; it must not depend on hand-controller internals.
+
+```text
+Poker engine internals
+        |
+        v
+poker.api
+├── HandStateView
+├── PublicPlayerView
+├── LegalActions
+├── ActionDecision
+└── play_hand()
+        |
+        v
+Agents / Arena
+```
+
+`HandStateView` contains public state and only the acting player's hole cards. `LegalActions` contains action availability and sizing bounds. `play_hand()` validates an agent decision against that query surface and then delegates mutation to `HandController`, which remains the source of truth for action execution.
+
+This boundary prevents Arena, baseline agents and future learning systems from duplicating poker legality rules.

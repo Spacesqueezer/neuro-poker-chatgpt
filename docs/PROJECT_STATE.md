@@ -2,9 +2,9 @@
 
 ## Current milestone
 
-Phase 3: deterministic verification and simulation hardening.
+Phase 3 is complete: deterministic verification now exercises the same public hand boundary intended for agents.
 
-The Texas Hold'em hand engine is playable and stress-tested. Persistent table seats now own participation between hands, so debug tooling no longer deletes busted players or owns dealer-button continuity.
+The next milestone is Phase 4: baseline agents and Arena v1.
 
 ## Current capabilities
 
@@ -22,10 +22,28 @@ The Texas Hold'em hand engine is playable and stress-tested. Persistent table se
 
 - Persistent `Table` with stable `Seat` objects.
 - Explicit `ACTIVE`, `SITTING_OUT` and `BUSTED` seat states.
-- `GameState.players` is the participant view for the current/next hand, not the persistent seating model.
-- Busted and sitting-out seats remain at the table but are excluded when the next hand is prepared.
-- Dealer button advances over unavailable seats while preserving physical seat order.
-- Sit-out/sit-in changes apply to the next hand and do not mutate an already active hand.
+- `GameState.players` is the participant view for the current/next hand.
+- Dealer button skips unavailable seats while preserving physical seat order.
+
+### Public simulation boundary
+
+`poker.api` is the supported boundary for agent/simulation code:
+
+```text
+HandStateView
++ LegalActions
++ ActionDecision
+        |
+        v
+play_hand(agents, seed, dealer_name=...) -> HandHistory
+```
+
+- `HandStateView` exposes public table/hand state plus only the acting player's hole cards.
+- `LegalActions` exposes call amount and legal bet/raise target ranges.
+- Agent decisions are checked against `LegalActions` and then still processed by `HandController`.
+- `play_hand()` owns the headless hand loop and returns completed `HandHistory`.
+- `dealer_name` allows Arena to rotate position fairly across independent hands.
+- `tools/stress_poker.py` now consumes this public API instead of `HandController` internals.
 
 ### Verification
 
@@ -35,82 +53,72 @@ The Texas Hold'em hand engine is playable and stress-tested. Persistent table se
 - Interactive history viewer.
 - Exact seed-based replay verification.
 - Structural verification fallback for scripted histories.
-- Randomized stress runner with chip/card/termination invariants.
+- Randomized stress runner using the public simulation API.
 
 ## Architecture snapshot
 
 ```text
-Table
-└── Seat[]
-    ├── status
-    └── Player
-        └── Hand
+Table / GameState / HandController
+             |
+             v
+         poker.api
+   ┌─────────┼──────────┐
+   v         v          v
+HandState  Legal     play_hand
+  View     Actions       |
+                        agents
 
-GameState
-├── Table
-├── players[]  <- current hand participant view
-├── Deck
-├── Board
-├── BettingState
-├── RoundManager
-└── TurnOrder
-
-HandController
-├── Dealer
-├── ActionResolver
-├── BettingRound
-├── PotManager
-└── HandHistory
+HandHistory
+├── viewer
+├── replay verifier
+└── stress verification
 ```
+
+The poker engine does not import or depend on agents. Agent code depends only on `poker.api`.
 
 ## Known gaps
 
-- No stable headless agent-facing hand API yet.
-- No legal-action/state observation interface intended for agents.
-- Arena, baseline agents and long-run poker statistics are not implemented.
-- Scripted manual scenarios have no replay seed, so they receive structural rather than exact replay verification.
-- Table rebuy/top-up, joining/leaving seats and cash-game session rules are intentionally not implemented yet.
+- Arena and baseline strategy agents are not implemented yet.
+- `play_hand()` currently models one independent hand with a shared starting stack value; multi-hand session stack persistence belongs to Arena/Table orchestration.
+- Scripted manual scenarios have no replay seed and therefore receive structural rather than exact replay verification.
+- Table rebuy/top-up, joining/leaving seats and cash-room session rules remain intentionally out of scope.
 
-## Next milestone
+## Next milestone — Arena v1
 
-Promote hand execution into a stable headless simulation API without coupling the poker engine to AI implementations.
+### 1. Baseline agents
 
-### 1. Introduce a legal-action/state interface
+Implement against `poker.api` only:
+- `RandomAgent`;
+- `CallingStationAgent`;
+- `NitAgent`.
 
-Direction:
+Agents must never inspect `GameState`, `HandController`, opponent hole cards or deck internals.
 
-```text
-HandStateView
-├── acting player
-├── street / board
-├── stacks / contributions
-├── pot / current target
-├── positions
-└── legal actions + sizing bounds
-```
-
-The interface must expose enough information for agents without giving them hidden opponent hole cards.
-
-### 2. Introduce a headless hand runner
+### 2. Arena runner
 
 Direction:
 
 ```text
-play_hand(table, policies, seed) -> HandHistory / HandResult
+ArenaRunner
+├── rotates dealer positions
+├── assigns deterministic hand seeds
+├── calls play_hand()
+├── aggregates stack deltas
+└── reports failures with exact seed
 ```
 
-The runner should coordinate policies through the public legal-action interface rather than through `HandController` internals.
+Initial statistics:
+- hands;
+- profit/loss;
+- bb/100;
+- showdown vs uncontested counts;
+- chip conservation / crashes.
 
-### 3. Add baseline policies
+Do not add neural models or dataset generation yet.
 
-Start with behavior used for verification rather than strategy quality:
-- Random;
-- Calling Station;
-- Nit.
+### 3. Verification requirements
 
-### 4. Build Arena only after the public simulation boundary is stable
-
-Before Arena work, keep running:
+Before and after Arena work run:
 
 ```text
 python -m pytest -q
@@ -118,7 +126,7 @@ python tools/stress_poker.py --hands 10000 --seed 42
 python tools/verify_history.py
 ```
 
-Any random stress failure must report the exact seed.
+Any randomized failure must report its exact seed.
 
 ## AI bootstrap instructions
 

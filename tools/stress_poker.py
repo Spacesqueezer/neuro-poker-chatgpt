@@ -8,92 +8,57 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from poker.api import ActionDecision, play_hand
 from poker.game.actions import PlayerAction
-from poker.game.dealer import Dealer
-from poker.game.game_state import GameState
-from poker.game.hand_controller import HandController
-from poker.game.round_manager import GameStreet
-from poker.player.player import Player
 
 
-TERMINAL_STREETS = {GameStreet.SHOWDOWN, GameStreet.COMPLETE}
+class RandomSmokeAgent:
+	def __init__(self, rng):
+		self.rng = rng
+
+	def choose_action(self, state, legal):
+		choices = []
+		for action in legal.actions:
+			if action == PlayerAction.BET:
+				choices.append(ActionDecision(action, legal.min_bet))
+			elif action == PlayerAction.RAISE:
+				choices.append(ActionDecision(action, legal.min_raise_to))
+			else:
+				choices.append(ActionDecision(action))
+		return self.rng.choice(choices)
 
 
-def create_hand(seed, player_count=3, stack=100):
-	state = GameState()
-	for index in range(player_count):
-		state.add_player(Player(f"P{index + 1}", stack))
-	controller = HandController(Dealer(seed=seed))
-	controller.start_hand(state)
-	return state, controller
-
-
-def legal_actions(state, controller):
-	player = controller.current_player(state)
-	if player is None or player.chips <= 0:
-		return []
-
-	target = state.betting.current_bet
-	facing = target - player.current_bet
-	actions = []
-
-	if facing > 0:
-		actions.append((PlayerAction.FOLD, 0))
-		actions.append((PlayerAction.CALL, 0))
-	else:
-		actions.append((PlayerAction.CHECK, 0))
-
-	max_target = player.current_bet + player.chips
-	if target == 0 and player.chips >= controller.big_blind:
-		actions.append((PlayerAction.BET, controller.big_blind))
-
-	if target > 0 and controller.betting_round.can_raise(player):
-		minimum_target = target + controller.minimum_raise
-		if max_target >= minimum_target:
-			actions.append((PlayerAction.RAISE, minimum_target))
-
-	if player.chips > 0:
-		actions.append((PlayerAction.ALL_IN, 0))
-
-	return actions
-
-
-def assert_invariants(state, controller, starting_total):
-	if sum(player.chips for player in state.players) != starting_total:
+def assert_invariants(history, starting_total):
+	if sum(history.final_stacks.values()) != starting_total:
 		raise AssertionError("chip conservation failed")
-	if any(player.chips < 0 for player in state.players):
+	if any(chips < 0 for chips in history.final_stacks.values()):
 		raise AssertionError("negative player stack")
-	if state.betting.pot != 0:
-		raise AssertionError("terminal hand left chips in collected pot")
-	if controller.hand_history is None or controller.hand_history.result is None:
+	if history.result is None:
 		raise AssertionError("terminal hand has no completed HandHistory")
 
+	board = []
+	for event in history.events:
+		if event.type in {"street", "showdown"}:
+			board = list(event.data.get("board", board))
 	cards = [
-		str(card)
-		for player in state.players
-		for card in player.hand.cards
-	] + [str(card) for card in state.board.cards]
+		card
+		for player in history.players
+		for card in player.get("cards", [])
+	] + board
 	if len(cards) != len(set(cards)):
 		raise AssertionError("duplicate visible cards")
 
 
-def run_hand(seed, rng, player_count=3, stack=100, max_actions=200):
-	state, controller = create_hand(seed, player_count=player_count, stack=stack)
-	starting_total = player_count * stack
-	actions_taken = 0
-
-	while state.round_manager.street not in TERMINAL_STREETS:
-		choices = legal_actions(state, controller)
-		if not choices:
-			raise AssertionError("no legal action available in non-terminal state")
-		action, amount = rng.choice(choices)
-		controller.process_action(state, action, amount)
-		actions_taken += 1
-		if actions_taken > max_actions:
-			raise AssertionError("hand exceeded action limit")
-
-	assert_invariants(state, controller, starting_total)
-	return controller.hand_history
+def run_hand(seed, rng, player_count=3, stack=100):
+	agent = RandomSmokeAgent(rng)
+	agents = {f"P{index + 1}": agent for index in range(player_count)}
+	history = play_hand(
+		agents,
+		seed=seed,
+		starting_stack=stack,
+	)
+	assert_invariants(history, player_count * stack)
+	return history
 
 
 def main():
@@ -138,7 +103,6 @@ def main():
 	print(f"Showdowns: {showdowns}")
 	print(f"Uncontested: {uncontested}")
 	print("Chip conservation: OK")
-	print("Duplicate visible cards: 0")
 	print("Crashes: 0")
 
 

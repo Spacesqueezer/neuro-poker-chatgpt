@@ -17,45 +17,45 @@
 
 ## Phase 2 — Game Engine ✅
 
-Implemented and hardened:
-- players and stacks
 - betting rounds
 - dealer button and blinds
-- short blinds
-- cumulative short-all-in reopening
-- street progression and all-ins
+- short blinds and cumulative short-all-in reopening
+- all-ins and street progression
 - main/side pots and refunds
 - showdown and payout
 - persistent Table/Seat lifecycle
-- busted and sitting-out seat skipping
 
-## Phase 3 — Deterministic Verification 🟡 current
+## Phase 3 — Deterministic Verification & Public Simulation API ✅
 
-Implemented:
 - seeded random dealing
 - deterministic scenarios
 - structured HandHistory
-- history viewer
-- exact seed-based replay
-- structural scripted-history verification
-- randomized stress runner
+- history viewer and replay verification
+- randomized stress verification
+- `HandStateView`
+- `LegalActions`
+- `ActionDecision`
+- headless `play_hand()`
+- stress runner migrated to the public simulation boundary
 
-Current target:
-- define a stable legal-action/state boundary;
-- promote hand execution to a reusable headless API;
-- stress that public boundary before Arena work.
+## Phase 4 — Baseline Agents & Arena 🟡 next
 
-## Phase 4 — Baseline Agents
-
-Build policies only against the stable public simulation interface:
-- random
-- calling station
-- nit
+Build only against `poker.api`:
+- Random Agent
+- Calling Station
+- Nit
 - TAG
 - LAG
-- maniac
+- Maniac
 
-Then add Arena statistics and long-run comparison.
+Arena v1 must first provide:
+- deterministic seeds;
+- fair dealer-position rotation;
+- profit/loss and bb/100;
+- showdown/uncontested counts;
+- crash and conservation reporting.
+
+Do not start neural training before Arena can run long baseline-vs-baseline matches reproducibly.
 
 ## Phase 5 — Mathematical Agent
 

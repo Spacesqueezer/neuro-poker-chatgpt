@@ -4,7 +4,7 @@ This document lists known temporary constraints and verification boundaries.
 
 ## Betting and pots
 
-The current no-limit hand engine supports:
+The no-limit hand engine currently supports:
 - check, call, bet, raise, fold and all-in;
 - full and short blind posting;
 - minimum bets and full-raise sizing;
@@ -17,20 +17,36 @@ The current no-limit hand engine supports:
 
 ## Table lifecycle
 
-Persistent lifecycle is owned by `Table` / `Seat`, not by debug tooling.
+Persistent lifecycle is owned by `Table` / `Seat`, not debug tooling.
 
 Supported seat states:
 - `ACTIVE`;
 - `SITTING_OUT`;
 - `BUSTED`.
 
-Busted and sitting-out seats keep their physical seat positions but are excluded from the next hand. Dealer movement skips unavailable seats. A sit-out/sit-in request affects future hand participation and does not remove a player from a hand already in progress.
-
 Not yet modeled:
 - rebuy/top-up;
-- joining or leaving an occupied table session;
+- joining/leaving an occupied table session;
 - waiting-for-BB/cash-room posting rules;
 - tournament blind schedules.
+
+## Public agent/simulation API
+
+`poker.api` is now the supported external hand boundary.
+
+`HandStateView` intentionally exposes:
+- public player stacks/bets/contributions/positions;
+- board, pot, street and target;
+- only the acting player's hole cards.
+
+`LegalActions` exposes legal action kinds plus call amount and bet/raise sizing bounds. `play_hand()` validates the returned `ActionDecision` before passing it to `HandController`.
+
+Current boundary limitations:
+- one `play_hand()` call creates one independent table/hand;
+- all participants currently receive the same `starting_stack` argument;
+- multi-hand stack persistence and session statistics belong to the upcoming Arena layer.
+
+External agents must not import `HandController`, `GameState` or `BettingRound`.
 
 ## Hand history and replay
 
@@ -47,17 +63,9 @@ python tools/verify_history.py
 
 ## Stress verification
 
-`tools/stress_poker.py` is engine verification tooling, not an Arena or strategy API.
+`tools/stress_poker.py` now exercises `poker.api.play_hand()` with a random smoke policy. It is still verification tooling, not an Arena strategy benchmark.
 
-It checks:
-- termination;
-- chip conservation;
-- non-negative stacks;
-- zero collected pot after terminal settlement;
-- completed HandHistory;
-- unique visible cards.
-
-Example:
+It checks termination, chip conservation, non-negative final stacks, completed history and unique visible cards.
 
 ```text
 python tools/stress_poker.py --hands 10000 --seed 42
@@ -67,16 +75,4 @@ python tools/stress_poker.py --hands 10000 --seed 42
 
 `python tools/manual_hand.py` starts a random default hand. Use `--seed N` for exact reproduction.
 
-Useful lifecycle commands:
-- `table`;
-- `sitout NAME`;
-- `sitin NAME`;
-- `deal`.
-
 Named deterministic scenarios remain available through `--scenario NAME` or `scenario NAME`.
-
-The runner intentionally exposes all hole cards for debugging.
-
-## Agent boundary
-
-There is no stable public agent API yet. External policies must not be built directly against `HandController` internals because the next milestone is a dedicated legal-action/state interface and headless hand runner.
