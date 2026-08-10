@@ -137,7 +137,7 @@ def test_check_is_rejected_when_player_faces_big_blind():
 		controller.process_action(state, PlayerAction.CHECK)
 
 
-def test_short_all_in_is_rejected_until_side_pots_exist():
+def test_short_all_in_call_is_allowed_below_current_target():
 	state = GameState()
 	state.add_player(Player("Alice", 100))
 	state.add_player(Player("Bob", 5))
@@ -146,9 +146,17 @@ def test_short_all_in_is_rejected_until_side_pots_exist():
 	controller.start_hand(state)
 
 	controller.process_action(state, PlayerAction.RAISE, 10)
+	controller.process_action(state, PlayerAction.ALL_IN)
 
-	with pytest.raises(ValueError, match="side pot"):
-		controller.process_action(state, PlayerAction.ALL_IN)
+	assert state.players[1].chips == 0
+	assert state.players[1].current_bet == 5
+	assert state.players[1].total_contribution == 5
+	assert state.betting.current_bet == 10
+
+	street = controller.process_action(state, PlayerAction.CALL)
+
+	assert street == GameStreet.FLOP
+	assert state.betting.pot == 25
 
 
 def test_blind_configuration_is_validated():
@@ -373,3 +381,99 @@ def test_showdown_splits_tied_pot_and_awards_odd_chip_left_of_dealer():
 	assert controller.showdown_payouts[carol] == 34
 	assert controller.showdown_payouts[alice] == 33
 	assert state.betting.pot == 0
+
+
+def test_three_level_all_in_builds_main_side_and_unmatched_refund():
+	state = GameState()
+	alice = Player("Alice", 0)
+	bob = Player("Bob", 0)
+	carol = Player("Carol", 0)
+	for player in (alice, bob, carol):
+		state.add_player(player)
+	state.dealer_button_index = 0
+
+	alice.hand.cards = [Card(Rank.ACE, Suit.HEARTS), Card(Rank.ACE, Suit.DIAMONDS)]
+	bob.hand.cards = [Card(Rank.KING, Suit.HEARTS), Card(Rank.KING, Suit.DIAMONDS)]
+	carol.hand.cards = [Card(Rank.QUEEN, Suit.HEARTS), Card(Rank.QUEEN, Suit.DIAMONDS)]
+	state.board.cards = [
+		Card(Rank.TWO, Suit.CLUBS),
+		Card(Rank.FIVE, Suit.DIAMONDS),
+		Card(Rank.EIGHT, Suit.SPADES),
+		Card(Rank.JACK, Suit.CLUBS),
+		Card(Rank.THREE, Suit.HEARTS),
+	]
+	alice.total_contribution = 20
+	bob.total_contribution = 50
+	carol.total_contribution = 100
+	state.betting.pot = 170
+	controller = HandController(Dealer())
+
+	controller._resolve_showdown(state)
+
+	assert alice.chips == 60
+	assert bob.chips == 60
+	assert carol.chips == 50
+	assert controller.showdown_payouts[alice] == 60
+	assert controller.showdown_payouts[bob] == 60
+	assert controller.showdown_payouts[carol] == 50
+	assert controller.showdown_refunds == {carol: 50}
+	assert controller.showdown_winners == [alice, bob]
+	assert state.betting.pot == 0
+	assert sum(player.chips for player in state.players) == 170
+
+
+def test_call_with_too_few_chips_becomes_short_all_in_call():
+	state = GameState()
+	state.add_player(Player("Alice", 100))
+	state.add_player(Player("Bob", 5))
+	state.add_player(Player("Carol", 100))
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.RAISE, 10)
+	controller.process_action(state, PlayerAction.CALL)
+
+	bob = state.players[1]
+	assert bob.chips == 0
+	assert bob.current_bet == 5
+	assert bob.total_contribution == 5
+	assert state.betting.current_bet == 10
+
+
+def test_player_contribution_accumulates_across_streets():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CHECK)
+
+	assert [player.total_contribution for player in state.players] == [2, 2, 2]
+
+	controller.process_action(state, PlayerAction.BET, 10)
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CALL)
+
+	assert [player.total_contribution for player in state.players] == [12, 12, 12]
+
+
+def test_pot_layers_are_derived_from_contribution_levels():
+	state = GameState()
+	alice = Player("Alice", 0)
+	bob = Player("Bob", 0)
+	carol = Player("Carol", 0)
+	for player in (alice, bob, carol):
+		state.add_player(player)
+	alice.total_contribution = 20
+	bob.total_contribution = 50
+	carol.total_contribution = 100
+	controller = HandController(Dealer())
+
+	layers = controller._build_pot_layers(state)
+
+	assert [(amount, [player.name for player in eligible]) for amount, eligible in layers] == [
+		(60, ["Alice", "Bob", "Carol"]),
+		(60, ["Bob", "Carol"]),
+		(50, ["Carol"]),
+	]

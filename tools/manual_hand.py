@@ -45,10 +45,25 @@ def print_showdown(controller):
 	for player, result in controller.showdown_results.items():
 		marker = "WIN" if player in controller.showdown_winners else "   "
 		payout = controller.showdown_payouts.get(player, 0)
+		refund = controller.showdown_refunds.get(player, 0)
+		refund_text = f" refund={refund}" if refund else ""
 		print(
 			f"  {marker} {player.name}: {result.rank.name.lower().replace('_', ' ')} "
-			f"[{format_cards(result.cards)}] payout={payout}"
+			f"[{format_cards(result.cards)}] payout={payout}{refund_text}"
 		)
+
+	if controller.showdown_pots:
+		print("Pots:")
+		pot_index = 0
+		for kind, amount, eligible, winners in controller.showdown_pots:
+			if kind == "refund":
+				print(f"  refund {amount}: {winners[0].name}")
+				continue
+			pot_index += 1
+			label = "main" if pot_index == 1 else f"side {pot_index - 1}"
+			eligible_names = ", ".join(player.name for player in eligible)
+			winner_names = ", ".join(player.name for player in winners)
+			print(f"  {label} {amount}: eligible=[{eligible_names}] winner=[{winner_names}]")
 	print()
 
 

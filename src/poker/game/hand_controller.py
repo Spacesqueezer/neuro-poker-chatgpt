@@ -23,6 +23,8 @@ class HandController:
 		self.showdown_results = {}
 		self.showdown_winners = []
 		self.showdown_payouts = {}
+		self.showdown_refunds = {}
+		self.showdown_pots = []
 
 	def start_hand(self, game_state):
 		if len(game_state.players) < 2:
@@ -38,6 +40,8 @@ class HandController:
 		self.showdown_results = {}
 		self.showdown_winners = []
 		self.showdown_payouts = {}
+		self.showdown_refunds = {}
+		self.showdown_pots = []
 
 		game_state.advance_dealer_button()
 		self.dealer.start_hand(game_state)
@@ -74,15 +78,13 @@ class HandController:
 			call_amount = previous_bet - player.current_bet
 			if call_amount <= 0:
 				raise ValueError("Nothing to call")
-			if call_amount > player.chips:
-				raise ValueError("Short call all-in requires side pot support")
-			self.action_resolver.apply(player, action, call_amount)
+			contribution = min(call_amount, player.chips)
+			self.action_resolver.apply(player, action, contribution)
 		elif action == PlayerAction.BET:
 			if previous_bet != 0:
 				raise ValueError("Cannot bet while facing an existing bet")
 			if amount < self.big_blind:
 				raise ValueError(f"Minimum bet is {self.big_blind}")
-			self._ensure_target_does_not_create_side_pot(game_state, player, amount)
 			self.action_resolver.apply(player, action, amount)
 			game_state.betting.current_bet = player.current_bet
 			self.minimum_raise = amount
@@ -100,7 +102,6 @@ class HandController:
 			if raise_size < self.minimum_raise:
 				raise ValueError(f"Minimum raise target is {minimum_target}")
 
-			self._ensure_target_does_not_create_side_pot(game_state, player, amount)
 			contribution = amount - player.current_bet
 			self.action_resolver.apply(player, action, contribution)
 			game_state.betting.current_bet = player.current_bet
@@ -112,10 +113,6 @@ class HandController:
 				raise ValueError("Player has no chips")
 
 			all_in_target = player.current_bet + all_in_amount
-			if all_in_target < previous_bet:
-				raise ValueError("Short call all-in requires side pot support")
-			if all_in_target > previous_bet:
-				self._ensure_target_does_not_create_side_pot(game_state, player, all_in_target)
 
 			self.action_resolver.apply(player, action, all_in_amount)
 
@@ -210,12 +207,6 @@ class HandController:
 	def _set_postflop_first_player(self, game_state):
 		game_state.turn_order.set_to_next_active_after(game_state.dealer_button_index)
 
-	def _ensure_target_does_not_create_side_pot(self, game_state, player, target):
-		for other in game_state.players:
-			if other is player or other.folded:
-				continue
-			if other.chips == 0 and other.current_bet < target:
-				raise ValueError("Further betting requires side pot support")
 
 	def _finish_betting_round(self, game_state):
 		for player in game_state.players:
@@ -269,26 +260,80 @@ class HandController:
 			player: evaluate_seven_cards([*player.hand.cards, *game_state.board.cards])
 			for player in contenders
 		}
-		best_key = max(
-			(result.rank, result.tiebreaker)
-			for result in self.showdown_results.values()
-		)
-		winners = [
-			player
-			for player, result in self.showdown_results.items()
-			if (result.rank, result.tiebreaker) == best_key
-		]
+		self.showdown_payouts = {player: 0 for player in contenders}
+		self.showdown_refunds = {}
+		self.showdown_pots = []
+		self.showdown_winners = []
 
-		ordered_winners = self._winners_left_of_dealer(game_state, winners)
-		share, remainder = divmod(game_state.betting.pot, len(ordered_winners))
-		self.showdown_payouts = {}
-		for index, player in enumerate(ordered_winners):
-			payout = share + (1 if index < remainder else 0)
-			player.chips += payout
-			self.showdown_payouts[player] = payout
+		pot_layers = self._build_pot_layers(game_state)
+		if not pot_layers:
+			pot_layers = [(game_state.betting.pot, contenders)]
 
-		self.showdown_winners = ordered_winners
+		for amount, eligible_players in pot_layers:
+			if amount <= 0:
+				continue
+
+			if len(eligible_players) == 1:
+				player = eligible_players[0]
+				player.chips += amount
+				self.showdown_payouts[player] = self.showdown_payouts.get(player, 0) + amount
+				self.showdown_refunds[player] = self.showdown_refunds.get(player, 0) + amount
+				self.showdown_pots.append(("refund", amount, [player], [player]))
+				continue
+
+			eligible = [player for player in eligible_players if not player.folded]
+			if not eligible:
+				raise RuntimeError("Pot layer has no eligible player")
+
+			best_key = max(
+				(self.showdown_results[player].rank, self.showdown_results[player].tiebreaker)
+				for player in eligible
+			)
+			winners = [
+				player
+				for player in eligible
+				if (self.showdown_results[player].rank, self.showdown_results[player].tiebreaker) == best_key
+			]
+
+			ordered_winners = self._winners_left_of_dealer(game_state, winners)
+			share, remainder = divmod(amount, len(ordered_winners))
+			for index, player in enumerate(ordered_winners):
+				payout = share + (1 if index < remainder else 0)
+				player.chips += payout
+				self.showdown_payouts[player] = self.showdown_payouts.get(player, 0) + payout
+
+			self.showdown_pots.append(("pot", amount, eligible, ordered_winners))
+			for player in ordered_winners:
+				if player not in self.showdown_winners:
+					self.showdown_winners.append(player)
+
 		game_state.betting.pot = 0
+
+	def _build_pot_layers(self, game_state):
+		contributions = {
+			player: player.total_contribution
+			for player in game_state.players
+			if player.total_contribution > 0
+		}
+		if not contributions:
+			return []
+
+		levels = sorted(set(contributions.values()))
+		previous_level = 0
+		layers = []
+
+		for level in levels:
+			contributors = [
+				player
+				for player, contribution in contributions.items()
+				if contribution >= level
+			]
+			amount = (level - previous_level) * len(contributors)
+			if amount > 0:
+				layers.append((amount, contributors))
+			previous_level = level
+
+		return layers
 
 	def _winners_left_of_dealer(self, game_state, winners):
 		winner_set = set(winners)

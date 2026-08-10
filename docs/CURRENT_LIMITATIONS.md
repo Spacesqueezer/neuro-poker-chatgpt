@@ -27,9 +27,9 @@ Current state:
 
 Known limitations:
 - per-hand contribution accounting is not yet modeled independently of street bets;
-- main/side pots are not implemented;
-- short all-in calls below the current target are rejected;
-- betting that would create a side pot is rejected;
+- main/side pots are supported through per-player hand contribution levels;
+- short all-in calls below the current target are supported;
+- unmatched excess contribution is returned at settlement;
 - short blind all-ins are not supported;
 - manual busted-player removal is a debug-runner behavior, not yet a table/seat lifecycle model.
 

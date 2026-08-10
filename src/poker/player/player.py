@@ -6,6 +6,7 @@ class Player:
 		self.name = name
 		self.chips = chips
 		self.current_bet = 0
+		self.total_contribution = 0
 		self.folded = False
 		self.hand = Hand()
 
@@ -15,6 +16,7 @@ class Player:
 
 		self.chips -= amount
 		self.current_bet += amount
+		self.total_contribution += amount
 
 	def collect_bet(self):
 		amount = self.current_bet
@@ -26,5 +28,6 @@ class Player:
 
 	def reset_for_hand(self):
 		self.current_bet = 0
+		self.total_contribution = 0
 		self.folded = False
 		self.hand = Hand()

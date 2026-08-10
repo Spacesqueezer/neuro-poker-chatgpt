@@ -113,7 +113,7 @@ SCENARIOS = {
 	),
 	"sidepot": ManualScenario(
 		name="sidepot",
-		description="Three unequal stacks for main-pot/side-pot development.",
+		description="Three unequal stacks with main pot, side pot and unmatched refund.",
 		players=(("Alice", 20), ("Bob", 50), ("Carol", 100)),
 		dealer_name="Alice",
 		hole_cards={
@@ -122,7 +122,7 @@ SCENARIOS = {
 			"Carol": ("QH", "QD"),
 		},
 		board=("2C", "5D", "8S", "JC", "3H"),
-		hint="Target case: Alice all-in 20, Bob up to 50, Carol covers both. Side pots are not implemented yet.",
+		hint="Target case: Alice all-in 20, Bob all-in 50, Carol all-in 100; expect main + side + unmatched refund.",
 	),
 	"splitpot": ManualScenario(
 		name="splitpot",

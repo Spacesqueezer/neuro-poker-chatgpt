@@ -93,7 +93,7 @@ Complete edge-case betting and pot accounting before AI integration.
 
 The basic hand lifecycle is playable from blinds through showdown and payout. The manual runner can load named deterministic scenarios whose stacks, cards, board runout and dealer position remain fixed across runs. This is now the preferred human smoke-test surface for edge cases.
 
-The next major engine gap is unequal-stack all-in accounting: short calls, returned unmatched chips, main pots and side pots.
+Unequal-stack all-in accounting is now supported: short calls, returned unmatched chips, main pots and side pots are derived from per-player hand contributions.
 
 ## Development rules reference
 
