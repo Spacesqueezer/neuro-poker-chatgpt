@@ -3,6 +3,7 @@ from poker.game.actions import PlayerAction
 from poker.game.betting_round import BettingRound
 from poker.evaluation.seven_card import evaluate_seven_cards
 from poker.game.round_manager import GameStreet
+from poker.game.pot_manager import PotManager
 
 
 class HandController:
@@ -13,6 +14,7 @@ class HandController:
 			raise ValueError("Big blind must exceed small blind")
 
 		self.dealer = dealer
+		self.pot_manager = PotManager()
 		self.action_resolver = action_resolver or ActionResolver()
 		self.small_blind = small_blind
 		self.big_blind = big_blind
@@ -260,90 +262,27 @@ class HandController:
 			player: evaluate_seven_cards([*player.hand.cards, *game_state.board.cards])
 			for player in contenders
 		}
-		self.showdown_payouts = {player: 0 for player in contenders}
-		self.showdown_refunds = {}
-		self.showdown_pots = []
-		self.showdown_winners = []
-
-		pot_layers = self._build_pot_layers(game_state)
-		if not pot_layers:
-			pot_layers = [(game_state.betting.pot, contenders)]
-
-		for amount, eligible_players in pot_layers:
-			if amount <= 0:
-				continue
-
-			if len(eligible_players) == 1:
-				player = eligible_players[0]
-				player.chips += amount
-				self.showdown_payouts[player] = self.showdown_payouts.get(player, 0) + amount
-				self.showdown_refunds[player] = self.showdown_refunds.get(player, 0) + amount
-				self.showdown_pots.append(("refund", amount, [player], [player]))
-				continue
-
-			eligible = [player for player in eligible_players if not player.folded]
-			if not eligible:
-				raise RuntimeError("Pot layer has no eligible player")
-
-			best_key = max(
-				(self.showdown_results[player].rank, self.showdown_results[player].tiebreaker)
-				for player in eligible
-			)
-			winners = [
-				player
-				for player in eligible
-				if (self.showdown_results[player].rank, self.showdown_results[player].tiebreaker) == best_key
-			]
-
-			ordered_winners = self._winners_left_of_dealer(game_state, winners)
-			share, remainder = divmod(amount, len(ordered_winners))
-			for index, player in enumerate(ordered_winners):
-				payout = share + (1 if index < remainder else 0)
-				player.chips += payout
-				self.showdown_payouts[player] = self.showdown_payouts.get(player, 0) + payout
-
-			self.showdown_pots.append(("pot", amount, eligible, ordered_winners))
-			for player in ordered_winners:
-				if player not in self.showdown_winners:
-					self.showdown_winners.append(player)
-
+		settlement = self.pot_manager.settle(
+			game_state.players,
+			game_state.dealer_button_index,
+			self.showdown_results,
+			fallback_pot=game_state.betting.pot,
+		)
+		self.showdown_payouts = settlement.payouts
+		self.showdown_refunds = settlement.refunds
+		self.showdown_winners = list(settlement.winners)
+		self.showdown_pots = [
+			(layer.kind, layer.amount, list(layer.eligible_players), list(layer.winners))
+			for layer in settlement.layers
+		]
 		game_state.betting.pot = 0
 
 	def _build_pot_layers(self, game_state):
-		contributions = {
-			player: player.total_contribution
-			for player in game_state.players
-			if player.total_contribution > 0
-		}
-		if not contributions:
-			return []
-
-		levels = sorted(set(contributions.values()))
-		previous_level = 0
-		layers = []
-
-		for level in levels:
-			contributors = [
-				player
-				for player, contribution in contributions.items()
-				if contribution >= level
-			]
-			amount = (level - previous_level) * len(contributors)
-			if amount > 0:
-				layers.append((amount, contributors))
-			previous_level = level
-
-		return layers
+		return self.pot_manager.build_layers(game_state.players)
 
 	def _winners_left_of_dealer(self, game_state, winners):
-		winner_set = set(winners)
-		ordered = []
-		player_count = len(game_state.players)
-
-		for offset in range(1, player_count + 1):
-			index = (game_state.dealer_button_index + offset) % player_count
-			player = game_state.players[index]
-			if player in winner_set:
-				ordered.append(player)
-
-		return ordered
+		return self.pot_manager._order_left_of_dealer(
+			game_state.players,
+			game_state.dealer_button_index,
+			winners,
+		)

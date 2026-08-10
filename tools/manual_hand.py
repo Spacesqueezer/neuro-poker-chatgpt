@@ -135,7 +135,7 @@ def print_players(state, controller):
 		position_text = f" {position}" if position else ""
 		print(
 			f"{marker} {player.name}{position_text}: chips={player.chips} "
-			f"bet={player.current_bet} status={status} "
+			f"bet={player.current_bet} contrib={player.total_contribution} status={status} "
 			f"hand=[{format_cards(player.hand.cards)}]"
 		)
 	print()

@@ -136,6 +136,59 @@ SCENARIOS = {
 		board=("10H", "JH", "QH", "KH", "AH"),
 		hint="Get both players to showdown; the royal-flush board forces an exact tie.",
 	),
+	"cascade": ManualScenario(
+		name="cascade",
+		description="Four all-ins creating multiple side-pot levels.",
+		players=(("Alice", 20), ("Bob", 40), ("Carol", 80), ("Dave", 160)),
+		dealer_name="Alice",
+		hole_cards={
+			"Alice": ("AH", "AD"),
+			"Bob": ("KH", "KD"),
+			"Carol": ("QH", "QD"),
+			"Dave": ("JH", "JD"),
+		},
+		board=("2C", "5D", "8S", "9C", "3H"),
+		hint="All four can shove in order; expect main + two side pots + Dave refund.",
+	),
+	"sidepot-fold": ManualScenario(
+		name="sidepot-fold",
+		description="Folded contributor remains in pot size but cannot win it.",
+		players=(("Alice", 20), ("Bob", 50), ("Carol", 50)),
+		dealer_name="Alice",
+		hole_cards={
+			"Alice": ("AH", "AD"),
+			"Bob": ("KH", "KD"),
+			"Carol": ("QH", "QD"),
+		},
+		board=("2C", "5D", "8S", "JC", "3H"),
+		hint="Use this to verify folded chips stay in the pot while folded players are ineligible.",
+	),
+	"sidepot-split": ManualScenario(
+		name="sidepot-split",
+		description="Tie inside a side-pot eligible subset.",
+		players=(("Alice", 20), ("Bob", 50), ("Carol", 50)),
+		dealer_name="Alice",
+		hole_cards={
+			"Alice": ("AH", "AD"),
+			"Bob": ("2C", "3D"),
+			"Carol": ("4C", "5D"),
+		},
+		board=("10H", "JH", "QH", "KH", "AH"),
+		hint="Board plays for everyone; every contested layer should split among eligible players only.",
+	),
+	"oddchip": ManualScenario(
+		name="oddchip",
+		description="Three-way tie for odd-chip ordering tests.",
+		players=(("Alice", 101), ("Bob", 101), ("Carol", 101)),
+		dealer_name="Alice",
+		hole_cards={
+			"Alice": ("2C", "3D"),
+			"Bob": ("4C", "5D"),
+			"Carol": ("6C", "7D"),
+		},
+		board=("10H", "JH", "QH", "KH", "AH"),
+		hint="Create an indivisible tied pot; odd chips go to winners left of the dealer first.",
+	),
 }
 
 

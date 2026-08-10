@@ -64,7 +64,7 @@ from tools.manual_scenarios import create_scenario, get_scenario, parse_card, sc
 
 
 def test_scenario_catalog_contains_core_debug_cases():
-	assert {"default", "headsup", "minraise", "short-allin", "sidepot", "splitpot"} <= set(scenario_names())
+	assert {"default", "headsup", "minraise", "short-allin", "sidepot", "splitpot", "cascade", "sidepot-fold", "sidepot-split", "oddchip"} <= set(scenario_names())
 
 
 def test_sidepot_scenario_has_unequal_stacks_and_fixed_cards():
@@ -104,3 +104,16 @@ def test_parse_card_keeps_ten_as_numeric_rank():
 def test_unknown_scenario_has_helpful_error():
 	with pytest.raises(ValueError, match="scenario list"):
 		get_scenario("dragon")
+
+
+def test_cascade_scenario_exposes_four_contribution_levels():
+	state, _, scenario = create_scenario("cascade")
+
+	assert [player.chips + player.current_bet for player in state.players] == [20, 40, 80, 160]
+	assert scenario.board == ("2C", "5D", "8S", "9C", "3H")
+
+
+def test_sidepot_split_uses_board_that_forces_tie():
+	_, _, scenario = create_scenario("sidepot-split")
+
+	assert scenario.board == ("10H", "JH", "QH", "KH", "AH")

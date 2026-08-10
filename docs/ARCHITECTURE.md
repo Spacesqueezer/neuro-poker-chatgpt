@@ -69,8 +69,9 @@ Betting and action systems operate on the same Player entities used by turn orde
 HandController
 ├── Dealer
 ├── ActionResolver
-└── BettingRound
-     └── Player[]
+├── BettingRound
+│    └── Player[]
+└── PotManager
 ```
 
 Responsibilities:
@@ -79,5 +80,30 @@ Responsibilities:
 - `BettingRound` tracks who still owes action and reopens action after a bet increase.
 - `TurnOrder` selects the acting Player and skips folded players.
 - `BettingState` stores the accumulated pot and current street target bet.
+- `PotManager` derives main/side pot layers from `Player.total_contribution` and settles each layer independently at showdown.
 
 Completed betting rounds collect each `Player.current_bet` into the pot before the next street begins.
+
+
+## Pot Accounting
+
+Per-hand contribution is owned by `Player.total_contribution`; street-local commitment remains in `Player.current_bet`.
+
+`PotManager` is the single settlement component for contested showdown money:
+
+```text
+Player.total_contribution[]
+        |
+        v
+PotManager.build_layers()
+        |
+        +--> main pot
+        +--> side pot 1
+        +--> side pot N
+        +--> unmatched refund
+        |
+        v
+PotManager.settle()
+```
+
+Folded players still fund layers through their contribution but are removed from that layer's eligible winners. Ties are split per layer. Odd chips are assigned deterministically starting with the first tied winner left of the dealer button.

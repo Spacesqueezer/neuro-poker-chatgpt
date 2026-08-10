@@ -51,6 +51,8 @@ Phase 2: Game Engine foundation.
 - Showdown resolution, winner payout and equal-hand main-pot splitting.
 - Automatic all-in board runout when no further betting decisions are possible.
 - Busted-player removal in the manual runner before the next hand.
+- Dedicated PotManager for main pots, multiple side pots, refunds, per-layer ties and odd-chip assignment.
+- Deterministic cascade, folded-side-pot, side-pot-split and odd-chip manual scenarios.
 
 ## Current architecture
 
@@ -71,6 +73,7 @@ src/poker/
 │   ├── round_manager.py
 │   ├── dealer.py
 │   ├── hand_controller.py
+│   ├── pot_manager.py
 │   ├── actions.py
 │   └── action_resolver.py
 ├── player/
@@ -121,19 +124,17 @@ Before implementing the next step:
 - preserve blind/position rules, showdown payout and automatic all-in runout;
 - use `python tools/manual_hand.py --scenario NAME` together with pytest.
 
-1. Implement contribution accounting for unequal-stack all-ins.
-   - Track each player's total contribution for the hand.
-   - Allow short all-in calls.
-   - Return unmatched excess chips when no opponent can contest them.
-   - Build a main pot and one or more side pots from contribution levels.
-   - Folded chips remain in pots but folded players are never eligible to win them.
+1. Harden blind and stack edge cases.
+   - Support short small-blind and big-blind all-ins instead of rejecting hand start.
+   - Verify betting order when a blind player starts all-in.
+   - Keep chip conservation explicit in tests.
 
-2. Resolve every pot independently at showdown.
-   - Determine eligible contenders per pot.
-   - Reuse the seven-card evaluator.
-   - Support ties and deterministic odd-chip assignment for every pot.
+2. Harden action reopening around multiple short all-ins.
+   - Verify cumulative short raises versus one full raise.
+   - Preserve per-player raise-lock semantics.
+   - Add deterministic scenarios before expanding rules.
 
-3. Expand deterministic scenarios as new edge cases are implemented.
-   - Keep existing scenario names stable.
-   - Add focused scenarios instead of relying on long manual command sequences.
+3. Continue table lifecycle work.
+   - Move busted-player handling out of the manual runner into an explicit table/seat model.
+   - Preserve dealer-button movement across removed seats.
 

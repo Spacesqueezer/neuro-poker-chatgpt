@@ -26,8 +26,9 @@ Current state:
 - uncontested pots are paid immediately.
 
 Known limitations:
-- per-hand contribution accounting is not yet modeled independently of street bets;
-- main/side pots are supported through per-player hand contribution levels;
+- per-hand contribution accounting is separated from street-local bets through `Player.total_contribution`;
+- main/side pots are derived by `PotManager` from per-player hand contribution levels;
+- multiple side-pot levels, folded contributors, per-layer ties and deterministic odd-chip assignment are supported;
 - short all-in calls below the current target are supported;
 - unmatched excess contribution is returned at settlement;
 - short blind all-ins are not supported;
@@ -48,6 +49,10 @@ Or switched while the runner is open:
 - `scenario short-allin`
 - `scenario sidepot`
 - `scenario splitpot`
+- `scenario cascade`
+- `scenario sidepot-fold`
+- `scenario sidepot-split`
+- `scenario oddchip`
 
 Every named scenario fixes starting stacks, hole cards, future board runout and initial dealer position. The tool intentionally exposes all hole cards for engine debugging.
 
