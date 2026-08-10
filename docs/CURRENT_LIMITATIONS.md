@@ -16,27 +16,42 @@ Dealer resets per-hand Player state before dealing new hole cards.
 
 Current state:
 - HandController owns the active BettingRound lifecycle;
-- actions are processed through ActionResolver for the current TurnOrder player;
-- checks, calls, bets, raises, folds and supported all-ins update player betting state;
-- a raise reopens action for players who already acted;
-- completed street contributions are collected into the pot;
-- completed betting rounds automatically advance the street and deal community cards;
-- folded players are skipped by turn order;
-- a one-player remainder moves the hand to SHOWDOWN as a temporary terminal state.
+- check, call, bet, raise, fold and supported all-in actions are playable;
+- minimum bet and full-raise sizing are enforced;
+- short raises do not incorrectly reopen betting;
+- blinds, dealer rotation and heads-up action order are implemented;
+- completed rounds collect chips and automatically advance streets;
+- when further betting is impossible because of all-ins, the board runs out automatically;
+- showdown evaluates active players, pays a single winner or splits the main pot on ties;
+- uncontested pots are paid immediately.
 
 Known limitations:
-- minimum raise sizing is not implemented;
-- side pots are not implemented;
-- short all-ins while facing a larger bet are rejected until side-pot accounting exists;
-- showdown winner resolution and pot payout are not implemented;
-- blind posting requires each blind player to have enough chips; short blind all-ins are deferred until side-pot accounting exists;
-- named positions beyond BTN/SB/BB are not exposed yet.
+- per-hand contribution accounting is not yet modeled independently of street bets;
+- main/side pots are not implemented;
+- short all-in calls below the current target are rejected;
+- betting that would create a side pot is rejected;
+- short blind all-ins are not supported;
+- manual busted-player removal is a debug-runner behavior, not yet a table/seat lifecycle model.
 
 ## Manual verification
 
-`python tools/manual_hand.py` starts a deterministic three-player console hand.
+`python tools/manual_hand.py` starts the deterministic `default` scenario.
 
-Supported commands:
+A scenario can be selected at launch:
+
+`python tools/manual_hand.py --scenario sidepot`
+
+Or switched while the runner is open:
+- `scenario list`
+- `scenario headsup`
+- `scenario minraise`
+- `scenario short-allin`
+- `scenario sidepot`
+- `scenario splitpot`
+
+Every named scenario fixes starting stacks, hole cards, future board runout and initial dealer position. The tool intentionally exposes all hole cards for engine debugging.
+
+Supported play/debug commands:
 - check
 - call
 - bet N
@@ -46,12 +61,10 @@ Supported commands:
 - state
 - players
 - deal
+- scenario list
+- scenario NAME
 - help
 - quit
-
-The runner prints BTN/SB/BB, blind amounts, current actor and all hole cards. `deal` starts another debug hand and rotates the dealer button; until showdown payout exists, it is a diagnostic reset rather than a complete cash-game hand transition.
-
-The tool intentionally exposes all hole cards for engine debugging.
 
 ## AI continuation rule
 

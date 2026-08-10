@@ -43,10 +43,14 @@ Phase 2: Game Engine foundation.
 - Raises reopen action for previously acted players.
 - Completed betting rounds collect contributions and advance streets automatically.
 - Deterministic manual console hand runner in tools/manual_hand.py.
+- Named deterministic manual scenarios with fixed stacks, hole cards, board runouts and dealer position.
 - Dealer button, small blind and big blind assignment.
 - Automatic blind posting at hand start.
 - Correct preflop and postflop first-action order, including heads-up rules.
 - Dealer button rotation between hands.
+- Showdown resolution, winner payout and equal-hand main-pot splitting.
+- Automatic all-in board runout when no further betting decisions are possible.
+- Busted-player removal in the manual runner before the next hand.
 
 ## Current architecture
 
@@ -85,11 +89,11 @@ tools/
 
 ## Current focus
 
-Complete the playable Texas Hold'em hand before AI integration.
+Complete edge-case betting and pot accounting before AI integration.
 
-The engine can now run betting rounds through HandController, enforce turn order, reopen action after raises, collect street contributions into the pot and automatically deal the next street. A console runner allows manual inspection of a deterministic three-player hand.
+The basic hand lifecycle is playable from blinds through showdown and payout. The manual runner can load named deterministic scenarios whose stacks, cards, board runout and dealer position remain fixed across runs. This is now the preferred human smoke-test surface for edge cases.
 
-The engine now includes position-aware blind posting and action order. The next missing terminal feature is showdown resolution and payout. Side pots remain intentionally deferred until the basic hand can resolve a winner and transfer the pot correctly.
+The next major engine gap is unequal-stack all-in accounting: short calls, returned unmatched chips, main pots and side pots.
 
 ## Development rules reference
 
@@ -112,29 +116,24 @@ The following instructions are written for the next AI developer.
 
 Before implementing the next step:
 - read DEV_RULES.md and CURRENT_LIMITATIONS.md;
-- inspect HandController, BettingRound, BettingState and evaluation modules;
+- inspect HandController, BettingRound, BettingState and manual scenarios;
 - preserve GameState -> Player -> Hand ownership;
-- preserve raise action reopening and automatic street progression;
-- use tools/manual_hand.py as a human-readable smoke test in addition to pytest.
+- preserve blind/position rules, showdown payout and automatic all-in runout;
+- use `python tools/manual_hand.py --scenario NAME` together with pytest.
 
-1. Implement showdown resolution and main-pot payout.
-   - Reuse the existing seven-card evaluation and comparison systems.
-   - Evaluate only non-folded players.
-   - Support a single winner and equal-hand split of the main pot.
-   - Keep side pots out of scope for this step.
-   - Define deterministic handling for indivisible split-pot remainder chips.
-   - Add tests covering winner payout, tied payout and folded-player exclusion.
+1. Implement contribution accounting for unequal-stack all-ins.
+   - Track each player's total contribution for the hand.
+   - Allow short all-in calls.
+   - Return unmatched excess chips when no opponent can contest them.
+   - Build a main pot and one or more side pots from contribution levels.
+   - Folded chips remain in pots but folded players are never eligible to win them.
 
-2. Improve manual verification.
-   - Extend tools/manual_hand.py to print showdown hand values and awarded chips after resolver integration.
-   - Keep the runner deterministic by default.
+2. Resolve every pot independently at showdown.
+   - Determine eligible contenders per pot.
+   - Reuse the seven-card evaluator.
+   - Support ties and deterministic odd-chip assignment for every pot.
 
-3. Preserve and extend position/blind rules.
-   - Dealer button rotates at each new hand.
-   - Heads-up uses BTN=SB, with BTN acting first preflop and BB first postflop.
-   - Multi-player preflop action starts left of BB; postflop action starts left of BTN.
-   - Add named non-blind positions only when table-size semantics are needed.
+3. Expand deterministic scenarios as new edge cases are implemented.
+   - Keep existing scenario names stable.
+   - Add focused scenarios instead of relying on long manual command sequences.
 
-4. Side pots and short all-ins.
-   - Design contribution accounting only after the main-pot hand flow is stable.
-   - Remove the current short-all-in rejection when side-pot accounting is implemented.

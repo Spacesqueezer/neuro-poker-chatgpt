@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
-import random
+import argparse
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from poker.game.actions import PlayerAction
-from poker.game.dealer import Dealer
-from poker.game.game_state import GameState
-from poker.game.hand_controller import HandController
 from poker.game.round_manager import GameStreet
-from poker.player.player import Player
+from tools.manual_scenarios import create_scenario, get_scenario, scenario_names
 
 
 ACTION_COMMANDS = {
@@ -36,7 +34,7 @@ def print_help():
 	print("Commands:")
 	print("  check | call | fold | all-in")
 	print("  bet N | raise N")
-	print("  state | players | deal | help | quit")
+	print("  state | players | deal | scenario list | scenario NAME | help | quit")
 
 
 def print_showdown(controller):
@@ -154,19 +152,29 @@ def parse_action(command):
 	return ACTION_COMMANDS[name], 0
 
 
+def print_scenarios():
+	print("Scenarios:")
+	for scenario_name in scenario_names():
+		scenario = get_scenario(scenario_name)
+		print(f"  {scenario.name:<12} {scenario.description}")
+	print()
+
+
+def print_scenario_banner(scenario):
+	print(f"Scenario: {scenario.name} - {scenario.description}")
+	print(f"Hint: {scenario.hint}")
+
+
 def main():
-	random.seed(42)
+	parser = argparse.ArgumentParser(description="Manual Texas Hold'em debug runner")
+	parser.add_argument("--scenario", default="default", choices=scenario_names())
+	args = parser.parse_args()
 
-	state = GameState()
-	state.add_player(Player("Alice", 100))
-	state.add_player(Player("Bob", 100))
-	state.add_player(Player("Carol", 100))
-
-	controller = HandController(Dealer(), small_blind=1, big_blind=2)
-	controller.start_hand(state)
+	state, controller, scenario = create_scenario(args.scenario)
 
 	print("Manual Texas Hold'em hand")
 	print_help()
+	print_scenario_banner(scenario)
 	print_state(state, controller)
 
 	while True:
@@ -187,6 +195,18 @@ def main():
 			continue
 		if name == "players":
 			print_players(state, controller)
+			continue
+		if name == "scenario list":
+			print_scenarios()
+			continue
+		if name.startswith("scenario "):
+			scenario_name = name.removeprefix("scenario ").strip()
+			try:
+				state, controller, scenario = create_scenario(scenario_name)
+				print_scenario_banner(scenario)
+				print_state(state, controller)
+			except ValueError as error:
+				print(f"Error: {error}")
 			continue
 		if name == "deal":
 			try:

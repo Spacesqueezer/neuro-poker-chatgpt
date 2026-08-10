@@ -59,3 +59,48 @@ def test_prepare_next_hand_rejects_table_with_one_funded_player():
 
 	with pytest.raises(ValueError, match="Not enough players"):
 		prepare_next_hand(state)
+
+from tools.manual_scenarios import create_scenario, get_scenario, parse_card, scenario_names
+
+
+def test_scenario_catalog_contains_core_debug_cases():
+	assert {"default", "headsup", "minraise", "short-allin", "sidepot", "splitpot"} <= set(scenario_names())
+
+
+def test_sidepot_scenario_has_unequal_stacks_and_fixed_cards():
+	state, controller, scenario = create_scenario("sidepot")
+
+	assert [player.chips + player.current_bet for player in state.players] == [20, 50, 100]
+	assert [str(card) for card in state.players[0].hand.cards] == ["A♥", "A♦"]
+	assert [str(card) for card in state.players[1].hand.cards] == ["K♥", "K♦"]
+	assert [str(card) for card in state.players[2].hand.cards] == ["Q♥", "Q♦"]
+	assert state.players[state.dealer_button_index].name == "Alice"
+	assert controller.position_name(state, state.dealer_button_index) == "BTN"
+	assert scenario.board == ("2C", "5D", "8S", "JC", "3H")
+
+
+def test_scripted_scenario_deals_fixed_board():
+	state, controller, _ = create_scenario("headsup")
+
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CHECK)
+	assert [str(card) for card in state.board.cards] == ["2♣", "7♦", "10♥"]
+
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.CHECK)
+	assert [str(card) for card in state.board.cards] == ["2♣", "7♦", "10♥", "J♠"]
+
+
+def test_splitpot_scenario_board_forces_board_play():
+	_, _, scenario = create_scenario("splitpot")
+
+	assert scenario.board == ("10H", "JH", "QH", "KH", "AH")
+
+
+def test_parse_card_keeps_ten_as_numeric_rank():
+	assert str(parse_card("10s")) == "10♠"
+
+
+def test_unknown_scenario_has_helpful_error():
+	with pytest.raises(ValueError, match="scenario list"):
+		get_scenario("dragon")

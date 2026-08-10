@@ -35,7 +35,7 @@ Implement:
 - betting rounds
 - pots
 - side pots
-- showdown
+- showdown ✅ main-pot payout foundation
 
 ## Phase 3 — Deterministic Simulation
 
@@ -44,7 +44,7 @@ Required:
 - seed-based generation
 - reproducible hands
 - hand replay
-- scenario generation
+- scenario generation ✅ named deterministic manual scenarios foundation
 - experiment tracking
 
 ## Phase 4 — Baseline Agents
