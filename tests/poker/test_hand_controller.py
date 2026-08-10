@@ -477,3 +477,43 @@ def test_pot_layers_are_derived_from_contribution_levels():
 		(60, ["Bob", "Carol"]),
 		(50, ["Carol"]),
 	]
+
+
+def test_hand_history_records_blinds_actions_and_uncontested_result():
+	state = make_state(player_count=3)
+	controller = HandController(Dealer(), small_blind=1, big_blind=2)
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.FOLD)
+	controller.process_action(state, PlayerAction.RAISE, 10)
+	controller.process_action(state, PlayerAction.FOLD)
+
+	history = controller.hand_history
+	assert history is not None
+	assert history.dealer == "Player1"
+	assert history.events[0].type == "blinds"
+	actions = [event for event in history.events if event.type == "action"]
+	assert [event.data["action"] for event in actions] == ["fold", "raise", "fold"]
+	assert history.result == "complete"
+	assert history.final_stacks["Player2"] == 102
+
+
+def test_hand_history_records_streets_and_showdown():
+	state = make_state(player_count=2)
+	controller = HandController(Dealer())
+	controller.start_hand(state)
+
+	controller.process_action(state, PlayerAction.CALL)
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.CHECK)
+	controller.process_action(state, PlayerAction.CHECK)
+
+	history = controller.hand_history
+	streets = [event.data["street"] for event in history.events if event.type == "street"]
+	assert streets == ["flop", "turn", "river"]
+	assert history.events[-1].type == "showdown"
+	assert history.result == "showdown"

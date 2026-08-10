@@ -107,3 +107,7 @@ PotManager.settle()
 ```
 
 Folded players still fund layers through their contribution but are removed from that layer's eligible winners. Ties are split per layer. Odd chips are assigned deterministically starting with the first tied winner left of the dealer button.
+
+## HandHistory
+
+`poker.game.hand_history` is the structured event record for a completed hand. `HandController` records domain events; persistence is handled separately by `HandHistoryStore`. Debug tooling may serialize histories to JSONL without making the poker engine depend on filesystem storage.

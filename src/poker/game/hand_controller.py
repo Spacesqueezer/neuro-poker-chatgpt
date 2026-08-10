@@ -4,6 +4,7 @@ from poker.game.betting_round import BettingRound
 from poker.evaluation.seven_card import evaluate_seven_cards
 from poker.game.round_manager import GameStreet
 from poker.game.pot_manager import PotManager
+from poker.game.hand_history import HandHistory, create_hand_id
 
 
 class HandController:
@@ -27,6 +28,7 @@ class HandController:
 		self.showdown_payouts = {}
 		self.showdown_refunds = {}
 		self.showdown_pots = []
+		self.hand_history = None
 
 	def start_hand(self, game_state):
 		if len(game_state.players) < 2:
@@ -49,6 +51,7 @@ class HandController:
 		self.dealer.start_hand(game_state)
 		self._assign_blinds(game_state)
 		self._post_blinds(game_state)
+		self._start_history(game_state)
 		self.betting_round = BettingRound(game_state.players)
 		self._set_preflop_first_player(game_state)
 
@@ -69,6 +72,8 @@ class HandController:
 		previous_bet = game_state.betting.current_bet
 		full_raise = False
 		short_raise = False
+		chips_before = player.chips
+		bet_before = player.current_bet
 
 		if action == PlayerAction.FOLD:
 			self.action_resolver.apply(player, action)
@@ -136,6 +141,15 @@ class HandController:
 		else:
 			raise ValueError("Unsupported action")
 
+		self._record_action(
+			game_state,
+			player,
+			action,
+			amount,
+			chips_before,
+			bet_before,
+		)
+
 		bet_increased = game_state.betting.current_bet > previous_bet
 		self.betting_round.mark_action(
 			player,
@@ -159,6 +173,9 @@ class HandController:
 			self.dealer.deal_turn(game_state)
 		elif street == GameStreet.RIVER:
 			self.dealer.deal_river(game_state)
+
+		if street in {GameStreet.FLOP, GameStreet.TURN, GameStreet.RIVER}:
+			self._record_street(game_state, street)
 
 		return street
 
@@ -219,9 +236,13 @@ class HandController:
 		active_players = self.betting_round.active_players()
 		if len(active_players) == 1:
 			winner = active_players[0]
-			winner.chips += game_state.betting.pot
+			payout = game_state.betting.pot
+			winner.chips += payout
 			game_state.betting.pot = 0
 			game_state.round_manager.street = GameStreet.COMPLETE
+			if self.hand_history is not None:
+				self.hand_history.add_event("uncontested", winner=winner.name, payout=payout)
+				self.hand_history.finish("complete", game_state.players)
 			return GameStreet.COMPLETE
 
 		if self._betting_is_closed_by_all_in(active_players):
@@ -276,6 +297,79 @@ class HandController:
 			for layer in settlement.layers
 		]
 		game_state.betting.pot = 0
+		if self.hand_history is not None:
+			self.hand_history.add_event(
+				"showdown",
+				board=[str(card) for card in game_state.board.cards],
+				results={
+					player.name: {
+						"rank": result.rank.name.lower(),
+						"cards": [str(card) for card in result.cards],
+						"payout": settlement.payouts.get(player, 0),
+						"refund": settlement.refunds.get(player, 0),
+					}
+					for player, result in self.showdown_results.items()
+				},
+				pots=[
+					{
+						"kind": layer.kind,
+						"amount": layer.amount,
+						"eligible": [player.name for player in layer.eligible_players],
+						"winners": [player.name for player in layer.winners],
+					}
+					for layer in settlement.layers
+				],
+			)
+			self.hand_history.finish("showdown", game_state.players)
+
+	def _start_history(self, game_state):
+		dealer = game_state.players[game_state.dealer_button_index]
+		self.hand_history = HandHistory(
+			hand_id=create_hand_id(),
+			players=[
+				{
+					"name": player.name,
+					"starting_chips": player.chips + player.current_bet,
+					"cards": [str(card) for card in player.hand.cards],
+				}
+				for player in game_state.players
+			],
+			dealer=dealer.name,
+			small_blind=self.small_blind,
+			big_blind=self.big_blind,
+		)
+		self.hand_history.add_event(
+			"blinds",
+			small_blind_player=game_state.players[self.small_blind_index].name,
+			big_blind_player=game_state.players[self.big_blind_index].name,
+			small_blind=self.small_blind,
+			big_blind=self.big_blind,
+		)
+
+	def _record_action(self, game_state, player, action, amount, chips_before, bet_before):
+		if self.hand_history is None:
+			return
+		self.hand_history.add_event(
+			"action",
+			street=game_state.round_manager.street.value,
+			player=player.name,
+			action=action.value,
+			requested_amount=amount,
+			contributed=(chips_before - player.chips),
+			bet_before=bet_before,
+			bet_after=player.current_bet,
+			chips_after=player.chips,
+		)
+
+	def _record_street(self, game_state, street):
+		if self.hand_history is None:
+			return
+		self.hand_history.add_event(
+			"street",
+			street=street.value,
+			board=[str(card) for card in game_state.board.cards],
+			pot=game_state.betting.pot,
+		)
 
 	def _build_pot_layers(self, game_state):
 		return self.pot_manager.build_layers(game_state.players)

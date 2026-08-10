@@ -138,3 +138,7 @@ Before implementing the next step:
    - Move busted-player handling out of the manual runner into an explicit table/seat model.
    - Preserve dealer-button movement across removed seats.
 
+
+## Hand history
+
+Completed hands can now produce structured `HandHistory` records with blinds, actions, streets, showdown data, pot layers, and final stacks. The manual runner persists completed hands to `artifacts/hand_history.jsonl`; use `tools/hand_history_viewer.py` to inspect them.

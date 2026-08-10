@@ -10,6 +10,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from poker.game.actions import PlayerAction
 from poker.game.round_manager import GameStreet
+from poker.game.hand_history import HandHistoryStore
 from tools.manual_scenarios import create_scenario, get_scenario, scenario_names
 
 
@@ -24,6 +25,7 @@ ACTION_COMMANDS = {
 }
 
 AMOUNT_COMMANDS = {"bet", "raise"}
+HISTORY_FILE = PROJECT_ROOT / "artifacts" / "hand_history.jsonl"
 
 
 def format_cards(cards):
@@ -180,12 +182,23 @@ def print_scenario_banner(scenario):
 	print(f"Hint: {scenario.hint}")
 
 
+def save_completed_history(controller, saved_histories):
+	if controller.hand_history is None or controller.hand_history.result is None:
+		return
+	history_key = id(controller.hand_history)
+	if history_key in saved_histories:
+		return
+	HandHistoryStore(HISTORY_FILE).append(controller.hand_history)
+	saved_histories.add(history_key)
+
+
 def main():
 	parser = argparse.ArgumentParser(description="Manual Texas Hold'em debug runner")
 	parser.add_argument("--scenario", default="default", choices=scenario_names())
 	args = parser.parse_args()
 
 	state, controller, scenario = create_scenario(args.scenario)
+	saved_histories = set()
 
 	print("Manual Texas Hold'em hand")
 	print_help()
@@ -197,10 +210,12 @@ def main():
 			command = input("action> ").strip()
 		except (EOFError, KeyboardInterrupt):
 			print()
+			save_completed_history(controller, saved_histories)
 			break
 
 		name = command.lower()
 		if name in {"quit", "exit"}:
+			save_completed_history(controller, saved_histories)
 			break
 		if name == "help":
 			print_help()
@@ -217,6 +232,7 @@ def main():
 		if name.startswith("scenario "):
 			scenario_name = name.removeprefix("scenario ").strip()
 			try:
+				save_completed_history(controller, saved_histories)
 				state, controller, scenario = create_scenario(scenario_name)
 				print_scenario_banner(scenario)
 				print_state(state, controller)
@@ -225,6 +241,7 @@ def main():
 			continue
 		if name == "deal":
 			try:
+				save_completed_history(controller, saved_histories)
 				prepare_next_hand(state)
 				controller.start_hand(state)
 				print_state(state, controller)
