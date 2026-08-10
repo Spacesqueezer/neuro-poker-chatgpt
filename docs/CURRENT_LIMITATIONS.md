@@ -2,49 +2,41 @@
 
 This document lists known temporary constraints and verification boundaries.
 
-## Betting and blinds
+## Betting and pots
 
-Supported:
+The current no-limit hand engine supports:
 - check, call, bet, raise, fold and all-in;
+- full and short blind posting;
 - minimum bets and full-raise sizing;
-- short raises without incorrect action reopening;
-- cumulative multiple short all-ins reopening action once a specific player is facing at least one full raise since that player's last action;
+- per-player cumulative short-all-in reopening;
 - short all-in calls below the current target;
-- short SB/BB posting with the full BB preserved as the preflop target;
-- dealer/SB/BB assignment and heads-up action order;
+- main/side pots, folded contributors, refunds, ties and odd chips;
 - automatic all-in board runout.
 
-Known gaps:
-- no currently known betting/blind correctness gap is intentionally accepted here; new gaps should be added when deterministic scenarios, replay verification or stress runs expose them.
-
-## Pot accounting
-
-`Player.total_contribution` is the source of truth for hand-level contribution. `PotManager` supports:
-- main pots;
-- multiple side pots;
-- folded contributors;
-- unmatched refunds;
-- ties in individual pot layers;
-- deterministic odd-chip assignment.
-
-Chip conservation must remain an invariant in every new pot/betting test.
+`Player.total_contribution` remains the source of truth for hand-level pot accounting. Chip conservation is a mandatory invariant.
 
 ## Table lifecycle
 
-Busted-player removal is still performed by `tools/manual_hand.py` before the next debug hand. This is not the intended final architecture.
+Persistent lifecycle is owned by `Table` / `Seat`, not by debug tooling.
 
-A future explicit table/seat component must own:
-- funded/busted/inactive seat state;
-- participation in the next hand;
-- dealer-button movement across unavailable seats.
+Supported seat states:
+- `ACTIVE`;
+- `SITTING_OUT`;
+- `BUSTED`.
+
+Busted and sitting-out seats keep their physical seat positions but are excluded from the next hand. Dealer movement skips unavailable seats. A sit-out/sit-in request affects future hand participation and does not remove a player from a hand already in progress.
+
+Not yet modeled:
+- rebuy/top-up;
+- joining or leaving an occupied table session;
+- waiting-for-BB/cash-room posting rules;
+- tournament blind schedules.
 
 ## Hand history and replay
 
-Completed hands can be stored as JSONL HandHistory records.
-
 - Seed-based random histories support exact replay through `HandReplayVerifier`.
-- Histories from scripted scenarios currently have `seed=None`; they receive structural verification only.
-- Exact replay compares the regenerated HandHistory payload (except the random hand id), including cards, actions, streets, pots and final stacks.
+- Scripted scenario histories have `seed=None` and receive structural verification only.
+- Exact replay compares regenerated cards, actions, streets, pots and final stacks.
 
 Commands:
 
@@ -55,17 +47,15 @@ python tools/verify_history.py
 
 ## Stress verification
 
-`tools/stress_poker.py` creates independent seeded hands and chooses from legal actions using a minimal random smoke policy.
+`tools/stress_poker.py` is engine verification tooling, not an Arena or strategy API.
 
-It currently verifies:
-- hand termination;
+It checks:
+- termination;
 - chip conservation;
 - non-negative stacks;
 - zero collected pot after terminal settlement;
 - completed HandHistory;
 - unique visible cards.
-
-It is not an Arena and its random policy is not a poker strategy API.
 
 Example:
 
@@ -73,12 +63,20 @@ Example:
 python tools/stress_poker.py --hands 10000 --seed 42
 ```
 
-Any failure prints the exact hand seed before exiting.
-
 ## Manual verification
 
-`python tools/manual_hand.py` starts a random default hand. Use `--seed N` to reproduce it exactly.
+`python tools/manual_hand.py` starts a random default hand. Use `--seed N` for exact reproduction.
 
-Named deterministic scenarios remain available through `--scenario NAME` or `scenario NAME` inside the runner. Betting-specific scenarios include `short-bb` and `cumulative-reopen`.
+Useful lifecycle commands:
+- `table`;
+- `sitout NAME`;
+- `sitin NAME`;
+- `deal`.
 
-The runner intentionally exposes all hole cards for engine debugging.
+Named deterministic scenarios remain available through `--scenario NAME` or `scenario NAME`.
+
+The runner intentionally exposes all hole cards for debugging.
+
+## Agent boundary
+
+There is no stable public agent API yet. External policies must not be built directly against `HandController` internals because the next milestone is a dedicated legal-action/state interface and headless hand runner.

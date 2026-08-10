@@ -15,44 +15,39 @@
 - seven-card comparison
 - positions foundation
 
-## Phase 2 — Game Engine ✅ foundation complete
+## Phase 2 — Game Engine ✅
 
-Implemented:
+Implemented and hardened:
 - players and stacks
 - betting rounds
 - dealer button and blinds
-- street progression
-- all-ins
-- main and side pots
-- refunds
+- short blinds
+- cumulative short-all-in reopening
+- street progression and all-ins
+- main/side pots and refunds
 - showdown and payout
-
-Hardened:
-- short blind all-ins
-- cumulative short-all-in reopen semantics
-
-Still hardening:
-- explicit table/seat lifecycle
+- persistent Table/Seat lifecycle
+- busted and sitting-out seat skipping
 
 ## Phase 3 — Deterministic Verification 🟡 current
 
 Implemented:
 - seeded random dealing
-- deterministic manual scenarios
+- deterministic scenarios
 - structured HandHistory
-- JSONL history viewer
-- exact seed-based hand replay verification
-- structural verification for scripted histories
-- randomized engine stress runner
+- history viewer
+- exact seed-based replay
+- structural scripted-history verification
+- randomized stress runner
 
-Next:
-- explicit table/seat lifecycle
-- replay/stress larger corpora
-- promote a stable headless `play_hand` simulation API
+Current target:
+- define a stable legal-action/state boundary;
+- promote hand execution to a reusable headless API;
+- stress that public boundary before Arena work.
 
 ## Phase 4 — Baseline Agents
 
-Create agents against a stable legal-action/state interface:
+Build policies only against the stable public simulation interface:
 - random
 - calling station
 - nit

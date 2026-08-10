@@ -31,8 +31,7 @@ class HandController:
 		self.hand_history = None
 
 	def start_hand(self, game_state):
-		if len(game_state.players) < 2:
-			raise ValueError("At least two players are required")
+		game_state.prepare_for_hand()
 
 		game_state.deck.reset()
 		game_state.board.cards.clear()
@@ -249,6 +248,7 @@ class HandController:
 			winner.chips += payout
 			game_state.betting.pot = 0
 			game_state.round_manager.street = GameStreet.COMPLETE
+			game_state.table.sync_statuses()
 			if self.hand_history is not None:
 				self.hand_history.add_event("uncontested", winner=winner.name, payout=payout)
 				self.hand_history.finish("complete", game_state.players)
@@ -306,6 +306,7 @@ class HandController:
 			for layer in settlement.layers
 		]
 		game_state.betting.pot = 0
+		game_state.table.sync_statuses()
 		if self.hand_history is not None:
 			self.hand_history.add_event(
 				"showdown",

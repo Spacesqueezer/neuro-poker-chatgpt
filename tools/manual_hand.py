@@ -36,7 +36,7 @@ def print_help():
 	print("Commands:")
 	print("  check | call | fold | all-in")
 	print("  bet N | raise N")
-	print("  state | players | deal | scenario list | scenario NAME | help | quit")
+	print("  state | players | table | sitout NAME | sitin NAME | deal | scenario list | scenario NAME | help | quit")
 
 
 def print_showdown(controller):
@@ -69,38 +69,17 @@ def print_showdown(controller):
 	print()
 
 
-def prepare_next_hand(state):
-	if len(state.players) < 2:
-		raise ValueError("At least two players are required")
 
-	old_players = list(state.players)
-	old_dealer_index = state.dealer_button_index
-	survivors = [player for player in old_players if player.chips > 0]
-
-	if len(survivors) < 2:
-		raise ValueError("Not enough players with chips for another hand")
-
-	if len(survivors) == len(old_players):
-		return
-
-	if old_dealer_index is None:
-		state.players[:] = survivors
-		state.dealer_button_index = None
-		state.turn_order.players = state.players
-		return
-
-	next_dealer = None
-	for offset in range(1, len(old_players) + 1):
-		candidate = old_players[(old_dealer_index + offset) % len(old_players)]
-		if candidate.chips > 0:
-			next_dealer = candidate
-			break
-
-	state.players[:] = survivors
-	state.turn_order.players = state.players
-	next_index = state.players.index(next_dealer)
-	state.dealer_button_index = (next_index - 1) % len(state.players)
-
+def print_table(state):
+	print("Table:")
+	button_seat = state.table.dealer_button_seat_index
+	for seat in state.table.seats:
+		marker = "BTN" if seat.index == button_seat else ""
+		print(
+			f"  seat={seat.index:<2} {seat.player.name:<10} chips={seat.player.chips:<5} "
+			f"status={seat.status.value:<11} {marker}"
+		)
+	print()
 
 def print_state(state, controller):
 	print()
@@ -169,6 +148,13 @@ def parse_action(command):
 	return ACTION_COMMANDS[name], 0
 
 
+def find_seated_player(state, name):
+	for seat in state.table.seats:
+		if seat.player.name.lower() == name.strip().lower():
+			return seat.player
+	raise ValueError(f"Unknown seated player: {name}")
+
+
 def print_scenarios():
 	print("Scenarios:")
 	for scenario_name in scenario_names():
@@ -230,6 +216,23 @@ def main():
 		if name == "players":
 			print_players(state, controller)
 			continue
+		if name == "table":
+			print_table(state)
+			continue
+		if name.startswith("sitout "):
+			try:
+				state.sit_out(find_seated_player(state, command.split(maxsplit=1)[1]))
+				print_table(state)
+			except ValueError as error:
+				print(f"Error: {error}")
+			continue
+		if name.startswith("sitin "):
+			try:
+				state.sit_in(find_seated_player(state, command.split(maxsplit=1)[1]))
+				print_table(state)
+			except ValueError as error:
+				print(f"Error: {error}")
+			continue
 		if name == "scenario list":
 			print_scenarios()
 			continue
@@ -246,7 +249,6 @@ def main():
 		if name == "deal":
 			try:
 				save_completed_history(controller, saved_histories)
-				prepare_next_hand(state)
 				controller.start_hand(state)
 				seed = getattr(controller.dealer, "current_seed", None)
 				if seed is not None:

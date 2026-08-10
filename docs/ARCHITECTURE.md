@@ -43,22 +43,28 @@ Recommended modular approach:
 
 ## Poker Domain Ownership
 
-Core runtime ownership:
+Persistent seating and one-hand state are separate:
 
 ```text
+Table
+└── Seat[]
+    ├── SeatStatus
+    └── Player
+        └── Hand
+
 GameState
+├── Table
+├── Player[]  # participants in the current/next hand
 ├── Deck
 ├── Board
 ├── BettingState
 ├── RoundManager
-├── TurnOrder
-└── Player[]
-    └── Hand
+└── TurnOrder
 ```
 
-GameState stores Player entities, not bare Hand objects.
-Hole cards are owned by `Player.hand`.
-Betting and action systems operate on the same Player entities used by turn order and dealing.
+`Table` owns stable physical seats and dealer-button seat continuity between hands. `GameState.players` is a hand-participant projection derived from funded `ACTIVE` seats when a hand is prepared. Busted and sitting-out players remain seated but do not enter the next hand.
+
+Hole cards are owned by `Player.hand`. Betting and action systems operate only on the current hand participant view.
 
 
 ## Hand Flow Coordination

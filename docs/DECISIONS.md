@@ -57,3 +57,16 @@ The minimum raise size itself remains the size of the last full valid bet or rai
 Reason:
 This matches no-limit hold'em reopen semantics while keeping raise sizing and reopen eligibility as separate concepts.
 
+
+## ADR-006: Persistent Table Owns Seats; GameState Exposes Hand Participants
+
+Date:
+2026-08-10
+
+Decision:
+`Table` owns stable `Seat` objects and dealer-button seat continuity between hands. `GameState.players` remains the ordered participant view used by the active hand engine and is rebuilt from funded `ACTIVE` seats before each new hand.
+
+Seat status is explicit (`ACTIVE`, `SITTING_OUT`, `BUSTED`). A status change does not remove a player from a hand already in progress; it changes eligibility for the next hand.
+
+Reason:
+Physical seating lifetime and one-hand participant lifetime are different concerns. Keeping busted-player removal in `manual_hand.py` made debug tooling responsible for poker lifecycle rules and lost persistent seat identity. The projection approach preserves existing betting/evaluation code while moving lifecycle ownership into the domain model.
