@@ -337,13 +337,18 @@ class HandController:
 			dealer=dealer.name,
 			small_blind=self.small_blind,
 			big_blind=self.big_blind,
+			seed=getattr(self.dealer, "current_seed", None),
 		)
+		small_blind_player = game_state.players[self.small_blind_index]
+		big_blind_player = game_state.players[self.big_blind_index]
 		self.hand_history.add_event(
 			"blinds",
-			small_blind_player=game_state.players[self.small_blind_index].name,
-			big_blind_player=game_state.players[self.big_blind_index].name,
-			small_blind=self.small_blind,
-			big_blind=self.big_blind,
+			small_blind_player=small_blind_player.name,
+			big_blind_player=big_blind_player.name,
+			small_blind=small_blind_player.current_bet,
+			big_blind=big_blind_player.current_bet,
+			pot=self.total_pot(game_state),
+			target=game_state.betting.current_bet,
 		)
 
 	def _record_action(self, game_state, player, action, amount, chips_before, bet_before):
@@ -358,7 +363,11 @@ class HandController:
 			contributed=(chips_before - player.chips),
 			bet_before=bet_before,
 			bet_after=player.current_bet,
+			total_contribution=player.total_contribution,
+			chips_before=chips_before,
 			chips_after=player.chips,
+			pot=self.total_pot(game_state),
+			target=game_state.betting.current_bet,
 		)
 
 	def _record_street(self, game_state, street):
@@ -369,6 +378,7 @@ class HandController:
 			street=street.value,
 			board=[str(card) for card in game_state.board.cards],
 			pot=game_state.betting.pot,
+			stacks={player.name: player.chips for player in game_state.players},
 		)
 
 	def _build_pot_layers(self, game_state):

@@ -177,9 +177,12 @@ def print_scenarios():
 	print()
 
 
-def print_scenario_banner(scenario):
+def print_scenario_banner(scenario, controller):
 	print(f"Scenario: {scenario.name} - {scenario.description}")
 	print(f"Hint: {scenario.hint}")
+	seed = getattr(controller.dealer, "current_seed", None)
+	if seed is not None:
+		print(f"Seed: {seed}")
 
 
 def save_completed_history(controller, saved_histories):
@@ -195,14 +198,15 @@ def save_completed_history(controller, saved_histories):
 def main():
 	parser = argparse.ArgumentParser(description="Manual Texas Hold'em debug runner")
 	parser.add_argument("--scenario", default="default", choices=scenario_names())
+	parser.add_argument("--seed", type=int, help="Deterministic seed for default random hands")
 	args = parser.parse_args()
 
-	state, controller, scenario = create_scenario(args.scenario)
+	state, controller, scenario = create_scenario(args.scenario, seed=args.seed)
 	saved_histories = set()
 
 	print("Manual Texas Hold'em hand")
 	print_help()
-	print_scenario_banner(scenario)
+	print_scenario_banner(scenario, controller)
 	print_state(state, controller)
 
 	while True:
@@ -233,8 +237,8 @@ def main():
 			scenario_name = name.removeprefix("scenario ").strip()
 			try:
 				save_completed_history(controller, saved_histories)
-				state, controller, scenario = create_scenario(scenario_name)
-				print_scenario_banner(scenario)
+				state, controller, scenario = create_scenario(scenario_name, seed=args.seed)
+				print_scenario_banner(scenario, controller)
 				print_state(state, controller)
 			except ValueError as error:
 				print(f"Error: {error}")
@@ -244,6 +248,9 @@ def main():
 				save_completed_history(controller, saved_histories)
 				prepare_next_hand(state)
 				controller.start_hand(state)
+				seed = getattr(controller.dealer, "current_seed", None)
+				if seed is not None:
+					print(f"Seed: {seed}")
 				print_state(state, controller)
 			except ValueError as error:
 				print(f"Error: {error}")

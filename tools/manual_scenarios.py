@@ -216,15 +216,20 @@ def get_scenario(name):
 	return SCENARIOS[key]
 
 
-def create_scenario(name="default", small_blind=1, big_blind=2):
+def create_scenario(name="default", small_blind=1, big_blind=2, seed=None):
 	scenario = get_scenario(name)
 	state = GameState()
 	for player_name, chips in scenario.players:
 		state.add_player(Player(player_name, chips))
 
-	draw_sequence = _build_draw_sequence(scenario)
+	if scenario.name == "default":
+		dealer = Dealer(seed=seed)
+	else:
+		draw_sequence = _build_draw_sequence(scenario)
+		dealer = ScriptedDealer(draw_sequence)
+
 	controller = HandController(
-		ScriptedDealer(draw_sequence),
+		dealer,
 		small_blind=small_blind,
 		big_blind=big_blind,
 	)

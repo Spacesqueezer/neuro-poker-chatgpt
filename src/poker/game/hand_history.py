@@ -24,6 +24,7 @@ class HandHistory:
 	dealer: str
 	small_blind: int
 	big_blind: int
+	seed: int | None = None
 	events: list[HandHistoryEvent] = field(default_factory=list)
 	final_stacks: dict[str, int] = field(default_factory=dict)
 	result: str | None = None
@@ -42,6 +43,7 @@ class HandHistory:
 			"dealer": self.dealer,
 			"small_blind": self.small_blind,
 			"big_blind": self.big_blind,
+			"seed": self.seed,
 			"events": [event.to_dict() for event in self.events],
 			"final_stacks": self.final_stacks,
 			"result": self.result,
@@ -55,6 +57,7 @@ class HandHistory:
 			dealer=payload["dealer"],
 			small_blind=payload["small_blind"],
 			big_blind=payload["big_blind"],
+			seed=payload.get("seed"),
 			events=[HandHistoryEvent.from_dict(item) for item in payload.get("events", [])],
 			final_stacks=dict(payload.get("final_stacks", {})),
 			result=payload.get("result"),
