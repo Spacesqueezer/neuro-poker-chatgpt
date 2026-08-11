@@ -10,6 +10,9 @@ class ArenaSession:
 	def current_stacks(self):
 		return dict(self.stacks)
 
+	def is_finished(self):
+		return any(stack <= 0 for stack in self.stacks.values())
+
 	@classmethod
 	def create(cls, players, starting_stack):
 		return cls(

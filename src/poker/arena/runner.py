@@ -29,5 +29,5 @@ class ArenaRunner:
 			except Exception:
 				stats.failed_hands += 1
 
-		stats.update_players(session.stacks, self.starting_stack)
+		stats.update_players(session.current_stacks(), self.starting_stack)
 		return stats
