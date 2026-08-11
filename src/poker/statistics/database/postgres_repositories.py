@@ -1,4 +1,10 @@
-class PostgresPlayerRepository:
+from poker.statistics.database.repositories import (
+	PlayerRepository,
+	AgentMemoryRepository,
+)
+
+
+class PostgresPlayerRepository(PlayerRepository):
 	def __init__(self, session):
 		self.session = session
 
@@ -6,10 +12,10 @@ class PostgresPlayerRepository:
 		self.session.add(player)
 
 	def get(self, player_id):
-		return self.session.get(type(player_id), player_id)
+		return self.session.get(player_id)
 
 
-class PostgresMemoryRepository:
+class PostgresMemoryRepository(AgentMemoryRepository):
 	def __init__(self, session):
 		self.session = session
 
@@ -17,4 +23,4 @@ class PostgresMemoryRepository:
 		self.session.add(memory)
 
 	def get(self, agent_id, player_id):
-		raise NotImplementedError
+		return self.session.get((agent_id, player_id))
