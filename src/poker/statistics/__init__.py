@@ -3,6 +3,7 @@ from poker.statistics.collector import StatisticsCollector
 from poker.statistics.hand_adapter import HandStatisticsAdapter
 from poker.statistics.hand_mapping import HandStatisticsMapper
 from poker.statistics.events import PlayerHandEvent
+from poker.statistics.extractor import HandStatisticsExtractor
 
 __all__ = [
 	"PlayerStatistics",
@@ -10,4 +11,5 @@ __all__ = [
 	"HandStatisticsAdapter",
 	"HandStatisticsMapper",
 	"PlayerHandEvent",
+	"HandStatisticsExtractor",
 ]
