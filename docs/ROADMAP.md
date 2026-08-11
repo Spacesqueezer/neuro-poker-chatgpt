@@ -69,7 +69,7 @@ Still required before Phase 4 is complete:
 
 Do not start neural training before Arena can run long baseline-vs-baseline matches reproducibly.
 
-## Phase 5 — Statistics & Opponent Modeling Foundation
+## Phase 5 — Statistics & Opponent Modeling Foundation 🟡 active
 
 Before neural training, the project must support persistent player statistics.
 
