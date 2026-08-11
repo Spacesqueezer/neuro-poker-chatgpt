@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 class ArenaSession:
 	starting_stack: int
 	stacks: dict[str, int] = field(default_factory=dict)
+	completed_hands: int = 0
 
 	def current_stacks(self):
 		return dict(self.stacks)
@@ -22,3 +23,5 @@ class ArenaSession:
 
 		for name, stack in history.final_stacks.items():
 			self.stacks[name] = stack
+
+		self.completed_hands += 1
