@@ -78,7 +78,8 @@ Still not modeled:
 Current limitation:
 - statistics objects and collector exist only in memory;
 - HandHistory integration still requires mapping real engine history fields into the internal event contract;
-- storage abstraction exists, but PostgreSQL persistence is not implemented yet.
+- storage abstraction exists, but PostgreSQL persistence is not implemented yet;
+- opponent memory is in-memory only.
 
 ## Stress verification
 

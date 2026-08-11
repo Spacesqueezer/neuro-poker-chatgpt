@@ -5,6 +5,7 @@ from poker.statistics.hand_mapping import HandStatisticsMapper
 from poker.statistics.events import PlayerHandEvent
 from poker.statistics.extractor import HandStatisticsExtractor
 from poker.statistics.storage import StatisticsStorage, MemoryStatisticsStorage
+from poker.statistics.memory import OpponentMemory
 
 __all__ = [
 	"PlayerStatistics",

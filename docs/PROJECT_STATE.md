@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model, in-memory collector, hand adapter, mapping boundary and extraction boundary exist. A storage boundary is introduced for future persistence. Database persistence is still planned.
+A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced before database persistence.
 
 ## Current capabilities
 
