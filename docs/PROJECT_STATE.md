@@ -4,7 +4,7 @@
 
 Phase 3 is complete: deterministic verification now exercises the same public hand boundary intended for agents.
 
-The next milestone is Phase 4: baseline agents and Arena v1.
+Phase 4 is active: baseline agents exist and Arena v1 now owns persistent multi-hand stack lifecycle.
 
 ## Current capabilities
 
@@ -81,17 +81,16 @@ The poker engine does not import or depend on agents. Agent code depends only on
 - Baseline strategy agents are implemented: RandomAgent, CallingStationAgent, NitAgent.
 - Arena v1 execution exists and now has baseline opponents for evaluation.
 - Arena reporting is being expanded with aggregated session statistics.
-- Arena v1 accounting now tracks session stacks and player profit foundations.
-- Arena session orchestration is being refined so stack lifecycle remains explicit.
-- Arena session object now tracks lifecycle state for future multi-hand execution.
-- ArenaSession is becoming the explicit owner of multi-hand session state.
-- ArenaSession now owns the hand execution transition boundary for future session features.
-- ArenaRunner is reduced to orchestration while session execution moves into ArenaSession.
-- `play_hand()` currently models one independent hand with a shared starting stack value; multi-hand session stack persistence belongs to Arena/Table orchestration.
+- Arena v1 accounting tracks session stacks and player profit foundations.
+- `ArenaSession` is the explicit owner of multi-hand session state and hand-to-hand stack transitions.
+- `ArenaRunner` is reduced to orchestration while session execution lives in `ArenaSession`.
+- `play_hand()` accepts either a shared `starting_stack` or per-player `starting_stacks`; Arena uses the latter to preserve stacks across hands.
+- Arena stops a session before starting another hand once any player has busted.
+- Arena validates player identity, non-negative stacks and chip conservation before accepting a hand result.
 - Scripted manual scenarios have no replay seed and therefore receive structural rather than exact replay verification.
 - Table rebuy/top-up, joining/leaving seats and cash-room session rules remain intentionally out of scope.
 
-## Next milestone — Arena v1
+## Active milestone — Arena v1
 
 ### 1. Baseline agents
 

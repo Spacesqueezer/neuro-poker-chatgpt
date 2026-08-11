@@ -17,18 +17,28 @@ def play_hand(
 	big_blind=2,
 	max_actions=500,
 	dealer_name=None,
+	starting_stacks=None,
 ):
 	if len(agents) < 2:
 		raise ValueError("At least two agents are required")
-	if starting_stack <= 0:
-		raise ValueError("Starting stack must be positive")
+
+	player_names = list(agents)
+	if starting_stacks is None:
+		if starting_stack <= 0:
+			raise ValueError("Starting stack must be positive")
+		stacks = {name: starting_stack for name in player_names}
+	else:
+		if set(starting_stacks) != set(player_names):
+			raise ValueError("Starting stacks must match agent names")
+		if any(stack <= 0 for stack in starting_stacks.values()):
+			raise ValueError("Starting stacks must be positive")
+		stacks = dict(starting_stacks)
 
 	state = GameState()
-	for name in agents:
-		state.add_player(Player(name, starting_stack))
+	for name in player_names:
+		state.add_player(Player(name, stacks[name]))
 
 	if dealer_name is not None:
-		player_names = list(agents)
 		if dealer_name not in agents:
 			raise ValueError(f"Unknown dealer: {dealer_name}")
 		desired_index = player_names.index(dealer_name)

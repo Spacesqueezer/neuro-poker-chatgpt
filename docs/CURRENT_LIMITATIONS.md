@@ -42,9 +42,9 @@ Not yet modeled:
 `LegalActions` exposes legal action kinds plus call amount and bet/raise sizing bounds. `play_hand()` validates the returned `ActionDecision` before passing it to `HandController`.
 
 Current boundary limitations:
-- one `play_hand()` call creates one independent table/hand;
-- all participants currently receive the same `starting_stack` argument;
-- multi-hand stack persistence and session statistics belong to the upcoming Arena layer.
+- one `play_hand()` call still creates one independent table/hand;
+- callers may provide either one shared `starting_stack` or explicit per-player `starting_stacks`;
+- persistent multi-hand stack ownership belongs to `ArenaSession`, while richer session statistics are still being expanded.
 
 External agents must not import `HandController`, `GameState` or `BettingRound`.
 
@@ -60,6 +60,18 @@ Commands:
 python tools/hand_history_viewer.py
 python tools/verify_history.py
 ```
+
+## Arena session lifecycle
+
+`ArenaSession` now passes current per-player stacks into each new `play_hand()` call and accepts the returned final stacks only after validating player identity, non-negative stacks and chip conservation.
+
+A session ends before another hand starts once any player reaches zero chips.
+
+Still not modeled:
+- rebuy/top-up during an Arena session;
+- adding/removing players mid-session;
+- persistent physical Table/Seat reuse across Arena hands;
+- tournament blind schedules and elimination orchestration.
 
 ## Stress verification
 

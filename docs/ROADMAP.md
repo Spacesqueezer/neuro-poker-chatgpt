@@ -38,22 +38,34 @@
 - headless `play_hand()`
 - stress runner migrated to the public simulation boundary
 
-## Phase 4 — Baseline Agents & Arena 🟡 next
+## Phase 4 — Baseline Agents & Arena 🟡 active
 
-Build only against `poker.api`:
+Build only against `poker.api`.
+
+Implemented baseline agents:
 - Random Agent
 - Calling Station
 - Nit
+
+Still planned:
 - TAG
 - LAG
 - Maniac
 
-Arena v1 must first provide:
+Arena v1 currently provides:
 - deterministic seeds;
 - fair dealer-position rotation;
-- profit/loss and bb/100;
+- persistent per-player stacks across hands;
+- session termination on bust;
+- profit/loss foundations;
+- hand failure accounting;
+- chip-conservation validation at the session boundary.
+
+Still required before Phase 4 is complete:
+- bb/100;
 - showdown/uncontested counts;
-- crash and conservation reporting.
+- richer crash reporting with exact failing seed;
+- longer reproducible baseline-vs-baseline validation.
 
 Do not start neural training before Arena can run long baseline-vs-baseline matches reproducibly.
 

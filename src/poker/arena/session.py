@@ -24,18 +24,29 @@ class ArenaSession:
 
 	def apply_hand_result(self, history):
 		if not history.final_stacks:
-			return
+			raise ValueError("Completed hand has no final stacks")
 
-		for name, stack in history.final_stacks.items():
-			self.stacks[name] = stack
+		if set(history.final_stacks) != set(self.stacks):
+			raise ValueError("Hand result players do not match Arena session")
 
+		chips_before = sum(self.stacks.values())
+		chips_after = sum(history.final_stacks.values())
+		if chips_after != chips_before:
+			raise ValueError(
+				f"Chip conservation failed: before={chips_before}, after={chips_after}"
+			)
+
+		if any(stack < 0 for stack in history.final_stacks.values()):
+			raise ValueError("Hand result contains a negative stack")
+
+		self.stacks = dict(history.final_stacks)
 		self.completed_hands += 1
 
 	def play_next_hand(self, agents, seed, dealer_name):
 		result = play_hand(
 			agents,
 			seed=seed,
-			starting_stack=self.starting_stack,
+			starting_stacks=self.current_stacks(),
 			dealer_name=dealer_name,
 		)
 		self.apply_hand_result(result)
@@ -45,6 +56,9 @@ class ArenaSession:
 		players = list(agents)
 
 		for index in range(hands):
+			if self.is_finished():
+				break
+
 			current_seed = seed + index
 			try:
 				result = self.play_next_hand(
