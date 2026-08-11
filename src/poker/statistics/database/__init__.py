@@ -8,12 +8,17 @@ from poker.statistics.database.repositories import (
 	StatisticsRepository,
 	AgentMemoryRepository,
 )
+from poker.statistics.database.memory import (
+	MemoryPlayerRepository,
+	MemoryStatisticsRepository,
+	MemoryAgentMemoryRepository,
+)
 
 __all__ = [
-	"PlayerRecord",
-	"PlayerStatisticsRecord",
-	"AgentMemoryRecord",
 	"PlayerRepository",
 	"StatisticsRepository",
 	"AgentMemoryRepository",
+	"MemoryPlayerRepository",
+	"MemoryStatisticsRepository",
+	"MemoryAgentMemoryRepository",
 ]
