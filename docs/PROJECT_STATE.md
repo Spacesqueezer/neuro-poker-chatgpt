@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model, in-memory collector and hand adapter boundary exist. Direct HandHistory integration and database persistence are still planned.
+A first statistics model, in-memory collector, hand adapter and mapping boundary exist. Direct HandHistory integration and database persistence are still planned.
 
 ## Current capabilities
 
