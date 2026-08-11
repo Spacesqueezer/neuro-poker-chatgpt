@@ -81,7 +81,7 @@ The poker engine does not import or depend on agents. Agent code depends only on
 - Baseline strategy agents are implemented: RandomAgent, CallingStationAgent, NitAgent.
 - Arena v1 execution exists and now has baseline opponents for evaluation.
 - Arena reporting is being expanded with aggregated session statistics.
-- Arena v1 accounting tracks session stacks and player profit foundations.
+- Arena v1 accounting tracks session stacks, player profit and bb/100 evaluation foundations.
 - `ArenaSession` is the explicit owner of multi-hand session state and hand-to-hand stack transitions.
 - `ArenaRunner` is reduced to orchestration while session execution lives in `ArenaSession`.
 - `play_hand()` accepts either a shared `starting_stack` or per-player `starting_stacks`; Arena uses the latter to preserve stacks across hands.
