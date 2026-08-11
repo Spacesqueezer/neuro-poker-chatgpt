@@ -24,6 +24,10 @@ class ArenaStats:
 		self.seeds.append(seed)
 		self.results.append(result)
 
+	def update_players(self, stacks, starting_stack):
+		for name, stack in stacks.items():
+			self.players[name] = PlayerArenaResult(starting_stack, stack)
+
 	def summary(self):
 		return {
 			"hands": self.hands,

@@ -1,4 +1,5 @@
 from poker.api import play_hand
+from poker.arena.session import ArenaSession
 from poker.arena.stats import ArenaStats
 
 
@@ -12,6 +13,7 @@ class ArenaRunner:
 	def run(self, hands, seed=42):
 		stats = ArenaStats()
 		players = list(self.agents)
+		session = ArenaSession.create(players, self.starting_stack)
 
 		for index in range(hands):
 			current_seed = seed + index
@@ -21,8 +23,10 @@ class ArenaRunner:
 					seed=current_seed,
 					dealer_name=players[index % len(players)],
 				)
+				session.apply_hand_result(result)
 				stats.record_result(current_seed, result)
 			except Exception:
 				stats.failed_hands += 1
 
+		stats.update_players(session.stacks, self.starting_stack)
 		return stats
