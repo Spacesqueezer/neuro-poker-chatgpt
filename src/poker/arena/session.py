@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 
+from poker.api import play_hand
+
 
 @dataclass
 class ArenaSession:
@@ -28,3 +30,13 @@ class ArenaSession:
 			self.stacks[name] = stack
 
 		self.completed_hands += 1
+
+	def play_next_hand(self, agents, seed, dealer_name):
+		result = play_hand(
+			agents,
+			seed=seed,
+			starting_stack=self.starting_stack,
+			dealer_name=dealer_name,
+		)
+		self.apply_hand_result(result)
+		return result
