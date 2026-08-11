@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model, in-memory collector, hand adapter, mapping boundary, internal hand event contract and extraction boundary exist. Direct engine HandHistory integration and database persistence are still planned.
+A first statistics model, in-memory collector, hand adapter, mapping boundary and extraction boundary exist. Player hand events now prepare for real engine HandHistory integration. Database persistence is still planned.
 
 ## Current capabilities
 

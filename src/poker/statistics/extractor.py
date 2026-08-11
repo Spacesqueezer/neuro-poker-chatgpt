@@ -11,6 +11,8 @@ class HandStatisticsExtractor:
 	def _extract_player(self, player):
 		return PlayerHandEvent(
 			player_name=player["name"],
+			position=player.get("position"),
+			street_actions=tuple(player.get("street_actions", [])),
 			entered_pot=player.get("entered_pot", False),
 			raised_preflop=player.get("raised_preflop", False),
 			three_bet=player.get("three_bet", False),
