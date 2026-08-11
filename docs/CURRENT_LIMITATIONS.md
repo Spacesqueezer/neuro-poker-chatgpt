@@ -77,7 +77,7 @@ Still not modeled:
 
 Current limitation:
 - statistics objects and collector exist only in memory;
-- HandHistory integration is not connected yet;
+- HandHistory integration still requires mapping real engine history fields;
 - no PostgreSQL persistence yet.
 
 ## Stress verification
