@@ -8,6 +8,8 @@ All future patches MUST follow this document.
 
 The repository is the source of truth. Do not rely on previous chat history.
 
+When repository access is available, AI must inspect the current repository instead of relying on memory or old snapshots.
+
 Before creating a patch:
 
 1. Read docs/DEV_RULES.md.
