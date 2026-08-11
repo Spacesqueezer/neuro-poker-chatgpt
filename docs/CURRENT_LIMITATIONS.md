@@ -76,8 +76,8 @@ Still not modeled:
 ## Player statistics
 
 Current limitation:
-- statistics objects exist only in memory;
-- no HandHistory aggregation yet;
+- statistics objects and collector exist only in memory;
+- HandHistory integration is not connected yet;
 - no PostgreSQL persistence yet.
 
 ## Stress verification

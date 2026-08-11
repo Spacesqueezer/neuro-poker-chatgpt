@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model exists. Database persistence and hand-history aggregation are still planned.
+A first statistics model and in-memory collector exist. Database persistence and HandHistory integration are still planned.
 
 ## Current capabilities
 
