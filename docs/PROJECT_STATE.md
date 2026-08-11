@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced before database persistence.
+A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced. PostgreSQL schema planning is the next persistence step.
 
 ## Current capabilities
 
