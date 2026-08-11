@@ -18,3 +18,4 @@ def test_arena_runs_multiple_hands():
 	assert result.hands == 2
 	assert result.seeds == [42, 43]
 	assert result.failed_hands == 0
+	assert result.summary()["hands"] == 2

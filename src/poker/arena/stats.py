@@ -12,3 +12,9 @@ class ArenaStats:
 		self.hands += 1
 		self.seeds.append(seed)
 		self.results.append(result)
+
+	def summary(self):
+		return {
+			"hands": self.hands,
+			"failed_hands": self.failed_hands,
+		}
