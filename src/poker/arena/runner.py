@@ -13,13 +13,15 @@ class ArenaRunner:
 		players = list(self.agents)
 
 		for index in range(hands):
-			result = play_hand(
-				self.agents,
-				seed=seed + index,
-				dealer_name=players[index % len(players)],
-			)
-			stats.hands += 1
-			stats.seeds.append(seed + index)
-			stats.results.append(result)
+			current_seed = seed + index
+			try:
+				result = play_hand(
+					self.agents,
+					seed=current_seed,
+					dealer_name=players[index % len(players)],
+				)
+				stats.record_result(current_seed, result)
+			except Exception:
+				stats.failed_hands += 1
 
 		return stats

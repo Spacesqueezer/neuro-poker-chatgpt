@@ -78,7 +78,8 @@ The poker engine does not import or depend on agents. Agent code depends only on
 
 ## Known gaps
 
-- Arena and baseline strategy agents are not implemented yet.
+- Baseline strategy agents are not implemented yet.
+- Arena v1 execution exists but needs richer statistics and reporting.
 - `play_hand()` currently models one independent hand with a shared starting stack value; multi-hand session stack persistence belongs to Arena/Table orchestration.
 - Scripted manual scenarios have no replay seed and therefore receive structural rather than exact replay verification.
 - Table rebuy/top-up, joining/leaving seats and cash-room session rules remain intentionally out of scope.
