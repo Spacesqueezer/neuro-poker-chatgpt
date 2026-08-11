@@ -7,17 +7,22 @@ class PostgresConfig:
 	echo: bool = False
 
 
-class PostgresSessionFactory:
+class PostgresEngine:
 	def __init__(self, config):
 		self.config = config
 
+
+class PostgresSessionFactory:
+	def __init__(self, config):
+		self.engine = PostgresEngine(config)
+
 	def create(self):
-		return PostgresSession(self.config)
+		return PostgresSession(self.engine)
 
 
 class PostgresSession:
-	def __init__(self, config):
-		self.config = config
+	def __init__(self, engine):
+		self.engine = engine
 		self.items = []
 
 	def add(self, item):
