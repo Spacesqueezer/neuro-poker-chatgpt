@@ -9,6 +9,8 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
+A first statistics model exists. Database persistence and hand-history aggregation are still planned.
+
 ## Current capabilities
 
 ### Poker hand engine

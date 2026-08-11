@@ -73,6 +73,13 @@ Still not modeled:
 - persistent physical Table/Seat reuse across Arena hands;
 - tournament blind schedules and elimination orchestration.
 
+## Player statistics
+
+Current limitation:
+- statistics objects exist only in memory;
+- no HandHistory aggregation yet;
+- no PostgreSQL persistence yet.
+
 ## Stress verification
 
 `tools/stress_poker.py` now exercises `poker.api.play_hand()` with a random smoke policy. It is still verification tooling, not an Arena strategy benchmark.
