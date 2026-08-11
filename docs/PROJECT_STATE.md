@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced. PostgreSQL persistence model layer and repository contracts exist. In-memory repositories validate the persistence flow before real database integration.
+A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced. PostgreSQL persistence model layer, repository contracts and in-memory repositories exist. Service layer now connects statistics consumers with storage boundaries before real database integration.
 
 ## Current capabilities
 

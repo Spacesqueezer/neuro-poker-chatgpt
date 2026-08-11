@@ -13,6 +13,7 @@ from poker.statistics.database.memory import (
 	MemoryStatisticsRepository,
 	MemoryAgentMemoryRepository,
 )
+from poker.statistics.database.services import StatisticsService
 
 __all__ = [
 	"PlayerRepository",
