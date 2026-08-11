@@ -20,3 +20,4 @@ def test_arena_runs_multiple_hands():
 	assert result.failed_hands == 0
 	assert result.summary()["hands"] == 2
 	assert result.summary()["failed_hands"] == 0
+	assert "alice" in result.summary()["players"]

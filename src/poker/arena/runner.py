@@ -21,6 +21,7 @@ class ArenaRunner:
 				result = play_hand(
 					self.agents,
 					seed=current_seed,
+					starting_stack=self.starting_stack,
 					dealer_name=players[index % len(players)],
 				)
 				session.apply_hand_result(result)

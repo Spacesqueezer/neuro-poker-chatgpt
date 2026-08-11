@@ -6,6 +6,9 @@ class ArenaSession:
 	starting_stack: int
 	stacks: dict[str, int] = field(default_factory=dict)
 
+	def current_stacks(self):
+		return dict(self.stacks)
+
 	@classmethod
 	def create(cls, players, starting_stack):
 		return cls(
