@@ -40,3 +40,18 @@ class ArenaSession:
 		)
 		self.apply_hand_result(result)
 		return result
+
+	def run(self, agents, hands, seed, stats):
+		players = list(agents)
+
+		for index in range(hands):
+			current_seed = seed + index
+			try:
+				result = self.play_next_hand(
+					agents,
+					seed=current_seed,
+					dealer_name=players[index % len(players)],
+				)
+				stats.record_result(current_seed, result)
+			except Exception:
+				stats.failed_hands += 1
