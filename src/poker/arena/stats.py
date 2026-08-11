@@ -47,12 +47,22 @@ class ArenaStats:
 			else 0
 		)
 
+		bb_per_100 = {
+			name: (
+				data.profit / 2 / self.hands * 100
+				if self.hands
+				else 0
+			)
+			for name, data in self.players.items()
+		}
+
 		return {
 			"hands": self.hands,
 			"failed_hands": self.failed_hands,
 			"showdowns": self.showdowns,
 			"uncontested_wins": self.uncontested_wins,
 			"average_pot": average_pot,
+			"bb_per_100": bb_per_100,
 			"players": {
 				name: {
 					"profit": data.profit,
