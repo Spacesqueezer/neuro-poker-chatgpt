@@ -14,6 +14,7 @@ from poker.statistics.database.memory import (
 	MemoryAgentMemoryRepository,
 )
 from poker.statistics.database.services import StatisticsService
+from poker.statistics.database.facade import StatisticsFacade
 
 __all__ = [
 	"PlayerRepository",
