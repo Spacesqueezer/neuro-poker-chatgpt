@@ -2,9 +2,12 @@
 
 ## Current milestone
 
-Phase 3 is complete: deterministic verification now exercises the same public hand boundary intended for agents.
+Phase 4 baseline Arena work is complete.
 
-Phase 4 is active: baseline agents exist and Arena v1 now owns persistent multi-hand stack lifecycle.
+Current focus:
+- player statistics foundation;
+- persistent opponent memory architecture;
+- preparation for dataset generation.
 
 ## Current capabilities
 
@@ -134,6 +137,36 @@ python tools/verify_history.py
 ```
 
 Any randomized failure must report its exact seed.
+
+## Player statistics direction
+
+The project will eventually maintain poker-tracker style statistics.
+
+Required concepts:
+- VPIP;
+- PFR;
+- 3-bet frequency;
+- fold to 3-bet;
+- continuation bet frequency;
+- aggression factor;
+- WTSD;
+- W$SD;
+- positional statistics.
+
+Statistics are not only global player data. Neural agents require separate opponent memory:
+
+```text
+NeuralAgent A
+    |
+    +-- statistics about Player X
+
+
+NeuralAgent B
+    |
+    +-- statistics about Player X
+```
+
+The same opponent may have different observed histories for different agents.
 
 ## AI bootstrap instructions
 

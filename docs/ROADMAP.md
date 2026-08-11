@@ -69,12 +69,25 @@ Still required before Phase 4 is complete:
 
 Do not start neural training before Arena can run long baseline-vs-baseline matches reproducibly.
 
-## Phase 5 — Mathematical Agent
+## Phase 5 — Statistics & Opponent Modeling Foundation
 
-- equity calculation
-- pot odds
-- ranges
-- Monte Carlo simulation
+Before neural training, the project must support persistent player statistics.
+
+Goals:
+- player profile generation;
+- poker tracker style statistics;
+- VPIP/PFR/aggression/showdown metrics;
+- historical hand statistics;
+- opponent memory storage.
+
+Planned storage:
+- local database for development;
+- PostgreSQL for persistent experiments.
+
+Generated player pool:
+- approximately 100 persistent simulated opponents;
+- different playing styles;
+- stable identities across sessions.
 
 ## Phase 6 — Learning System
 
@@ -86,11 +99,21 @@ Self-play
         ↓
 Reinforcement learning
 
-## Phase 7 — Opponent Modeling
+Generated / curated data
+        ↓
+Imitation learning
+        ↓
+Self-play
+        ↓
+Reinforcement learning
+
+## Phase 7 — Advanced Opponent Memory
 
 - persistent player profiles
+- agent-specific opponent statistics
 - tendencies and statistics
 - adaptive strategy inputs
+- confidence-weighted observations
 
 ## Phase 8 — External State Extraction
 
