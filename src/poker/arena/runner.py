@@ -3,10 +3,11 @@ from poker.arena.stats import ArenaStats
 
 
 class ArenaRunner:
-	def __init__(self, agents):
+	def __init__(self, agents, starting_stack=100):
 		if len(agents) < 2:
 			raise ValueError("Arena requires at least two agents")
 		self.agents = agents
+		self.starting_stack = starting_stack
 
 	def run(self, hands, seed=42):
 		stats = ArenaStats()
