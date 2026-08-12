@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced. PostgreSQL persistence transition has started: repository boundaries and session backend boundary are prepared while existing in-memory storage remains the active runtime implementation. The next stage is replacing the internal session implementation with SQLAlchemy without changing service contracts.
+A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced. PostgreSQL persistence transition has started: repository boundaries and session backend boundary are prepared while existing in-memory storage remains the active runtime implementation. SQLAlchemy backend boundary has been introduced. The next stage is replacing the internal storage with real ORM sessions without changing service contracts.
 
 ## Current capabilities
 
