@@ -56,6 +56,18 @@ class PostgresStatisticsRepository(StatisticsRepository):
 				aggression=statistics.aggression,
 				wtsd=statistics.wtsd,
 				wsd=statistics.wsd,
+				vpip_hands=statistics.vpip_hands,
+				pfr_hands=statistics.pfr_hands,
+				three_bet_opportunities=statistics.three_bet_opportunities,
+				three_bets=statistics.three_bets,
+				fold_to_three_bet_opportunities=statistics.fold_to_three_bet_opportunities,
+				folds_to_three_bet=statistics.folds_to_three_bet,
+				cbet_opportunities=statistics.cbet_opportunities,
+				cbets=statistics.cbets,
+				aggressive_actions=statistics.aggressive_actions,
+				calls=statistics.calls,
+				showdowns=statistics.showdowns,
+				showdown_wins=statistics.showdown_wins,
 			)
 		)
 		self.session.commit()
@@ -74,6 +86,18 @@ class PostgresStatisticsRepository(StatisticsRepository):
 			aggression=model.aggression,
 			wtsd=model.wtsd,
 			wsd=model.wsd,
+			vpip_hands=model.vpip_hands,
+			pfr_hands=model.pfr_hands,
+			three_bet_opportunities=model.three_bet_opportunities,
+			three_bets=model.three_bets,
+			fold_to_three_bet_opportunities=model.fold_to_three_bet_opportunities,
+			folds_to_three_bet=model.folds_to_three_bet,
+			cbet_opportunities=model.cbet_opportunities,
+			cbets=model.cbets,
+			aggressive_actions=model.aggressive_actions,
+			calls=model.calls,
+			showdowns=model.showdowns,
+			showdown_wins=model.showdown_wins,
 		)
 
 

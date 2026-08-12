@@ -45,6 +45,18 @@ class PlayerStatisticsModel(DeclarativeBase):
 	aggression: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 	wtsd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 	wsd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	vpip_hands: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	pfr_hands: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	three_bet_opportunities: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	three_bets: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	fold_to_three_bet_opportunities: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	folds_to_three_bet: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	cbet_opportunities: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	cbets: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	aggressive_actions: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	calls: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	showdowns: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	showdown_wins: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 	player: Mapped[PlayerModel] = relationship(back_populates="statistics")
 

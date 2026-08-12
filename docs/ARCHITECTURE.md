@@ -186,7 +186,7 @@ StatisticsService / future NeuralAgent opponent model
           players / player_statistics / agent_memory
 ```
 
-`PlayerRecord`, `PlayerStatisticsRecord` and `AgentMemoryRecord` remain transport/domain records at the repository boundary. SQLAlchemy models are persistence-only objects. `AgentMemoryModel` uses `(agent_id, player_id)` as a composite primary key so each neural agent can maintain an independent view of the same opponent.
+`PlayerRecord`, `PlayerStatisticsRecord` and `AgentMemoryRecord` remain transport/domain records at the repository boundary. SQLAlchemy models are persistence-only objects. `PlayerStatisticsRecord` persists both derived tracker rates and their raw numerators/denominators; the counters are the durable aggregation source of truth and prevent mathematically invalid averaging of percentages across sessions. `AgentMemoryModel` uses `(agent_id, player_id)` as a composite primary key so each neural agent can maintain an independent view of the same opponent.
 
 Completed engine histories feed statistics through a separate read-only mapping path:
 

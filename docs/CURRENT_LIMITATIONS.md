@@ -81,11 +81,12 @@ Current limitation:
 - flop continuation-bet opportunity/action and postflop aggression-factor inputs are derived from history;
 - c-bet logic currently covers the flop only;
 - positional splits, fold-to-cbet and street-specific aggression are not yet implemented;
-- richer tracker numerators/denominators are not yet persisted in the SQLAlchemy/PostgreSQL statistics schema;
+- tracker numerators/denominators for VPIP, PFR, 3-bet, fold-to-3-bet, c-bet, aggression and showdown metrics are persisted in the SQLAlchemy/PostgreSQL statistics schema;
+- `StatisticsCollector` does not yet automatically flush its accumulated snapshots into the persistence repository;
 - SQLAlchemy persistence for players, aggregate statistics and agent-specific opponent memory is implemented and SQLite-tested;
 - Alembic owns schema evolution and the initial persistence revision is upgrade/downgrade tested;
 - real PostgreSQL integration coverage is opt-in and requires `POKER_TEST_DATABASE_URL`; it is skipped in environments without a disposable PostgreSQL test database;
-- richer tracker metrics such as fold-to-3-bet, c-bet and positional splits are not yet represented in the persistence schema.
+- positional splits, fold-to-cbet and street-specific aggression are not yet represented in the persistence schema.
 
 ## Stress verification
 

@@ -40,6 +40,18 @@ def test_sqlalchemy_repositories_round_trip_records():
 			aggression=2.4,
 			wtsd=0.27,
 			wsd=0.53,
+			vpip_hands=31,
+			pfr_hands=22,
+			three_bet_opportunities=50,
+			three_bets=4,
+			fold_to_three_bet_opportunities=12,
+			folds_to_three_bet=7,
+			cbet_opportunities=18,
+			cbets=11,
+			aggressive_actions=44,
+			calls=18,
+			showdowns=27,
+			showdown_wins=14,
 		)
 		agent_memory = AgentMemoryRecord(
 			agent_id="neural_a",

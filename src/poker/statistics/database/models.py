@@ -18,6 +18,18 @@ class PlayerStatisticsRecord:
 	aggression: float = 0.0
 	wtsd: float = 0.0
 	wsd: float = 0.0
+	vpip_hands: int = 0
+	pfr_hands: int = 0
+	three_bet_opportunities: int = 0
+	three_bets: int = 0
+	fold_to_three_bet_opportunities: int = 0
+	folds_to_three_bet: int = 0
+	cbet_opportunities: int = 0
+	cbets: int = 0
+	aggressive_actions: int = 0
+	calls: int = 0
+	showdowns: int = 0
+	showdown_wins: int = 0
 
 
 @dataclass
