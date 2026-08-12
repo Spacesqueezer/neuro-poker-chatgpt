@@ -188,4 +188,4 @@ StatisticsService / future NeuralAgent opponent model
 
 `PlayerRecord`, `PlayerStatisticsRecord` and `AgentMemoryRecord` remain transport/domain records at the repository boundary. SQLAlchemy models are persistence-only objects. `AgentMemoryModel` uses `(agent_id, player_id)` as a composite primary key so each neural agent can maintain an independent view of the same opponent.
 
-SQLite in-memory is the persistence test backend. Production PostgreSQL must use the same repository contracts; schema changes should move through Alembic rather than leaking database concerns into statistics services.
+SQLite in-memory is the fast persistence test backend. Production PostgreSQL uses the same repository contracts. Alembic owns schema evolution through `migrations/`; `src/poker/statistics/database/migrations.py` is the programmatic upgrade/downgrade boundary. Database URLs may be supplied explicitly by callers or through `POKER_DATABASE_URL` in Alembic execution. Schema changes must be represented by revisions rather than leaking database concerns into statistics services.

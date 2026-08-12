@@ -9,7 +9,7 @@ Current focus:
 - persistent opponent memory architecture;
 - preparation for dataset generation.
 
-A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced. SQLAlchemy 2.x now provides the real persistence backend: mapped player/statistics/agent-memory tables, engine/session creation, and repository round trips are covered by SQLite in-memory tests. Existing in-memory repositories remain available for fast unit tests. The next persistence step is Alembic schema migration and PostgreSQL integration testing; service contracts should remain unchanged.
+A first statistics model, collector, extraction pipeline and storage boundary exist. Agent-specific opponent memory architecture is introduced. SQLAlchemy 2.x provides the real persistence backend, and Alembic now owns schema evolution with an initial revision for players, aggregate statistics and agent-specific memory. Repository round trips and migration upgrade/downgrade are covered by SQLite tests. Existing in-memory repositories remain available for fast unit tests. The next persistence step is exercising the same stack against a real PostgreSQL instance, then expanding tracker metrics without changing service contracts.
 
 ## Current capabilities
 
