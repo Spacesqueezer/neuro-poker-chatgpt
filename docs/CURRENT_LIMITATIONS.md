@@ -79,7 +79,7 @@ Current limitation:
 - statistics collection still requires mapping real HandHistory fields into the internal event contract;
 - SQLAlchemy persistence for players, aggregate statistics and agent-specific opponent memory is implemented and SQLite-tested;
 - Alembic owns schema evolution and the initial persistence revision is upgrade/downgrade tested;
-- PostgreSQL itself is not yet exercised by automated integration tests;
+- real PostgreSQL integration coverage is opt-in and requires `POKER_TEST_DATABASE_URL`; it is skipped in environments without a disposable PostgreSQL test database;
 - richer tracker metrics such as fold-to-3-bet, c-bet and positional splits are not yet represented in the persistence schema.
 
 ## Stress verification
