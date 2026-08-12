@@ -1,56 +1,66 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from sqlalchemy import Float, ForeignKey, Integer, String
+from sqlalchemy.orm import (
+	DeclarativeBase as SQLAlchemyDeclarativeBase,
+	Mapped,
+	mapped_column,
+	relationship,
+)
 
 
-class DeclarativeBase:
-	metadata = {}
+class DeclarativeBase(SQLAlchemyDeclarativeBase):
+	pass
 
 
-class MappedField:
-	def __init__(self, name, primary_key=False):
-		self.name = name
-		self.primary_key = primary_key
-
-
-@dataclass
 class PlayerModel(DeclarativeBase):
-	id: int
-	name: str
-	profile_id: int | None = None
+	__tablename__ = "players"
 
-	__mapped_fields__ = {
-		"id": MappedField("id", primary_key=True),
-		"name": MappedField("name"),
-		"profile_id": MappedField("profile_id"),
-	}
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	name: Mapped[str] = mapped_column(String(128), nullable=False)
+	profile_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+	statistics: Mapped[PlayerStatisticsModel | None] = relationship(
+		back_populates="player",
+		uselist=False,
+		cascade="all, delete-orphan",
+	)
+	memories: Mapped[list[AgentMemoryModel]] = relationship(
+		back_populates="player",
+		cascade="all, delete-orphan",
+	)
 
 
-@dataclass
 class PlayerStatisticsModel(DeclarativeBase):
-	player_id: int
-	hands: int = 0
-	vpip: float = 0.0
-	pfr: float = 0.0
-	three_bet: float = 0.0
-	aggression: float = 0.0
-	wtsd: float = 0.0
-	wsd: float = 0.0
+	__tablename__ = "player_statistics"
 
-	__mapped_fields__ = {
-		"player_id": MappedField("player_id", primary_key=True),
-	}
+	player_id: Mapped[int] = mapped_column(
+		ForeignKey("players.id", ondelete="CASCADE"),
+		primary_key=True,
+	)
+	hands: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	vpip: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	pfr: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	three_bet: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	aggression: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	wtsd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	wsd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+	player: Mapped[PlayerModel] = relationship(back_populates="statistics")
 
 
-@dataclass
 class AgentMemoryModel(DeclarativeBase):
-	agent_id: str
-	player_id: int
-	hands_observed: int = 0
-	vpip_estimate: float = 0.0
-	pfr_estimate: float = 0.0
-	aggression_estimate: float = 0.0
-	confidence: float = 0.0
+	__tablename__ = "agent_memory"
 
-	__mapped_fields__ = {
-		"agent_id": MappedField("agent_id", primary_key=True),
-		"player_id": MappedField("player_id", primary_key=True),
-	}
+	agent_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+	player_id: Mapped[int] = mapped_column(
+		ForeignKey("players.id", ondelete="CASCADE"),
+		primary_key=True,
+	)
+	hands_observed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	vpip_estimate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	pfr_estimate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	aggression_estimate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+	player: Mapped[PlayerModel] = relationship(back_populates="memories")

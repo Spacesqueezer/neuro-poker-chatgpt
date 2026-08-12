@@ -164,3 +164,28 @@ Agents / Arena
 `HandStateView` contains public state and only the acting player's hole cards. `LegalActions` contains action availability and sizing bounds. `play_hand()` validates an agent decision against that query surface and then delegates mutation to `HandController`, which remains the source of truth for action execution.
 
 This boundary prevents Arena, baseline agents and future learning systems from duplicating poker legality rules.
+
+## Statistics Persistence
+
+Statistics consumers depend on repository contracts, not on SQLAlchemy directly:
+
+```text
+StatisticsService / future NeuralAgent opponent model
+                    |
+                    v
+            repository contracts
+             /             \
+            v               v
+      in-memory         SQLAlchemy
+                        repositories
+                            |
+                            v
+                     SQLAlchemy Session
+                            |
+                            v
+          players / player_statistics / agent_memory
+```
+
+`PlayerRecord`, `PlayerStatisticsRecord` and `AgentMemoryRecord` remain transport/domain records at the repository boundary. SQLAlchemy models are persistence-only objects. `AgentMemoryModel` uses `(agent_id, player_id)` as a composite primary key so each neural agent can maintain an independent view of the same opponent.
+
+SQLite in-memory is the persistence test backend. Production PostgreSQL must use the same repository contracts; schema changes should move through Alembic rather than leaking database concerns into statistics services.

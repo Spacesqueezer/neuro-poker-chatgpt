@@ -2,17 +2,26 @@ from poker.statistics.database.sqlalchemy_backend import (
 	SQLAlchemyConfig,
 	SQLAlchemyEngine,
 )
+from poker.statistics.database.sqlalchemy_models import PlayerModel
 
 
 def test_sqlalchemy_backend_boundary():
 	engine = SQLAlchemyEngine(
 		SQLAlchemyConfig(
-			url="sqlite:///:memory:"
+			url="sqlite:///:memory:",
+			create_schema=True,
 		)
 	)
 
-	session = engine.create_session()
+	with engine.create_session() as session:
+		session.add(
+			PlayerModel(
+				id=1,
+				name="Player_001",
+			)
+		)
+		session.commit()
 
-	session.add("item")
+		assert session.get(PlayerModel, 1).name == "Player_001"
 
-	assert session.commit() is True
+	engine.dispose()

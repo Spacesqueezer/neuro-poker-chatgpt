@@ -76,10 +76,11 @@ Still not modeled:
 ## Player statistics
 
 Current limitation:
-- statistics objects and collector exist only in memory;
-- HandHistory integration still requires mapping real engine history fields into the internal event contract;
-- database models and repository contracts exist, but PostgreSQL persistence is not implemented yet;
-- opponent memory is in-memory only.
+- statistics collection still requires mapping real HandHistory fields into the internal event contract;
+- SQLAlchemy persistence for players, aggregate statistics and agent-specific opponent memory is implemented and SQLite-tested;
+- PostgreSQL itself is not yet exercised by automated integration tests;
+- schema evolution is not yet owned by real Alembic revisions;
+- richer tracker metrics such as fold-to-3-bet, c-bet and positional splits are not yet represented in the persistence schema.
 
 ## Stress verification
 

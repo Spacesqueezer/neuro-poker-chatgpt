@@ -1,30 +1,42 @@
 from dataclasses import dataclass
 
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
-@dataclass
+from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+
+
+@dataclass(frozen=True)
 class SQLAlchemyConfig:
 	url: str
 	echo: bool = False
+	create_schema: bool = False
 
 
 class SQLAlchemyEngine:
-	def __init__(self, config):
+	def __init__(self, config: SQLAlchemyConfig):
 		self.config = config
+		self.raw_engine: Engine = create_engine(
+			config.url,
+			echo=config.echo,
+		)
+		self._session_factory = sessionmaker(
+			bind=self.raw_engine,
+			expire_on_commit=False,
+		)
 
-	def create_session(self):
-		return SQLAlchemySession(self)
+		if config.create_schema:
+			self.create_schema()
+
+	def create_schema(self):
+		DeclarativeBase.metadata.create_all(self.raw_engine)
+
+	def create_session(self) -> Session:
+		return self._session_factory()
+
+	def dispose(self):
+		self.raw_engine.dispose()
 
 
-class SQLAlchemySession:
-	def __init__(self, engine):
-		self.engine = engine
-		self.items = []
-
-	def add(self, item):
-		self.items.append(item)
-
-	def commit(self):
-		return True
-
-	def rollback(self):
-		self.items.clear()
+SQLAlchemySession = Session
