@@ -11,13 +11,16 @@ class PostgresEngine:
 	def __init__(self, config):
 		self.config = config
 
+	def create_session(self):
+		return PostgresSession(self)
+
 
 class PostgresSessionFactory:
 	def __init__(self, config):
 		self.engine = PostgresEngine(config)
 
 	def create(self):
-		return PostgresSession(self.engine)
+		return self.engine.create_session()
 
 
 class PostgresSession:
