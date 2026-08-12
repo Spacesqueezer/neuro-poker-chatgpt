@@ -1,3 +1,6 @@
+from poker.statistics.database.models import PlayerStatisticsRecord
+
+
 class StatisticsService:
 	def __init__(
 		self,
@@ -14,3 +17,47 @@ class StatisticsService:
 
 	def get_agent_memory(self, agent_id, player_id):
 		return self.memory_repository.get(agent_id, player_id)
+
+	def persist_collector(self, collector, player_ids):
+		records = []
+
+		for player_name, stats in collector.players.items():
+			if player_name not in player_ids:
+				raise KeyError(
+					f"Missing persistent player id for {player_name}"
+				)
+
+			record = self._record_from_statistics(
+				player_ids[player_name],
+				stats,
+			)
+			self.statistics_repository.save(record)
+			records.append(record)
+
+		return records
+
+	def _record_from_statistics(self, player_id, stats):
+		return PlayerStatisticsRecord(
+			player_id=player_id,
+			hands=stats.hands,
+			vpip=stats.vpip,
+			pfr=stats.pfr,
+			three_bet=stats.three_bet,
+			aggression=stats.aggression_factor,
+			wtsd=stats.wtsd,
+			wsd=stats.wsd,
+			vpip_hands=stats.vpip_hands,
+			pfr_hands=stats.pfr_hands,
+			three_bet_opportunities=stats.three_bet_opportunities,
+			three_bets=stats.three_bets,
+			fold_to_three_bet_opportunities=(
+				stats.fold_to_three_bet_opportunities
+			),
+			folds_to_three_bet=stats.folds_to_three_bet,
+			cbet_opportunities=stats.cbet_opportunities,
+			cbets=stats.cbets,
+			aggressive_actions=stats.aggressive_actions,
+			calls=stats.calls,
+			showdowns=stats.showdowns,
+			showdown_wins=stats.showdown_wins,
+		)

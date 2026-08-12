@@ -204,7 +204,15 @@ HandStatisticsAdapter
     |
     v
 StatisticsCollector
+    |
+    v
+StatisticsService.persist_collector()
+    |
+    v
+StatisticsRepository
 ```
+
+`StatisticsCollector` remains an in-memory aggregation object and has no database dependency. `StatisticsService` is the persistence boundary: it resolves collector player names through an explicit stable-id mapping, converts snapshots into `PlayerStatisticsRecord` values, and writes them through repository contracts. This allows the same flow to use memory repositories in tests and SQLAlchemy/PostgreSQL repositories in production.
 
 The mapper derives facts only from recorded public hand events; it does not inspect `GameState` or `HandController`. For compatibility, already-aggregated player dictionaries are accepted and their existing flags are preserved. Opportunity-based metrics are derived from action order: a player acting after one preflop raise receives a 3-bet opportunity, an opener facing the second raise receives a fold-to-3-bet opportunity, and the final preflop aggressor receives a flop c-bet opportunity only when action reaches that player before a postflop bet. Postflop bets/raises/all-ins and calls are counted separately for aggression-factor calculation. This keeps statistics reproducible from persisted histories without breaking the earlier statistics input contract.
 
