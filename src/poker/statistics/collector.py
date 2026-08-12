@@ -18,7 +18,14 @@ class StatisticsCollector:
 		player_name,
 		entered_pot=False,
 		raised_preflop=False,
+		three_bet_opportunity=False,
 		three_bet=False,
+		fold_to_three_bet_opportunity=False,
+		folded_to_three_bet=False,
+		cbet_opportunity=False,
+		cbet=False,
+		aggressive_actions=0,
+		calls=0,
 		showdown=False,
 		won_showdown=False,
 	):
@@ -31,8 +38,26 @@ class StatisticsCollector:
 		if raised_preflop:
 			stats.pfr_hands += 1
 
+		if three_bet_opportunity:
+			stats.three_bet_opportunities += 1
+
 		if three_bet:
 			stats.three_bets += 1
+
+		if fold_to_three_bet_opportunity:
+			stats.fold_to_three_bet_opportunities += 1
+
+		if folded_to_three_bet:
+			stats.folds_to_three_bet += 1
+
+		if cbet_opportunity:
+			stats.cbet_opportunities += 1
+
+		if cbet:
+			stats.cbets += 1
+
+		stats.aggressive_actions += aggressive_actions
+		stats.calls += calls
 
 		if showdown:
 			stats.showdowns += 1

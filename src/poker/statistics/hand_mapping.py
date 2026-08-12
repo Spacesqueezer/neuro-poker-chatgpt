@@ -1,7 +1,10 @@
 class HandStatisticsMapper:
 	PREFLOP = "preflop"
+	FLOP = "flop"
+	POSTFLOP_STREETS = {"flop", "turn", "river"}
 	VOLUNTARY_ACTIONS = {"call", "bet", "raise", "all_in"}
 	RAISE_ACTIONS = {"bet", "raise", "all_in"}
+	AGGRESSIVE_ACTIONS = {"bet", "raise", "all_in"}
 
 	def map_hand(self, hand_history):
 		if hasattr(hand_history, "to_dict"):
@@ -13,6 +16,11 @@ class HandStatisticsMapper:
 		}
 
 		preflop_raise_count = 0
+		preflop_aggressor = None
+		open_raiser = None
+		three_bettor = None
+		flop_bet_seen = False
+		flop_aggressor_acted = False
 
 		for event in hand_history.get("events", []):
 			if hasattr(event, "to_dict"):
@@ -28,8 +36,9 @@ class HandStatisticsMapper:
 
 				action = data.get("action")
 				street = data.get("street")
+				player = players[player_name]
 
-				players[player_name]["street_actions"].append(
+				player["street_actions"].append(
 					{
 						"street": street,
 						"action": action,
@@ -38,14 +47,44 @@ class HandStatisticsMapper:
 
 				if street == self.PREFLOP:
 					if action in self.VOLUNTARY_ACTIONS:
-						players[player_name]["entered_pot"] = True
+						player["entered_pot"] = True
+
+					if preflop_raise_count == 1 and player_name != open_raiser:
+						player["three_bet_opportunity"] = True
+
+					if preflop_raise_count == 2 and player_name == open_raiser:
+						player["fold_to_three_bet_opportunity"] = True
+						if action == "fold":
+							player["folded_to_three_bet"] = True
 
 					if action in self.RAISE_ACTIONS:
 						preflop_raise_count += 1
-						players[player_name]["raised_preflop"] = True
+						player["raised_preflop"] = True
+						preflop_aggressor = player_name
 
-						if preflop_raise_count == 2:
-							players[player_name]["three_bet"] = True
+						if preflop_raise_count == 1:
+							open_raiser = player_name
+						elif preflop_raise_count == 2:
+							three_bettor = player_name
+							player["three_bet"] = True
+
+				elif street in self.POSTFLOP_STREETS:
+					if action in self.AGGRESSIVE_ACTIONS:
+						player["aggressive_actions"] += 1
+					elif action == "call":
+						player["calls"] += 1
+
+					if street == self.FLOP:
+						if player_name == preflop_aggressor and not flop_aggressor_acted:
+							flop_aggressor_acted = True
+
+							if not flop_bet_seen:
+								player["cbet_opportunity"] = True
+								if action in {"bet", "all_in"}:
+									player["cbet"] = True
+
+						if action in self.AGGRESSIVE_ACTIONS:
+							flop_bet_seen = True
 
 			elif event_type == "showdown":
 				results = data.get("results", {})
@@ -68,7 +107,17 @@ class HandStatisticsMapper:
 			"street_actions": list(player.get("street_actions", [])),
 			"entered_pot": player.get("entered_pot", False),
 			"raised_preflop": player.get("raised_preflop", False),
+			"three_bet_opportunity": player.get("three_bet_opportunity", False),
 			"three_bet": player.get("three_bet", False),
+			"fold_to_three_bet_opportunity": player.get(
+				"fold_to_three_bet_opportunity",
+				False,
+			),
+			"folded_to_three_bet": player.get("folded_to_three_bet", False),
+			"cbet_opportunity": player.get("cbet_opportunity", False),
+			"cbet": player.get("cbet", False),
+			"aggressive_actions": player.get("aggressive_actions", 0),
+			"calls": player.get("calls", 0),
 			"showdown": player.get("showdown", False),
 			"won_showdown": player.get("won_showdown", False),
 		}

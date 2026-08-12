@@ -15,7 +15,17 @@ class HandStatisticsAdapter:
 				player["name"],
 				entered_pot=player.get("entered_pot", False),
 				raised_preflop=player.get("raised_preflop", False),
+				three_bet_opportunity=player.get("three_bet_opportunity", False),
 				three_bet=player.get("three_bet", False),
+				fold_to_three_bet_opportunity=player.get(
+					"fold_to_three_bet_opportunity",
+					False,
+				),
+				folded_to_three_bet=player.get("folded_to_three_bet", False),
+				cbet_opportunity=player.get("cbet_opportunity", False),
+				cbet=player.get("cbet", False),
+				aggressive_actions=player.get("aggressive_actions", 0),
+				calls=player.get("calls", 0),
 				showdown=player.get("showdown", False),
 				won_showdown=player.get("won_showdown", False),
 			)
