@@ -82,7 +82,7 @@ Current limitation:
 - c-bet logic currently covers the flop only;
 - positional splits, fold-to-cbet and street-specific aggression are not yet implemented;
 - tracker numerators/denominators for VPIP, PFR, 3-bet, fold-to-3-bet, c-bet, aggression and showdown metrics are persisted in the SQLAlchemy/PostgreSQL statistics schema;
-- `StatisticsCollector` snapshots can now be persisted explicitly through `StatisticsService.persist_collector()`, but Arena/simulation lifecycle does not yet invoke that bridge automatically;
+- Arena automatically collects successful hand histories and can persist them through `StatisticsService` when stable player IDs are configured; generic non-Arena simulation callers still need to invoke the bridge explicitly;
 - SQLAlchemy persistence for players, aggregate statistics and agent-specific opponent memory is implemented and SQLite-tested;
 - Alembic owns schema evolution and the initial persistence revision is upgrade/downgrade tested;
 - real PostgreSQL integration coverage is opt-in and requires `POKER_TEST_DATABASE_URL`; it is skipped in environments without a disposable PostgreSQL test database;

@@ -94,6 +94,49 @@ def test_service_persists_multiple_players_by_stable_id():
 	assert service.get_player_statistics(202).pfr_hands == 1
 
 
+def test_service_merges_new_session_counters_with_existing_history():
+	service = _service()
+
+	first = StatisticsCollector()
+	first.register_hand(
+		"alice",
+		entered_pot=True,
+		raised_preflop=True,
+		three_bet_opportunity=True,
+		three_bet=True,
+		aggressive_actions=2,
+		calls=1,
+	)
+	service.persist_collector(first, {"alice": 101})
+
+	second = StatisticsCollector()
+	second.register_hand(
+		"alice",
+		three_bet_opportunity=True,
+		fold_to_three_bet_opportunity=True,
+		folded_to_three_bet=True,
+		aggressive_actions=1,
+		calls=2,
+	)
+	service.persist_collector(second, {"alice": 101})
+
+	record = service.get_player_statistics(101)
+
+	assert record.hands == 2
+	assert record.vpip_hands == 1
+	assert record.vpip == 0.5
+	assert record.pfr_hands == 1
+	assert record.pfr == 0.5
+	assert record.three_bet_opportunities == 2
+	assert record.three_bets == 1
+	assert record.three_bet == 0.5
+	assert record.fold_to_three_bet_opportunities == 1
+	assert record.folds_to_three_bet == 1
+	assert record.aggressive_actions == 3
+	assert record.calls == 3
+	assert record.aggression == 1.0
+
+
 def test_service_rejects_collector_player_without_persistent_id():
 	collector = StatisticsCollector()
 	collector.register_hand("unknown", entered_pot=True)

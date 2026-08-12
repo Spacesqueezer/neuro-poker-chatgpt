@@ -2,6 +2,22 @@ from poker.statistics.database.models import PlayerStatisticsRecord
 
 
 class StatisticsService:
+	_COUNTER_FIELDS = (
+		"hands",
+		"vpip_hands",
+		"pfr_hands",
+		"three_bet_opportunities",
+		"three_bets",
+		"fold_to_three_bet_opportunities",
+		"folds_to_three_bet",
+		"cbet_opportunities",
+		"cbets",
+		"aggressive_actions",
+		"calls",
+		"showdowns",
+		"showdown_wins",
+	)
+
 	def __init__(
 		self,
 		player_repository,
@@ -27,10 +43,14 @@ class StatisticsService:
 					f"Missing persistent player id for {player_name}"
 				)
 
-			record = self._record_from_statistics(
-				player_ids[player_name],
+			player_id = player_ids[player_name]
+			incoming = self._record_from_statistics(
+				player_id,
 				stats,
 			)
+			existing = self.statistics_repository.get(player_id)
+			record = self._merge_records(existing, incoming)
+
 			self.statistics_repository.save(record)
 			records.append(record)
 
@@ -60,4 +80,52 @@ class StatisticsService:
 			calls=stats.calls,
 			showdowns=stats.showdowns,
 			showdown_wins=stats.showdown_wins,
+		)
+
+	def _merge_records(self, existing, incoming):
+		if existing is None:
+			return incoming
+
+		counters = {
+			field: getattr(existing, field) + getattr(incoming, field)
+			for field in self._COUNTER_FIELDS
+		}
+
+		return PlayerStatisticsRecord(
+			player_id=incoming.player_id,
+			**counters,
+			vpip=self._ratio(
+				counters["vpip_hands"],
+				counters["hands"],
+			),
+			pfr=self._ratio(
+				counters["pfr_hands"],
+				counters["hands"],
+			),
+			three_bet=self._ratio(
+				counters["three_bets"],
+				counters["three_bet_opportunities"],
+			),
+			aggression=self._aggression(
+				counters["aggressive_actions"],
+				counters["calls"],
+			),
+			wtsd=self._ratio(
+				counters["showdowns"],
+				counters["hands"],
+			),
+			wsd=self._ratio(
+				counters["showdown_wins"],
+				counters["showdowns"],
+			),
+		)
+
+	def _ratio(self, numerator, denominator):
+		return numerator / denominator if denominator else 0
+
+	def _aggression(self, aggressive_actions, calls):
+		return (
+			aggressive_actions / calls
+			if calls
+			else float(aggressive_actions)
 		)

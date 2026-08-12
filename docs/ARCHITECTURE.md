@@ -212,7 +212,30 @@ StatisticsService.persist_collector()
 StatisticsRepository
 ```
 
-`StatisticsCollector` remains an in-memory aggregation object and has no database dependency. `StatisticsService` is the persistence boundary: it resolves collector player names through an explicit stable-id mapping, converts snapshots into `PlayerStatisticsRecord` values, and writes them through repository contracts. This allows the same flow to use memory repositories in tests and SQLAlchemy/PostgreSQL repositories in production.
+`StatisticsCollector` remains an in-memory aggregation object and has no database dependency. `StatisticsService` is the persistence boundary: it resolves collector player names through an explicit stable-id mapping, converts snapshots into `PlayerStatisticsRecord` values, merges raw counters with any existing stored record, recalculates derived rates from the merged counters, and writes through repository contracts. This allows the same flow to use memory repositories in tests and SQLAlchemy/PostgreSQL repositories in production.
+
+Arena integrates at orchestration level rather than inside the poker engine:
+
+```text
+ArenaSession
+    |
+    +-- successful HandHistory
+            |
+            v
+ArenaRunner
+    |
+    +-- HandStatisticsAdapter
+    |       |
+    |       v
+    |   StatisticsCollector
+    |
+    +-- optional StatisticsService
+            |
+            v
+      persistent player profile
+```
+
+`ArenaSession` only exposes an optional successful-hand observer and remains unaware of statistics or storage. Statistics/persistence failures are therefore not misclassified as poker-hand failures.
 
 The mapper derives facts only from recorded public hand events; it does not inspect `GameState` or `HandController`. For compatibility, already-aggregated player dictionaries are accepted and their existing flags are preserved. Opportunity-based metrics are derived from action order: a player acting after one preflop raise receives a 3-bet opportunity, an opener facing the second raise receives a fold-to-3-bet opportunity, and the final preflop aggressor receives a flop c-bet opportunity only when action reaches that player before a postflop bet. Postflop bets/raises/all-ins and calls are counted separately for aggression-factor calculation. This keeps statistics reproducible from persisted histories without breaking the earlier statistics input contract.
 

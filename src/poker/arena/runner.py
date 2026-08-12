@@ -1,19 +1,50 @@
 from poker.arena.session import ArenaSession
 from poker.arena.stats import ArenaStats
+from poker.statistics.hand_adapter import HandStatisticsAdapter
 
 
 class ArenaRunner:
-	def __init__(self, agents, starting_stack=100):
+	def __init__(
+		self,
+		agents,
+		starting_stack=100,
+		statistics_service=None,
+		player_ids=None,
+	):
 		if len(agents) < 2:
 			raise ValueError("Arena requires at least two agents")
+		if statistics_service is not None and player_ids is None:
+			raise ValueError(
+				"player_ids are required when statistics persistence is enabled"
+			)
+
 		self.agents = agents
 		self.starting_stack = starting_stack
+		self.statistics_service = statistics_service
+		self.player_ids = dict(player_ids or {})
+		self.last_statistics_collector = None
 
 	def run(self, hands, seed=42):
 		stats = ArenaStats()
 		players = list(self.agents)
 		session = ArenaSession.create(players, self.starting_stack)
+		statistics_adapter = HandStatisticsAdapter()
 
-		session.run(self.agents, hands, seed, stats)
+		session.run(
+			self.agents,
+			hands,
+			seed,
+			stats,
+			hand_observer=statistics_adapter.process_hand,
+		)
 		stats.update_players(session.current_stacks(), self.starting_stack)
+
+		self.last_statistics_collector = statistics_adapter.collector
+
+		if self.statistics_service is not None:
+			self.statistics_service.persist_collector(
+				statistics_adapter.collector,
+				self.player_ids,
+			)
+
 		return stats

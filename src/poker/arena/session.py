@@ -52,7 +52,14 @@ class ArenaSession:
 		self.apply_hand_result(result)
 		return result
 
-	def run(self, agents, hands, seed, stats):
+	def run(
+		self,
+		agents,
+		hands,
+		seed,
+		stats,
+		hand_observer=None,
+	):
 		players = list(agents)
 
 		for index in range(hands):
@@ -69,3 +76,7 @@ class ArenaSession:
 				stats.record_result(current_seed, result)
 			except Exception:
 				stats.failed_hands += 1
+				continue
+
+			if hand_observer is not None:
+				hand_observer(result)
