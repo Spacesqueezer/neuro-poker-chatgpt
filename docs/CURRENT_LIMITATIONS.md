@@ -76,7 +76,9 @@ Still not modeled:
 ## Player statistics
 
 Current limitation:
-- statistics collection still requires mapping real HandHistory fields into the internal event contract;
+- real `HandHistory` action/showdown events now feed VPIP, PFR, basic 3-bet and showdown statistics directly, while legacy pre-aggregated hand dictionaries remain supported;
+- 3-bet is currently identified as the second preflop aggressive action and is not yet opportunity-aware;
+- fold-to-3-bet, c-bet, aggression factor inputs and positional splits still need explicit opportunity/action tracking;
 - SQLAlchemy persistence for players, aggregate statistics and agent-specific opponent memory is implemented and SQLite-tested;
 - Alembic owns schema evolution and the initial persistence revision is upgrade/downgrade tested;
 - real PostgreSQL integration coverage is opt-in and requires `POKER_TEST_DATABASE_URL`; it is skipped in environments without a disposable PostgreSQL test database;
