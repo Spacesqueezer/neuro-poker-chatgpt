@@ -1,19 +1,19 @@
 from dataclasses import dataclass
 
 
-class BaseModel:
-	pass
+class DeclarativeBase:
+	metadata = {}
 
 
 @dataclass
-class PlayerModel(BaseModel):
+class PlayerModel(DeclarativeBase):
 	id: int
 	name: str
 	profile_id: int | None = None
 
 
 @dataclass
-class PlayerStatisticsModel(BaseModel):
+class PlayerStatisticsModel(DeclarativeBase):
 	player_id: int
 	hands: int = 0
 	vpip: float = 0.0
@@ -25,7 +25,7 @@ class PlayerStatisticsModel(BaseModel):
 
 
 @dataclass
-class AgentMemoryModel(BaseModel):
+class AgentMemoryModel(DeclarativeBase):
 	agent_id: str
 	player_id: int
 	hands_observed: int = 0
