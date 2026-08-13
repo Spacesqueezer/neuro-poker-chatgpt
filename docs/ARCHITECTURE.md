@@ -328,6 +328,26 @@ HandStateView + LegalActions
 
 The expert must not inspect engine internals, deck state or hidden opponent cards. Its Monte-Carlo deck is reconstructed only from publicly known cards and samples remaining unknown cards uniformly. This is an explicit heuristic teacher boundary, not a solver or GTO claim.
 
+Teacher quality is measured outside the agent:
+
+```text
+ExpertBenchmarkRunner
+      |
+      +--> session 1: Expert vs baseline
+      +--> session 2: reset stacks, alternate first dealer
+      +--> ...
+      |
+      v
+aggregate actual hands
++ failures
++ Expert profit
++ bb/100
++ showdown/uncontested counts
++ completion rate
+```
+
+Each benchmark session creates fresh agent instances with deterministic derived seeds. Ordinary `ArenaSession` bust semantics remain unchanged; benchmark orchestration resets stacks by starting a new Arena session. This prevents one bust from truncating an entire teacher-quality experiment while preserving reproducibility.
+
 `LearningDatasetGenerator` is orchestration above Arena and the dataset boundary. It constructs explicitly named agents, derives deterministic seeds for stochastic agents, can filter capture to one configured teacher, captures a clean raw JSONL dataset, performs a seeded deterministic sample-level train/validation split, analyzes every split and writes a manifest containing the generation configuration and Arena failure count. Generation fails if any Arena hand fails, preventing silent partial datasets. `RandomAgent` is required to obey the same `LegalActions` contract as every other agent, including legal BET/RAISE sizing. Generated data remains outside the poker engine and is safe to delete/rebuild. The standalone generator currently requires global profile scope because no online agent-memory updater exists yet; private-memory training must wait for an explicit observation-history update path rather than treating zero-filled memory as meaningful knowledge.
 
 The public simulation loop owns the only decision-capture hook. `play_hand()` invokes an optional `decision_observer(view, legal, decision)` only after the agent decision has passed `LegalActions` validation and before `HandController` mutates state. Arena forwards the callback but remains unaware of learning/dataset classes. To preserve the historical Arena/session call contract, `ArenaSession` omits the `decision_observer` keyword entirely when no observer is configured. This keeps existing alternate `play_hand` callables and monkeypatch tests compatible. The dependency direction remains `poker.api` exposes observations/events while `poker.learning` subscribes from outside.

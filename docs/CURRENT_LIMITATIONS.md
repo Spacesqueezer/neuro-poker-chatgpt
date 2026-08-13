@@ -101,7 +101,8 @@ Current limitation:
 - train/validation splitting is deterministic sample-level splitting, not grouped by hand/session, so leakage-sensitive experiments may require a grouped splitter later;
 - `ExpertAgent` provides deterministic Monte-Carlo equity/pot-odds teacher decisions through the public API, and dataset generation can record only the configured teacher's decisions;
 - the expert is intentionally heuristic and is not claimed to be GTO: opponent ranges are sampled uniformly from unknown cards, action-history range inference is not yet modeled, and strategic lookahead beyond showdown equity/pot odds is limited;
-- no trainable policy consumes the learning samples yet; teacher quality must be benchmarked before imitation learning is treated as a strength-improving step.
+- reproducible teacher benchmarks now run multiple reset Arena sessions against Random/CallingStation/Nit and aggregate Expert profit, bb/100, failures and completion rate; this measures empirical strength but is not an exploitability/GTO metric;
+- no trainable policy consumes the learning samples yet; longer teacher benchmarks and explicit range modeling remain prerequisites before imitation learning is treated as a strength-improving step.
 
 ## Stress verification
 
