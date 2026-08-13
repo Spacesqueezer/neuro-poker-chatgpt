@@ -88,7 +88,9 @@ Current limitation:
 - SQLAlchemy persistence for players, aggregate statistics and agent-specific opponent memory is implemented and SQLite-tested;
 - Alembic owns schema evolution and the initial persistence revision is upgrade/downgrade tested;
 - real PostgreSQL integration coverage is opt-in and requires `POKER_TEST_DATABASE_URL`; it is skipped in environments without a disposable PostgreSQL test database;
-- turn/river barrel frequencies, fold-to-turn/river-bet and other advanced tracker metrics are not yet modeled.
+- turn/river barrel frequencies, fold-to-turn/river-bet and other advanced tracker metrics are not yet modeled;
+- persisted tracker data now has a fixed opponent-profile feature boundary, but no neural observation or policy consumes it yet;
+- `OpponentProfile` deliberately keeps global tracker history and agent-specific memory distinct; future decision integration must explicitly select the intended information scope and must not leak omniscient global history into experiments intended to model private agent knowledge.
 
 ## Stress verification
 

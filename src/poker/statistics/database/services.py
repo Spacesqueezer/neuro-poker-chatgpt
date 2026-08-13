@@ -43,8 +43,18 @@ class StatisticsService:
 	def get_player_statistics(self, player_id):
 		return self.statistics_repository.get(player_id)
 
+	def get_player_by_name(self, player_name):
+		return self.player_repository.get_by_name(player_name)
+
+	def get_player_positions(self, player_id):
+		return self.statistics_repository.list_positions(player_id)
+
 	def get_agent_memory(self, agent_id, player_id):
 		return self.memory_repository.get(agent_id, player_id)
+
+	def save_agent_memory(self, memory):
+		self.memory_repository.save(memory)
+		return memory
 
 	def resolve_players(self, player_names):
 		resolved = {}

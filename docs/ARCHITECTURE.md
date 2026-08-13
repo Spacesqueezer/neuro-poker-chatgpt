@@ -241,4 +241,31 @@ Canonical player position is written into each `HandHistory.players` entry by th
 
 The mapper derives facts only from recorded public hand events and the recorded player-position metadata; it does not inspect live `GameState` or `HandController`. For compatibility, already-aggregated player dictionaries are accepted and their existing flags are preserved. Opportunity-based metrics are derived from action order: a player acting after one preflop raise receives a 3-bet opportunity, an opener facing the second raise receives a fold-to-3-bet opportunity, and the final preflop aggressor receives a flop c-bet opportunity only when action reaches that player before a postflop bet. Once a c-bet occurs, each opponent's first direct response is a fold-to-cbet opportunity until an opponent raises, after which later action is no longer attributed directly to the original c-bet. Postflop bets/raises/all-ins and calls are counted globally and separately for flop/turn/river aggression-factor calculation. Raw counters remain the persistence source of truth. This keeps statistics reproducible from persisted histories without breaking the earlier statistics input contract.
 
+Opponent-facing feature extraction sits above persistence:
+
+```text
+StatisticsFacade
+      |
+      v
+OpponentProfileProvider
+      |
+      +--> global persisted tracker statistics
+      +--> positional statistics
+      +--> optional agent-specific memory
+      |
+      v
+immutable OpponentProfile
+      |
+      v
+OpponentProfileEncoder
+      |
+      v
+fixed named feature tuple
+      |
+      v
+future observation / strategy code
+```
+
+`OpponentProfileProvider` is the composition boundary for opponent snapshots. Strategy and learning code must not query SQLAlchemy models or repositories directly. `OpponentProfileEncoder` currently exposes a fixed 22-feature schema containing global rates, a selected-position slice, street aggression, showdown metrics and agent-memory estimates/confidence. Missing statistics, positions or memory are represented by zero-valued features so dimensionality remains stable. Global tracker history and agent-specific memory are deliberately represented as distinct concepts. Future live-agent integration must choose the permitted information scope explicitly instead of accidentally giving an agent global knowledge it could not have observed.
+
 SQLite in-memory is the fast persistence test backend. PostgreSQL uses the same repository contracts and has an opt-in integration path driven by `POKER_TEST_DATABASE_URL`; that database must be disposable because the integration test resets it to Alembic `base` before upgrading to `head`. Alembic owns schema evolution through `migrations/`; `src/poker/statistics/database/migrations.py` is the programmatic upgrade/downgrade boundary. Runtime migration URLs may be supplied explicitly by callers or through `POKER_DATABASE_URL` in Alembic execution. Schema changes must be represented by revisions rather than leaking database concerns into statistics services.
