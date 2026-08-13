@@ -64,6 +64,53 @@ def test_observed_raise_tightens_opponent_range():
 	assert aggressive > passive
 
 
+def _action(player, action, street="preflop"):
+	return PublicActionView(
+		street=street,
+		player=player,
+		action=action,
+		contributed=6,
+		bet_before=2,
+		bet_after=8,
+		pot=11,
+		target=8,
+	)
+
+
+def test_range_state_distinguishes_open_raise_3bet_and_4bet():
+	model = PositionRangeModel()
+	player = _player()
+	open_state = model.build_range_state(player, _state((_action("villain", "raise"),)))
+	three_bet_state = model.build_range_state(player, _state((
+		_action("opener", "raise"),
+		_action("villain", "raise"),
+	)))
+	four_bet_state = model.build_range_state(player, _state((
+		_action("opener", "raise"),
+		_action("villain", "raise"),
+		_action("opener", "raise"),
+		_action("villain", "raise"),
+	)))
+	assert open_state.preflop_action_class == "open_raise"
+	assert three_bet_state.preflop_action_class == "3bet"
+	assert four_bet_state.preflop_action_class == "4bet_plus"
+
+
+def test_3bet_range_is_tighter_than_open_raise_range():
+	open_raise = _state((_action("villain", "raise"),))
+	three_bet = _state((
+		_action("opener", "raise"),
+		_action("villain", "raise"),
+	))
+	assert _average_rank(three_bet) > _average_rank(open_raise)
+
+
+def test_later_street_aggression_tightens_more_than_flop_aggression():
+	flop = _state((_action("villain", "bet", "flop"),))
+	river = _state((_action("villain", "bet", "river"),))
+	assert _average_rank(river) > _average_rank(flop)
+
+
 def test_other_players_actions_do_not_change_villain_range():
 	action = PublicActionView(
 		street="preflop",

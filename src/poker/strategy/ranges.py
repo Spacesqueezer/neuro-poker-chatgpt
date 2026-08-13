@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from itertools import combinations
 
 
@@ -13,6 +14,34 @@ _POSITION_EXPONENT = {
 	"SB": 2.4,
 	"BB": 2.2,
 }
+
+
+@dataclass(frozen=True)
+class OpponentRangeState:
+	position: str
+	preflop_calls: int = 0
+	preflop_raise_level: int = 0
+	preflop_all_in: bool = False
+	flop_calls: int = 0
+	flop_aggression: int = 0
+	turn_calls: int = 0
+	turn_aggression: int = 0
+	river_calls: int = 0
+	river_aggression: int = 0
+
+	@property
+	def preflop_action_class(self):
+		if self.preflop_all_in:
+			return "all_in"
+		if self.preflop_raise_level >= 3:
+			return "4bet_plus"
+		if self.preflop_raise_level == 2:
+			return "3bet"
+		if self.preflop_raise_level == 1:
+			return "open_raise"
+		if self.preflop_calls:
+			return "call"
+		return "unopened"
 
 
 class UniformRangeModel:
@@ -40,27 +69,67 @@ class PositionRangeModel:
 			)[0]
 		)
 
-	def _range_exponent(self, player, state):
-		exponent = _POSITION_EXPONENT.get(player.position, 2.5)
-
+	def build_range_state(self, player, state):
 		if state is None:
-			return exponent
+			return OpponentRangeState(position=player.position)
 
-		actions = [
-			action
-			for action in state.action_history
-			if action.player == player.name
-		]
+		preflop_calls = 0
+		preflop_raise_level = 0
+		preflop_all_in = False
+		street_calls = {"flop": 0, "turn": 0, "river": 0}
+		street_aggression = {"flop": 0, "turn": 0, "river": 0}
+		preflop_raise_count = 0
 
-		for action in actions:
-			if action.action in {"raise", "bet"}:
-				exponent += 1.15
-			elif action.action == "all_in":
-				exponent += 1.60
-			elif action.action == "call":
-				exponent += 0.25
+		for action in state.action_history:
+			if action.street == "preflop" and action.action in {"raise", "all_in"}:
+				preflop_raise_count += 1
 
-		return min(8.0, exponent)
+			if action.player != player.name:
+				continue
+
+			if action.street == "preflop":
+				if action.action == "call":
+					preflop_calls += 1
+				elif action.action == "raise":
+					preflop_raise_level = max(preflop_raise_level, preflop_raise_count)
+				elif action.action == "all_in":
+					preflop_all_in = True
+					preflop_raise_level = max(preflop_raise_level, preflop_raise_count)
+			elif action.street in street_calls:
+				if action.action == "call":
+					street_calls[action.street] += 1
+				elif action.action in {"bet", "raise", "all_in"}:
+					street_aggression[action.street] += 1
+
+		return OpponentRangeState(
+			position=player.position,
+			preflop_calls=preflop_calls,
+			preflop_raise_level=preflop_raise_level,
+			preflop_all_in=preflop_all_in,
+			flop_calls=street_calls["flop"],
+			flop_aggression=street_aggression["flop"],
+			turn_calls=street_calls["turn"],
+			turn_aggression=street_aggression["turn"],
+			river_calls=street_calls["river"],
+			river_aggression=street_aggression["river"],
+		)
+
+	def _range_exponent(self, player, state):
+		range_state = self.build_range_state(player, state)
+		exponent = _POSITION_EXPONENT.get(range_state.position, 2.5)
+		exponent += {
+			"unopened": 0.0,
+			"call": 0.30,
+			"open_raise": 1.00,
+			"3bet": 2.00,
+			"4bet_plus": 3.00,
+			"all_in": 3.50,
+		}[range_state.preflop_action_class]
+		exponent += 0.20 * (range_state.flop_calls + range_state.turn_calls + range_state.river_calls)
+		exponent += 0.70 * range_state.flop_aggression
+		exponent += 0.90 * range_state.turn_aggression
+		exponent += 1.10 * range_state.river_aggression
+		return min(9.0, exponent)
 
 	def _weight(self, combo):
 		first, second = combo

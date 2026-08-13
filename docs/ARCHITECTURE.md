@@ -346,7 +346,7 @@ MonteCarloEquityEstimator
         +--> seven-card evaluation
 ```
 
-`PositionRangeModel` is deliberately conservative in scope: early positions receive a stronger preference for high/pair/suited-connected holdings, while late positions remain wider. `UniformRangeModel` is retained for control experiments. Because `HandStateView` does not yet expose public action history, the range model must not infer raise/call/bet history from hidden engine state. This remains an explicit heuristic teacher boundary, not a solver or GTO claim.
+`PositionRangeModel` starts from a position prior and derives an immutable `OpponentRangeState` only from `HandStateView.action_history`. The state classifies the opponent's preflop line as unopened/call/open-raise/3-bet/4-bet+/all-in and tracks calls/aggression separately on flop, turn and river. That structured state adjusts the strength weighting used to sample legal two-card combinations; later-street aggression currently contributes more tightening than earlier-street aggression. `UniformRangeModel` is retained for control experiments. No range code may inspect hidden engine state. The representation is intentionally a stepping stone toward combo-by-combo reweighting and restricted solver work, not a GTO claim.
 
 Teacher quality is measured outside the agent:
 
