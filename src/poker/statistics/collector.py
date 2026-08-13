@@ -28,21 +28,38 @@ class StatisticsCollector:
 		calls=0,
 		showdown=False,
 		won_showdown=False,
+		position=None,
 	):
 		stats = self.get_player(player_name)
 		stats.hands += 1
 
+		position_stats = (
+			stats.get_position(position)
+			if position is not None
+			else None
+		)
+		if position_stats is not None:
+			position_stats.hands += 1
+
 		if entered_pot:
 			stats.vpip_hands += 1
+			if position_stats is not None:
+				position_stats.vpip_hands += 1
 
 		if raised_preflop:
 			stats.pfr_hands += 1
+			if position_stats is not None:
+				position_stats.pfr_hands += 1
 
 		if three_bet_opportunity:
 			stats.three_bet_opportunities += 1
+			if position_stats is not None:
+				position_stats.three_bet_opportunities += 1
 
 		if three_bet:
 			stats.three_bets += 1
+			if position_stats is not None:
+				position_stats.three_bets += 1
 
 		if fold_to_three_bet_opportunity:
 			stats.fold_to_three_bet_opportunities += 1

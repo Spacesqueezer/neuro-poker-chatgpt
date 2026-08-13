@@ -28,6 +28,7 @@ class HandStatisticsAdapter:
 				calls=player.get("calls", 0),
 				showdown=player.get("showdown", False),
 				won_showdown=player.get("won_showdown", False),
+				position=player.get("position"),
 			)
 
 		return self.collector

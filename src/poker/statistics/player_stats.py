@@ -1,4 +1,30 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class PositionStatistics:
+	position: str
+	hands: int = 0
+	vpip_hands: int = 0
+	pfr_hands: int = 0
+	three_bet_opportunities: int = 0
+	three_bets: int = 0
+
+	@property
+	def vpip(self):
+		return self.vpip_hands / self.hands if self.hands else 0
+
+	@property
+	def pfr(self):
+		return self.pfr_hands / self.hands if self.hands else 0
+
+	@property
+	def three_bet(self):
+		return (
+			self.three_bets / self.three_bet_opportunities
+			if self.three_bet_opportunities
+			else 0
+		)
 
 
 @dataclass
@@ -17,6 +43,13 @@ class PlayerStatistics:
 	calls: int = 0
 	showdowns: int = 0
 	showdown_wins: int = 0
+	positions: dict[str, PositionStatistics] = field(default_factory=dict)
+
+	def get_position(self, position):
+		if position not in self.positions:
+			self.positions[position] = PositionStatistics(position=position)
+
+		return self.positions[position]
 
 	@property
 	def vpip(self):

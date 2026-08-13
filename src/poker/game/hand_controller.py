@@ -5,6 +5,7 @@ from poker.evaluation.seven_card import evaluate_seven_cards
 from poker.game.round_manager import GameStreet
 from poker.game.pot_manager import PotManager
 from poker.game.hand_history import HandHistory, create_hand_id
+from poker.game.positions import positions_by_player
 
 
 class HandController:
@@ -334,6 +335,10 @@ class HandController:
 
 	def _start_history(self, game_state):
 		dealer = game_state.players[game_state.dealer_button_index]
+		player_positions = positions_by_player(
+			game_state.players,
+			game_state.dealer_button_index,
+		)
 		self.hand_history = HandHistory(
 			hand_id=create_hand_id(),
 			players=[
@@ -341,6 +346,7 @@ class HandController:
 					"name": player.name,
 					"starting_chips": player.chips + player.current_bet,
 					"cards": [str(card) for card in player.hand.cards],
+					"position": player_positions[player.name],
 				}
 				for player in game_state.players
 			],

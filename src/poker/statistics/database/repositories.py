@@ -26,6 +26,15 @@ class StatisticsRepository:
 	def get(self, player_id: int):
 		raise NotImplementedError
 
+	def save_position(self, statistics):
+		raise NotImplementedError
+
+	def get_position(self, player_id: int, position: str):
+		raise NotImplementedError
+
+	def list_positions(self, player_id: int):
+		raise NotImplementedError
+
 
 class AgentMemoryRepository:
 	def save(self, memory: AgentMemoryRecord):

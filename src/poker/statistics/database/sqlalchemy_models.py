@@ -65,6 +65,31 @@ class PlayerStatisticsModel(DeclarativeBase):
 	player: Mapped[PlayerModel] = relationship(back_populates="statistics")
 
 
+class PlayerPositionStatisticsModel(DeclarativeBase):
+	__tablename__ = "player_position_statistics"
+
+	player_id: Mapped[int] = mapped_column(
+		ForeignKey("players.id", ondelete="CASCADE"),
+		primary_key=True,
+	)
+	position: Mapped[str] = mapped_column(
+		String(16),
+		primary_key=True,
+	)
+	hands: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	vpip: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	pfr: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	three_bet: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+	vpip_hands: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	pfr_hands: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	three_bet_opportunities: Mapped[int] = mapped_column(
+		Integer,
+		default=0,
+		nullable=False,
+	)
+	three_bets: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
 class AgentMemoryModel(DeclarativeBase):
 	__tablename__ = "agent_memory"
 

@@ -1,5 +1,6 @@
 from poker.statistics.database.models import (
 	AgentMemoryRecord,
+	PlayerPositionStatisticsRecord,
 	PlayerRecord,
 	PlayerStatisticsRecord,
 )
@@ -13,6 +14,7 @@ from sqlalchemy import func, select
 from poker.statistics.database.sqlalchemy_models import (
 	AgentMemoryModel,
 	PlayerModel,
+	PlayerPositionStatisticsModel,
 	PlayerStatisticsModel,
 )
 
@@ -118,6 +120,55 @@ class PostgresStatisticsRepository(StatisticsRepository):
 			calls=model.calls,
 			showdowns=model.showdowns,
 			showdown_wins=model.showdown_wins,
+		)
+
+	def save_position(self, statistics: PlayerPositionStatisticsRecord):
+		self.session.merge(
+			PlayerPositionStatisticsModel(
+				player_id=statistics.player_id,
+				position=statistics.position,
+				hands=statistics.hands,
+				vpip=statistics.vpip,
+				pfr=statistics.pfr,
+				three_bet=statistics.three_bet,
+				vpip_hands=statistics.vpip_hands,
+				pfr_hands=statistics.pfr_hands,
+				three_bet_opportunities=statistics.three_bet_opportunities,
+				three_bets=statistics.three_bets,
+			)
+		)
+		self.session.commit()
+
+	def get_position(self, player_id: int, position: str):
+		model = self.session.get(
+			PlayerPositionStatisticsModel,
+			(player_id, position),
+		)
+		if model is None:
+			return None
+
+		return self._position_record(model)
+
+	def list_positions(self, player_id: int):
+		models = self.session.scalars(
+			select(PlayerPositionStatisticsModel).where(
+				PlayerPositionStatisticsModel.player_id == player_id
+			)
+		).all()
+		return [self._position_record(model) for model in models]
+
+	def _position_record(self, model):
+		return PlayerPositionStatisticsRecord(
+			player_id=model.player_id,
+			position=model.position,
+			hands=model.hands,
+			vpip=model.vpip,
+			pfr=model.pfr,
+			three_bet=model.three_bet,
+			vpip_hands=model.vpip_hands,
+			pfr_hands=model.pfr_hands,
+			three_bet_opportunities=model.three_bet_opportunities,
+			three_bets=model.three_bets,
 		)
 
 

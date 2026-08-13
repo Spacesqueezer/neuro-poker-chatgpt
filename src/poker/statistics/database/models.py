@@ -33,6 +33,20 @@ class PlayerStatisticsRecord:
 
 
 @dataclass
+class PlayerPositionStatisticsRecord:
+	player_id: int
+	position: str
+	hands: int = 0
+	vpip: float = 0.0
+	pfr: float = 0.0
+	three_bet: float = 0.0
+	vpip_hands: int = 0
+	pfr_hands: int = 0
+	three_bet_opportunities: int = 0
+	three_bets: int = 0
+
+
+@dataclass
 class AgentMemoryRecord:
 	agent_id: str
 	player_id: int

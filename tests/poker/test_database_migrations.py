@@ -27,6 +27,7 @@ def test_initial_migration_round_trip(tmp_path):
 	assert {
 		"players",
 		"player_statistics",
+		"player_position_statistics",
 		"agent_memory",
 	}.issubset(set(inspector.get_table_names()))
 

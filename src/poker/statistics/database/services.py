@@ -1,4 +1,5 @@
 from poker.statistics.database.models import (
+	PlayerPositionStatisticsRecord,
 	PlayerRecord,
 	PlayerStatisticsRecord,
 )
@@ -77,9 +78,66 @@ class StatisticsService:
 			record = self._merge_records(existing, incoming)
 
 			self.statistics_repository.save(record)
+			self._persist_positions(
+				player_id,
+				stats.positions,
+			)
 			records.append(record)
 
 		return records
+
+	def _persist_positions(self, player_id, positions):
+		for position, stats in positions.items():
+			incoming = PlayerPositionStatisticsRecord(
+				player_id=player_id,
+				position=position,
+				hands=stats.hands,
+				vpip=stats.vpip,
+				pfr=stats.pfr,
+				three_bet=stats.three_bet,
+				vpip_hands=stats.vpip_hands,
+				pfr_hands=stats.pfr_hands,
+				three_bet_opportunities=stats.three_bet_opportunities,
+				three_bets=stats.three_bets,
+			)
+			existing = self.statistics_repository.get_position(
+				player_id,
+				position,
+			)
+			record = self._merge_position_records(
+				existing,
+				incoming,
+			)
+			self.statistics_repository.save_position(record)
+
+	def _merge_position_records(self, existing, incoming):
+		if existing is None:
+			return incoming
+
+		hands = existing.hands + incoming.hands
+		vpip_hands = existing.vpip_hands + incoming.vpip_hands
+		pfr_hands = existing.pfr_hands + incoming.pfr_hands
+		three_bet_opportunities = (
+			existing.three_bet_opportunities
+			+ incoming.three_bet_opportunities
+		)
+		three_bets = existing.three_bets + incoming.three_bets
+
+		return PlayerPositionStatisticsRecord(
+			player_id=incoming.player_id,
+			position=incoming.position,
+			hands=hands,
+			vpip=self._ratio(vpip_hands, hands),
+			pfr=self._ratio(pfr_hands, hands),
+			three_bet=self._ratio(
+				three_bets,
+				three_bet_opportunities,
+			),
+			vpip_hands=vpip_hands,
+			pfr_hands=pfr_hands,
+			three_bet_opportunities=three_bet_opportunities,
+			three_bets=three_bets,
+		)
 
 	def _record_from_statistics(self, player_id, stats):
 		return PlayerStatisticsRecord(
