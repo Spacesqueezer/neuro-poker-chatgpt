@@ -272,9 +272,21 @@ LearningObservationEncoder
       v
 fixed LearningObservation
       |
-      v
-future dataset / policy code
+      +----------------------+
+      |                      |
+      v                      v
+LearningActionEncoder   chosen ActionDecision
+      |                      |
+      +----------+-----------+
+                 |
+                 v
+        versioned LearningSample
+                 |
+                 v
+       future dataset / policy
 ```
+
+`LearningActionEncoder` consumes the same public `LegalActions` contract used to validate agents. Its action order is fixed as fold/check/call/bet/raise/all-in, with a six-element legality mask and normalized call/bet/raise sizing bounds. `LearningSampleBuilder` validates the chosen `ActionDecision` against `LegalActions` before recording its action index and normalized amount, so invalid labels cannot silently enter a dataset. `LearningSample` is versioned and serializable without engine or persistence objects.
 
 `LearningObservationEncoder` is the learning-facing state boundary. It consumes only `poker.api.HandStateView` plus `OpponentProfileProvider`; it does not import engine internals or persistence models. Hole cards and board cards use independent fixed 52-way one-hot sections, streets use one-hot encoding, chip/bet values are normalized by the total chips represented in the public state, and opponent slots preserve public player order with zero padding up to 9-max. Profile scope must be chosen explicitly: `private` masks all global tracker fields and exposes only agent-specific memory, `global` masks memory, and `combined` exposes both.
 

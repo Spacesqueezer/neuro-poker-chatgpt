@@ -92,7 +92,9 @@ Current limitation:
 - persisted tracker data now feeds a fixed learning-observation boundary, but no trainable policy consumes it yet;
 - `LearningObservationEncoder` supports 2-9 handed tables and pads unused opponent slots to a fixed shape;
 - opponent information scope is explicit: `private` exposes only agent-specific memory, `global` exposes shared persisted tracker statistics, and `combined` exposes both;
-- legal-action mask/sizing encoding and the dataset sample contract are not yet attached to the learning observation.
+- legal actions now have a stable six-action mask plus normalized call/bet/raise sizing bounds, and chosen decisions can be encoded as supervised targets;
+- `LearningSample` is a versioned observation/action contract, but automatic capture from `play_hand()` / Arena and dataset persistence/analysis are not yet connected;
+- no trainable policy consumes the learning samples yet.
 
 ## Stress verification
 
