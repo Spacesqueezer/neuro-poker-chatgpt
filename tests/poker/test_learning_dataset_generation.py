@@ -11,7 +11,9 @@ def test_dataset_generator_is_reproducible_and_writes_split_manifest(tmp_path):
 		hands=30,
 		seed=123,
 		validation_fraction=0.2,
-		agents=("random", "calling_station", "nit"),
+		agents=("expert", "calling_station", "nit"),
+		teacher="expert",
+		expert_equity_samples=40,
 	)
 	generator = LearningDatasetGenerator()
 
@@ -31,11 +33,15 @@ def test_dataset_generator_is_reproducible_and_writes_split_manifest(tmp_path):
 	manifest = json.loads(first.manifest_path.read_text(encoding="utf-8"))
 	assert manifest["config"]["seed"] == 123
 	assert manifest["config"]["agents"] == [
-		"random",
+		"expert",
 		"calling_station",
 		"nit",
 	]
+	assert manifest["config"]["teacher"] == "expert"
 	assert manifest["raw"]["samples"] == first.raw_samples
+	assert manifest["raw"]["acting_players"] == {
+		"expert": first.raw_samples,
+	}
 	assert manifest["train"]["samples"] == first.train_samples
 	assert manifest["validation"]["samples"] == first.validation_samples
 	assert manifest["raw"]["consistent_observation_size"] is True

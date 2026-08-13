@@ -19,8 +19,18 @@ def main():
 	parser.add_argument(
 		"--agents",
 		nargs="+",
-		default=["random", "calling_station", "nit"],
-		choices=["random", "calling_station", "nit"],
+		default=["expert", "calling_station", "nit"],
+		choices=["expert", "random", "calling_station", "nit"],
+	)
+	parser.add_argument(
+		"--teacher",
+		default="expert",
+		choices=["expert", "random", "calling_station", "nit"],
+	)
+	parser.add_argument(
+		"--expert-equity-samples",
+		type=int,
+		default=300,
 	)
 	args = parser.parse_args()
 
@@ -30,6 +40,8 @@ def main():
 		starting_stack=args.starting_stack,
 		validation_fraction=args.validation_fraction,
 		agents=tuple(args.agents),
+		teacher=args.teacher,
+		expert_equity_samples=args.expert_equity_samples,
 	)
 	result = LearningDatasetGenerator().generate(
 		args.output,

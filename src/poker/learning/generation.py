@@ -3,7 +3,12 @@ import random
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from poker.agents import CallingStationAgent, NitAgent, RandomAgent
+from poker.agents import (
+	CallingStationAgent,
+	ExpertAgent,
+	NitAgent,
+	RandomAgent,
+)
 from poker.arena.runner import ArenaRunner
 from poker.learning.dataset import (
 	LearningDatasetAnalyzer,
@@ -19,7 +24,9 @@ class DatasetGenerationConfig:
 	starting_stack: int = 100
 	validation_fraction: float = 0.1
 	profile_scope: str = "global"
-	agents: tuple[str, ...] = ("random", "calling_station", "nit")
+	agents: tuple[str, ...] = ("expert", "calling_station", "nit")
+	teacher: str | None = "expert"
+	expert_equity_samples: int = 300
 
 	def validate(self):
 		if self.hands <= 0:
@@ -32,6 +39,10 @@ class DatasetGenerationConfig:
 			raise ValueError("dataset generation requires at least two agents")
 		if len(set(self.agents)) != len(self.agents):
 			raise ValueError("agent specs must be unique")
+		if self.teacher is not None and self.teacher not in self.agents:
+			raise ValueError("teacher must be one of the configured agents")
+		if self.expert_equity_samples <= 0:
+			raise ValueError("expert_equity_samples must be positive")
 		if self.profile_scope != "global":
 			raise ValueError(
 				"standalone dataset generation currently supports profile_scope='global'"
@@ -69,10 +80,19 @@ class LearningDatasetGenerator:
 			if path.exists():
 				path.unlink()
 
-		agents = self._build_agents(config.agents, config.seed)
+		agents = self._build_agents(
+			config.agents,
+			config.seed,
+			config.expert_equity_samples,
+		)
 		capture = LearningDatasetCapture(
 			LearningDatasetWriter(raw_path),
 			profile_scope=config.profile_scope,
+			include_players=(
+				(config.teacher,)
+				if config.teacher is not None
+				else None
+			),
 		)
 		stats = ArenaRunner(
 			agents,
@@ -135,11 +155,16 @@ class LearningDatasetGenerator:
 			arena_failed_hands=stats.failed_hands,
 		)
 
-	def _build_agents(self, specs, seed):
+	def _build_agents(self, specs, seed, expert_equity_samples):
 		agents = {}
 		for index, spec in enumerate(specs):
 			if spec == "random":
 				agent = RandomAgent(seed=seed + 100000 + index)
+			elif spec == "expert":
+				agent = ExpertAgent(
+					seed=seed + 200000 + index,
+					equity_samples=expert_equity_samples,
+				)
 			elif spec == "calling_station":
 				agent = CallingStationAgent()
 			elif spec == "nit":

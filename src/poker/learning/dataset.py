@@ -30,14 +30,26 @@ class LearningDatasetCapture:
 		sample_builder=None,
 		agent_ids=None,
 		profile_scope="private",
+		include_players=None,
 	):
 		self.writer = writer
 		self.sample_builder = sample_builder or LearningSampleBuilder()
 		self.agent_ids = dict(agent_ids or {})
 		self.profile_scope = profile_scope
+		self.include_players = (
+			set(include_players)
+			if include_players is not None
+			else None
+		)
 		self.samples_written = 0
 
 	def __call__(self, hand_state, legal_actions, decision):
+		if (
+			self.include_players is not None
+			and hand_state.acting_player not in self.include_players
+		):
+			return None
+
 		agent_id = self.agent_ids.get(hand_state.acting_player)
 		sample = self.sample_builder.build(
 			hand_state,

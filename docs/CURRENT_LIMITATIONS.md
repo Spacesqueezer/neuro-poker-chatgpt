@@ -99,7 +99,9 @@ Current limitation:
 - dataset generation fails fast if Arena reports failed hands; `RandomAgent` now generates legal sizing for BET/RAISE through `LegalActions`;
 - the standalone generator currently supports baseline `random`, `calling_station` and `nit` agent specs and deliberately uses global tracker scope; online updates of agent-specific private memory during simulation are not yet implemented;
 - train/validation splitting is deterministic sample-level splitting, not grouped by hand/session, so leakage-sensitive experiments may require a grouped splitter later;
-- no trainable policy consumes the learning samples yet.
+- `ExpertAgent` provides deterministic Monte-Carlo equity/pot-odds teacher decisions through the public API, and dataset generation can record only the configured teacher's decisions;
+- the expert is intentionally heuristic and is not claimed to be GTO: opponent ranges are sampled uniformly from unknown cards, action-history range inference is not yet modeled, and strategic lookahead beyond showdown equity/pot odds is limited;
+- no trainable policy consumes the learning samples yet; teacher quality must be benchmarked before imitation learning is treated as a strength-improving step.
 
 ## Stress verification
 

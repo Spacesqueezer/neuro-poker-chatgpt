@@ -91,7 +91,7 @@ Generated player pool:
 
 ## Phase 6 — Learning System
 
-Generated / curated data
+Teacher / solver data
         ↓
 Imitation learning
         ↓
@@ -99,13 +99,11 @@ Self-play
         ↓
 Reinforcement learning
 
-Generated / curated data
-        ↓
-Imitation learning
-        ↓
-Self-play
-        ↓
-Reinforcement learning
+Current direction:
+- use a deterministic Monte-Carlo equity expert as the first meaningful teacher;
+- record teacher-only labels while baseline agents provide varied opposition;
+- benchmark the teacher before treating imitation learning as an improvement path;
+- if teacher quality plateaus, introduce CFR/MCCFR first on a restricted heads-up abstraction rather than scaling weak supervised labels.
 
 ## Phase 7 — Advanced Opponent Memory
 
