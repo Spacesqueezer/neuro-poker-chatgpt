@@ -31,6 +31,21 @@ def test_initial_migration_round_trip(tmp_path):
 		"agent_memory",
 	}.issubset(set(inspector.get_table_names()))
 
+	player_statistics_columns = {
+		column["name"]
+		for column in inspector.get_columns("player_statistics")
+	}
+	assert {
+		"fold_to_cbet_opportunities",
+		"folds_to_cbet",
+		"flop_aggressive_actions",
+		"flop_calls",
+		"turn_aggressive_actions",
+		"turn_calls",
+		"river_aggressive_actions",
+		"river_calls",
+	}.issubset(player_statistics_columns)
+
 	assert inspector.get_pk_constraint("agent_memory")["constrained_columns"] == [
 		"agent_id",
 		"player_id",

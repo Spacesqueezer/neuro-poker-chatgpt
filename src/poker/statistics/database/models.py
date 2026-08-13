@@ -26,8 +26,16 @@ class PlayerStatisticsRecord:
 	folds_to_three_bet: int = 0
 	cbet_opportunities: int = 0
 	cbets: int = 0
+	fold_to_cbet_opportunities: int = 0
+	folds_to_cbet: int = 0
 	aggressive_actions: int = 0
 	calls: int = 0
+	flop_aggressive_actions: int = 0
+	flop_calls: int = 0
+	turn_aggressive_actions: int = 0
+	turn_calls: int = 0
+	river_aggressive_actions: int = 0
+	river_calls: int = 0
 	showdowns: int = 0
 	showdown_wins: int = 0
 

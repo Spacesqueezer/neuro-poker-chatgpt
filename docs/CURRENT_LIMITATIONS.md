@@ -79,15 +79,15 @@ Current limitation:
 - real `HandHistory` action/showdown events now feed VPIP, PFR, basic 3-bet and showdown statistics directly, while legacy pre-aggregated hand dictionaries remain supported;
 - 3-bet and fold-to-3-bet now track explicit opportunities from preflop action order;
 - flop continuation-bet opportunity/action and postflop aggression-factor inputs are derived from history;
-- c-bet logic currently covers the flop only;
+- c-bet and fold-to-cbet currently cover the flop only;
 - VPIP/PFR/3-bet positional splits are implemented and persisted for canonical 2-9 handed table positions;
-- fold-to-cbet and street-specific aggression are not yet implemented;
+- aggression inputs and aggression factor are available globally and separately for flop/turn/river;
 - tracker numerators/denominators for VPIP, PFR, 3-bet, fold-to-3-bet, c-bet, aggression and showdown metrics are persisted in the SQLAlchemy/PostgreSQL statistics schema;
 - Arena automatically collects successful hand histories and can persist them through `StatisticsService`; stable player records are resolved or created by unique player name, while generic non-Arena simulation callers still need to invoke the persistence bridge explicitly;
 - SQLAlchemy persistence for players, aggregate statistics and agent-specific opponent memory is implemented and SQLite-tested;
 - Alembic owns schema evolution and the initial persistence revision is upgrade/downgrade tested;
 - real PostgreSQL integration coverage is opt-in and requires `POKER_TEST_DATABASE_URL`; it is skipped in environments without a disposable PostgreSQL test database;
-- fold-to-cbet and street-specific aggression are not yet represented in the persistence schema.
+- turn/river barrel frequencies, fold-to-turn/river-bet and other advanced tracker metrics are not yet modeled.
 
 ## Stress verification
 

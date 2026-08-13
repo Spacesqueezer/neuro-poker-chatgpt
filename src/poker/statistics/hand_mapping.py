@@ -21,6 +21,9 @@ class HandStatisticsMapper:
 		three_bettor = None
 		flop_bet_seen = False
 		flop_aggressor_acted = False
+		cbet_bettor = None
+		cbet_responses = set()
+		cbet_raised = False
 
 		for event in hand_history.get("events", []):
 			if hasattr(event, "to_dict"):
@@ -71,10 +74,27 @@ class HandStatisticsMapper:
 				elif street in self.POSTFLOP_STREETS:
 					if action in self.AGGRESSIVE_ACTIONS:
 						player["aggressive_actions"] += 1
+						player[f"{street}_aggressive_actions"] += 1
 					elif action == "call":
 						player["calls"] += 1
+						player[f"{street}_calls"] += 1
 
 					if street == self.FLOP:
+						if (
+							cbet_bettor is not None
+							and player_name != cbet_bettor
+							and player_name not in cbet_responses
+							and not cbet_raised
+						):
+							player["fold_to_cbet_opportunity"] = True
+							cbet_responses.add(player_name)
+
+							if action == "fold":
+								player["folded_to_cbet"] = True
+
+							if action in {"raise", "all_in"}:
+								cbet_raised = True
+
 						if player_name == preflop_aggressor and not flop_aggressor_acted:
 							flop_aggressor_acted = True
 
@@ -82,6 +102,7 @@ class HandStatisticsMapper:
 								player["cbet_opportunity"] = True
 								if action in {"bet", "all_in"}:
 									player["cbet"] = True
+									cbet_bettor = player_name
 
 						if action in self.AGGRESSIVE_ACTIONS:
 							flop_bet_seen = True
@@ -116,8 +137,19 @@ class HandStatisticsMapper:
 			"folded_to_three_bet": player.get("folded_to_three_bet", False),
 			"cbet_opportunity": player.get("cbet_opportunity", False),
 			"cbet": player.get("cbet", False),
+			"fold_to_cbet_opportunity": player.get(
+				"fold_to_cbet_opportunity",
+				False,
+			),
+			"folded_to_cbet": player.get("folded_to_cbet", False),
 			"aggressive_actions": player.get("aggressive_actions", 0),
 			"calls": player.get("calls", 0),
+			"flop_aggressive_actions": player.get("flop_aggressive_actions", 0),
+			"flop_calls": player.get("flop_calls", 0),
+			"turn_aggressive_actions": player.get("turn_aggressive_actions", 0),
+			"turn_calls": player.get("turn_calls", 0),
+			"river_aggressive_actions": player.get("river_aggressive_actions", 0),
+			"river_calls": player.get("river_calls", 0),
 			"showdown": player.get("showdown", False),
 			"won_showdown": player.get("won_showdown", False),
 		}

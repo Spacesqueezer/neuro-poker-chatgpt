@@ -24,8 +24,16 @@ class StatisticsCollector:
 		folded_to_three_bet=False,
 		cbet_opportunity=False,
 		cbet=False,
+		fold_to_cbet_opportunity=False,
+		folded_to_cbet=False,
 		aggressive_actions=0,
 		calls=0,
+		flop_aggressive_actions=0,
+		flop_calls=0,
+		turn_aggressive_actions=0,
+		turn_calls=0,
+		river_aggressive_actions=0,
+		river_calls=0,
 		showdown=False,
 		won_showdown=False,
 		position=None,
@@ -73,8 +81,20 @@ class StatisticsCollector:
 		if cbet:
 			stats.cbets += 1
 
+		if fold_to_cbet_opportunity:
+			stats.fold_to_cbet_opportunities += 1
+
+		if folded_to_cbet:
+			stats.folds_to_cbet += 1
+
 		stats.aggressive_actions += aggressive_actions
 		stats.calls += calls
+		stats.flop_aggressive_actions += flop_aggressive_actions
+		stats.flop_calls += flop_calls
+		stats.turn_aggressive_actions += turn_aggressive_actions
+		stats.turn_calls += turn_calls
+		stats.river_aggressive_actions += river_aggressive_actions
+		stats.river_calls += river_calls
 
 		if showdown:
 			stats.showdowns += 1

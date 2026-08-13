@@ -39,8 +39,16 @@ class PlayerStatistics:
 	folds_to_three_bet: int = 0
 	cbet_opportunities: int = 0
 	cbets: int = 0
+	fold_to_cbet_opportunities: int = 0
+	folds_to_cbet: int = 0
 	aggressive_actions: int = 0
 	calls: int = 0
+	flop_aggressive_actions: int = 0
+	flop_calls: int = 0
+	turn_aggressive_actions: int = 0
+	turn_calls: int = 0
+	river_aggressive_actions: int = 0
+	river_calls: int = 0
 	showdowns: int = 0
 	showdown_wins: int = 0
 	positions: dict[str, PositionStatistics] = field(default_factory=dict)
@@ -80,8 +88,43 @@ class PlayerStatistics:
 		return self.cbets / self.cbet_opportunities if self.cbet_opportunities else 0
 
 	@property
+	def fold_to_cbet(self):
+		return (
+			self.folds_to_cbet / self.fold_to_cbet_opportunities
+			if self.fold_to_cbet_opportunities
+			else 0
+		)
+
+	@property
 	def aggression_factor(self):
-		return self.aggressive_actions / self.calls if self.calls else float(self.aggressive_actions)
+		return self._aggression_factor(
+			self.aggressive_actions,
+			self.calls,
+		)
+
+	@property
+	def flop_aggression_factor(self):
+		return self._aggression_factor(
+			self.flop_aggressive_actions,
+			self.flop_calls,
+		)
+
+	@property
+	def turn_aggression_factor(self):
+		return self._aggression_factor(
+			self.turn_aggressive_actions,
+			self.turn_calls,
+		)
+
+	@property
+	def river_aggression_factor(self):
+		return self._aggression_factor(
+			self.river_aggressive_actions,
+			self.river_calls,
+		)
+
+	def _aggression_factor(self, aggressive_actions, calls):
+		return aggressive_actions / calls if calls else float(aggressive_actions)
 
 	@property
 	def wtsd(self):
