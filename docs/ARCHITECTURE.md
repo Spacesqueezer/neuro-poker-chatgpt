@@ -212,7 +212,7 @@ StatisticsService.persist_collector()
 StatisticsRepository
 ```
 
-`StatisticsCollector` remains an in-memory aggregation object and has no database dependency. `StatisticsService` is the persistence boundary: it resolves collector player names through an explicit stable-id mapping, converts snapshots into `PlayerStatisticsRecord` values, merges raw counters with any existing stored record, recalculates derived rates from the merged counters, and writes through repository contracts. This allows the same flow to use memory repositories in tests and SQLAlchemy/PostgreSQL repositories in production.
+`StatisticsCollector` remains an in-memory aggregation object and has no database dependency. `StatisticsService` is the persistence boundary: it resolves collector player names to stable `PlayerRecord` identities through `PlayerRepository`, creating missing roster entries when needed; explicit stable-id mappings remain available for controlled callers. It converts snapshots into `PlayerStatisticsRecord` values, merges raw counters with any existing stored record, recalculates derived rates from the merged counters, and writes through repository contracts. Player names are unique at the SQL schema boundary so repeated Arena/dataset sessions resolve the same logical player instead of creating duplicate identities. This allows the same flow to use memory repositories in tests and SQLAlchemy/PostgreSQL repositories in production.
 
 Arena integrates at orchestration level rather than inside the poker engine:
 

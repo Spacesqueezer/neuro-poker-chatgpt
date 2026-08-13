@@ -99,18 +99,37 @@ def test_arena_persistence_accumulates_across_runs():
 	)
 
 
-def test_arena_requires_stable_ids_when_persistence_is_enabled():
+def test_arena_resolves_stable_player_ids_automatically():
 	service = _service()
+	runner = ArenaRunner(
+		{
+			"calling": CallingStationAgent(),
+			"nit": NitAgent(),
+		},
+		starting_stack=100,
+		statistics_service=service,
+	)
 
-	try:
-		ArenaRunner(
-			{
-				"calling": CallingStationAgent(),
-				"nit": NitAgent(),
-			},
-			statistics_service=service,
-		)
-	except ValueError as error:
-		assert "player_ids are required" in str(error)
-	else:
-		raise AssertionError("Expected stable player id validation")
+	first = runner.run(
+		hands=10,
+		seed=42,
+	)
+
+	calling = service.player_repository.get_by_name("calling")
+	nit = service.player_repository.get_by_name("nit")
+
+	assert calling is not None
+	assert nit is not None
+	assert service.get_player_statistics(calling.id).hands == first.hands
+	assert service.get_player_statistics(nit.id).hands == first.hands
+
+	second = runner.run(
+		hands=10,
+		seed=142,
+	)
+
+	assert service.player_repository.get_by_name("calling").id == calling.id
+	assert service.player_repository.get_by_name("nit").id == nit.id
+	assert service.get_player_statistics(calling.id).hands == (
+		first.hands + second.hands
+	)

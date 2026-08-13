@@ -13,11 +13,6 @@ class ArenaRunner:
 	):
 		if len(agents) < 2:
 			raise ValueError("Arena requires at least two agents")
-		if statistics_service is not None and player_ids is None:
-			raise ValueError(
-				"player_ids are required when statistics persistence is enabled"
-			)
-
 		self.agents = agents
 		self.starting_stack = starting_stack
 		self.statistics_service = statistics_service
@@ -44,7 +39,7 @@ class ArenaRunner:
 		if self.statistics_service is not None:
 			self.statistics_service.persist_collector(
 				statistics_adapter.collector,
-				self.player_ids,
+				self.player_ids or None,
 			)
 
 		return stats

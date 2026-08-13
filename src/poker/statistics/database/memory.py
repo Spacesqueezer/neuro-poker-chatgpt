@@ -10,10 +10,24 @@ class MemoryPlayerRepository(PlayerRepository):
 		self.players = {}
 
 	def save(self, player):
+		existing = self.get_by_name(player.name)
+		if existing is not None and existing.id != player.id:
+			raise ValueError(f"Player name already exists: {player.name}")
+
 		self.players[player.id] = player
 
 	def get(self, player_id):
 		return self.players.get(player_id)
+
+	def get_by_name(self, name):
+		for player in self.players.values():
+			if player.name == name:
+				return player
+
+		return None
+
+	def next_id(self):
+		return max(self.players, default=0) + 1
 
 
 class MemoryStatisticsRepository(StatisticsRepository):

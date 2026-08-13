@@ -8,6 +8,8 @@ from poker.statistics.database.repositories import (
 	PlayerRepository,
 	StatisticsRepository,
 )
+from sqlalchemy import func, select
+
 from poker.statistics.database.sqlalchemy_models import (
 	AgentMemoryModel,
 	PlayerModel,
@@ -34,6 +36,24 @@ class PostgresPlayerRepository(PlayerRepository):
 		if model is None:
 			return None
 
+		return self._to_record(model)
+
+	def get_by_name(self, name: str):
+		model = self.session.scalar(
+			select(PlayerModel).where(PlayerModel.name == name)
+		)
+		if model is None:
+			return None
+
+		return self._to_record(model)
+
+	def next_id(self):
+		current_max = self.session.scalar(
+			select(func.max(PlayerModel.id))
+		)
+		return (current_max or 0) + 1
+
+	def _to_record(self, model):
 		return PlayerRecord(
 			id=model.id,
 			name=model.name,

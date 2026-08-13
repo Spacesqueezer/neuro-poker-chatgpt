@@ -137,7 +137,41 @@ def test_service_merges_new_session_counters_with_existing_history():
 	assert record.aggression == 1.0
 
 
-def test_service_rejects_collector_player_without_persistent_id():
+def test_service_resolves_and_reuses_persistent_players_by_name():
+	service = _service()
+
+	first = service.resolve_players(["alice", "bob"])
+	second = service.resolve_players(["bob", "alice"])
+
+	assert first == {
+		"alice": 1,
+		"bob": 2,
+	}
+	assert second == {
+		"bob": 2,
+		"alice": 1,
+	}
+
+
+def test_service_persists_collector_without_manual_player_ids():
+	collector = StatisticsCollector()
+	collector.register_hand("alice", entered_pot=True)
+	collector.register_hand("bob", raised_preflop=True)
+
+	service = _service()
+	service.persist_collector(collector)
+
+	alice = service.player_repository.get_by_name("alice")
+	bob = service.player_repository.get_by_name("bob")
+
+	assert alice is not None
+	assert bob is not None
+	assert alice.id != bob.id
+	assert service.get_player_statistics(alice.id).vpip_hands == 1
+	assert service.get_player_statistics(bob.id).pfr_hands == 1
+
+
+def test_service_rejects_incomplete_explicit_player_id_mapping():
 	collector = StatisticsCollector()
 	collector.register_hand("unknown", entered_pot=True)
 

@@ -17,7 +17,11 @@ class PlayerModel(DeclarativeBase):
 	__tablename__ = "players"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True)
-	name: Mapped[str] = mapped_column(String(128), nullable=False)
+	name: Mapped[str] = mapped_column(
+		String(128),
+		nullable=False,
+		unique=True,
+	)
 	profile_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 	statistics: Mapped[PlayerStatisticsModel | None] = relationship(

@@ -1,4 +1,7 @@
-from poker.statistics.database.models import PlayerStatisticsRecord
+from poker.statistics.database.models import (
+	PlayerRecord,
+	PlayerStatisticsRecord,
+)
 
 
 class StatisticsService:
@@ -34,16 +37,38 @@ class StatisticsService:
 	def get_agent_memory(self, agent_id, player_id):
 		return self.memory_repository.get(agent_id, player_id)
 
-	def persist_collector(self, collector, player_ids):
+	def resolve_players(self, player_names):
+		resolved = {}
+
+		for player_name in player_names:
+			player = self.player_repository.get_by_name(player_name)
+
+			if player is None:
+				player = PlayerRecord(
+					id=self.player_repository.next_id(),
+					name=player_name,
+				)
+				self.player_repository.save(player)
+
+			resolved[player_name] = player.id
+
+		return resolved
+
+	def persist_collector(self, collector, player_ids=None):
 		records = []
+		resolved_ids = (
+			dict(player_ids)
+			if player_ids is not None
+			else self.resolve_players(collector.players)
+		)
 
 		for player_name, stats in collector.players.items():
-			if player_name not in player_ids:
+			if player_name not in resolved_ids:
 				raise KeyError(
 					f"Missing persistent player id for {player_name}"
 				)
 
-			player_id = player_ids[player_name]
+			player_id = resolved_ids[player_name]
 			incoming = self._record_from_statistics(
 				player_id,
 				stats,

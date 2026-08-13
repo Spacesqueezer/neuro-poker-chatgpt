@@ -35,6 +35,12 @@ def test_initial_migration_round_trip(tmp_path):
 		"player_id",
 	]
 
+	player_unique_constraints = inspector.get_unique_constraints("players")
+	assert any(
+		constraint["column_names"] == ["name"]
+		for constraint in player_unique_constraints
+	)
+
 	engine.dispose()
 
 	downgrade_database(config)

@@ -12,6 +12,12 @@ class PlayerRepository:
 	def get(self, player_id: int):
 		raise NotImplementedError
 
+	def get_by_name(self, name: str):
+		raise NotImplementedError
+
+	def next_id(self):
+		raise NotImplementedError
+
 
 class StatisticsRepository:
 	def save(self, statistics: PlayerStatisticsRecord):
