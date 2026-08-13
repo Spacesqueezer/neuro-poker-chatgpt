@@ -7,6 +7,11 @@ from poker.learning.dataset import (
 	LearningDatasetCapture,
 	LearningDatasetWriter,
 )
+from poker.learning.generation import (
+	DatasetGenerationConfig,
+	DatasetGenerationResult,
+	LearningDatasetGenerator,
+)
 from poker.learning.observation import (
 	LearningObservation,
 	LearningObservationEncoder,
@@ -20,6 +25,9 @@ __all__ = [
 	"LearningDatasetAnalyzer",
 	"LearningDatasetCapture",
 	"LearningDatasetWriter",
+	"DatasetGenerationConfig",
+	"DatasetGenerationResult",
+	"LearningDatasetGenerator",
 	"LearningObservation",
 	"LearningObservationEncoder",
 	"LearningSample",

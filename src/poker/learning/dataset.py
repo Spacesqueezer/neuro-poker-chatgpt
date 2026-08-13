@@ -89,6 +89,9 @@ class LearningDatasetAnalyzer:
 			"action_mask_sizes": dict(sorted(mask_sizes.items())),
 			"action_sizing_sizes": dict(sorted(sizing_sizes.items())),
 			"acting_players": dict(sorted(players.items())),
+			"consistent_observation_size": len(observation_sizes) <= 1,
+			"consistent_action_mask_size": len(mask_sizes) <= 1,
+			"consistent_action_sizing_size": len(sizing_sizes) <= 1,
 		}
 
 	def _validate(self, payload, line_number):

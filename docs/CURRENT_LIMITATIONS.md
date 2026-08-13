@@ -95,7 +95,10 @@ Current limitation:
 - legal actions now have a stable six-action mask plus normalized call/bet/raise sizing bounds, and chosen decisions can be encoded as supervised targets;
 - versioned `LearningSample` records can now be captured automatically from validated `play_hand()`/Arena decisions and persisted as JSONL;
 - the dataset analyzer validates version, legal targets and vector shapes and reports basic action/player distributions;
-- reproducible large-scale dataset-generation CLI/configuration, train/validation splits and richer quality analysis are not yet implemented;
+- reproducible dataset generation is available through `LearningDatasetGenerator` and `tools/generate_dataset.py`, with deterministic seeds, train/validation JSONL splits and a manifest containing shape/action/player analysis;
+- dataset generation fails fast if Arena reports failed hands; `RandomAgent` now generates legal sizing for BET/RAISE through `LegalActions`;
+- the standalone generator currently supports baseline `random`, `calling_station` and `nit` agent specs and deliberately uses global tracker scope; online updates of agent-specific private memory during simulation are not yet implemented;
+- train/validation splitting is deterministic sample-level splitting, not grouped by hand/session, so leakage-sensitive experiments may require a grouped splitter later;
 - no trainable policy consumes the learning samples yet.
 
 ## Stress verification

@@ -295,8 +295,18 @@ LearningActionEncoder   chosen ActionDecision
        LearningDatasetAnalyzer
                  |
                  v
+       LearningDatasetGenerator
+          /             \
+         v               v
+    train.jsonl    validation.jsonl
+         \               /
+          +------v-------+
+                 |
+                 v
           future policy
 ```
+
+`LearningDatasetGenerator` is orchestration above Arena and the dataset boundary. It constructs explicitly named baseline agents, derives deterministic seeds for stochastic agents, captures a clean raw JSONL dataset, performs a seeded deterministic sample-level train/validation split, analyzes every split and writes a manifest containing the generation configuration and Arena failure count. Generation fails if any Arena hand fails, preventing silent partial datasets. `RandomAgent` is required to obey the same `LegalActions` contract as every other agent, including legal BET/RAISE sizing. Generated data remains outside the poker engine and is safe to delete/rebuild. The standalone generator currently requires global profile scope because no online agent-memory updater exists yet; private-memory training must wait for an explicit observation-history update path rather than treating zero-filled memory as meaningful knowledge.
 
 The public simulation loop owns the only decision-capture hook. `play_hand()` invokes an optional `decision_observer(view, legal, decision)` only after the agent decision has passed `LegalActions` validation and before `HandController` mutates state. Arena forwards the callback but remains unaware of learning/dataset classes. To preserve the historical Arena/session call contract, `ArenaSession` omits the `decision_observer` keyword entirely when no observer is configured. This keeps existing alternate `play_hand` callables and monkeypatch tests compatible. The dependency direction remains `poker.api` exposes observations/events while `poker.learning` subscribes from outside.
 
