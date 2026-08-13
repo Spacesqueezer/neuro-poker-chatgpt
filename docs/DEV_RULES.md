@@ -86,6 +86,21 @@ MUST update docs/PROJECT_STATE.md.
 
 PROJECT_STATE.md synchronization is a mandatory development step.
 
+`docs/USER_GUIDE_RU.md` is the user-facing command and workflow reference.
+
+Any patch that adds or changes:
+- a CLI command;
+- a command-line argument;
+- an interactive user command;
+- a tool under `tools/`;
+- a user-visible output format;
+- a required environment variable;
+- a standard workflow for tests, benchmarks, dataset generation, migrations, training, snapshots or patch application;
+
+MUST update `docs/USER_GUIDE_RU.md` in the same patch.
+
+Internal APIs that require no user action do not need to be duplicated in the user guide.
+
 ## Project continuation rules
 
 Next steps in PROJECT_STATE.md are instructions for the next AI developer.
@@ -123,6 +138,9 @@ Reasons behind important choices.
 
 ROADMAP.md:
 Long-term direction.
+
+USER_GUIDE_RU.md:
+Russian user-facing command reference, arguments and practical workflows.
 
 ## Rule file ownership
 
