@@ -1,6 +1,7 @@
 from poker.api.hand_state import HandStateView, LegalActions, PublicPlayerView
 from poker.agents.expert import ExpertAgent, MonteCarloEquityEstimator
 from poker.game.actions import PlayerAction
+from poker.strategy.ranges import UniformRangeModel
 
 
 def _state(hole_cards, board=()):
@@ -34,6 +35,20 @@ def test_equity_estimator_is_reproducible_for_same_seed():
 	state = _state(("A♠", "A♥"))
 
 	assert first.estimate(state) == second.estimate(state)
+
+
+def test_equity_estimator_can_use_explicit_uniform_range_model():
+	estimator = MonteCarloEquityEstimator(
+		samples=50,
+		seed=123,
+		range_model=UniformRangeModel(),
+	)
+
+	equity = estimator.estimate(
+		_state(("A♠", "A♥"))
+	)
+
+	assert 0.0 <= equity <= 1.0
 
 
 def test_premium_pair_has_more_equity_than_weak_offsuit_hand():

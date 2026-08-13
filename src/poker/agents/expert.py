@@ -5,6 +5,7 @@ from poker.cards.card import Card
 from poker.enums import Rank, Suit
 from poker.evaluation.seven_card import evaluate_seven_cards
 from poker.game.actions import PlayerAction
+from poker.strategy.ranges import PositionRangeModel
 
 
 RANK_BY_SYMBOL = {str(rank.value): rank for rank in Rank}
@@ -44,12 +45,18 @@ def full_deck():
 
 
 class MonteCarloEquityEstimator:
-	def __init__(self, samples=300, seed=None):
+	def __init__(
+		self,
+		samples=300,
+		seed=None,
+		range_model=None,
+	):
 		if samples <= 0:
 			raise ValueError("samples must be positive")
 
 		self.samples = samples
 		self.random = random.Random(seed)
+		self.range_model = range_model or PositionRangeModel()
 
 	def estimate(self, state):
 		hero_cards = [parse_card(value) for value in state.hole_cards]
@@ -78,19 +85,35 @@ class MonteCarloEquityEstimator:
 		equity = 0.0
 
 		for _ in range(self.samples):
-			sampled = self.random.sample(available, cards_needed)
-			runout = sampled[:board_needed]
+			remaining = list(available)
+			opponent_hands = []
+
+			for opponent in opponents:
+				opponent_cards = self.range_model.sample_hole_cards(
+					remaining,
+					opponent,
+					state,
+					self.random,
+				)
+				opponent_hands.append(opponent_cards)
+
+				for card in opponent_cards:
+					remaining.remove(card)
+
+			runout = self.random.sample(
+				remaining,
+				board_needed,
+			)
 			final_board = board + runout
-			cursor = board_needed
 
 			hero_result = evaluate_seven_cards(hero_cards + final_board)
 			results = [hero_result]
 
-			for _opponent in opponents:
-				opponent_cards = sampled[cursor:cursor + 2]
-				cursor += 2
+			for opponent_cards in opponent_hands:
 				results.append(
-					evaluate_seven_cards(opponent_cards + final_board)
+					evaluate_seven_cards(
+						list(opponent_cards) + final_board
+					)
 				)
 
 			best = max(
@@ -117,10 +140,12 @@ class ExpertAgent:
 		equity_samples=300,
 		raise_margin=0.18,
 		value_bet_threshold=0.58,
+		range_model=None,
 	):
 		self.equity = MonteCarloEquityEstimator(
 			samples=equity_samples,
 			seed=seed,
+			range_model=range_model,
 		)
 		self.raise_margin = raise_margin
 		self.value_bet_threshold = value_bet_threshold

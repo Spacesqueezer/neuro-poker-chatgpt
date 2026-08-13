@@ -326,7 +326,26 @@ HandStateView + LegalActions
     ActionDecision
 ```
 
-The expert must not inspect engine internals, deck state or hidden opponent cards. Its Monte-Carlo deck is reconstructed only from publicly known cards and samples remaining unknown cards uniformly. This is an explicit heuristic teacher boundary, not a solver or GTO claim.
+The expert must not inspect engine internals, deck state or hidden opponent cards. Its Monte-Carlo deck is reconstructed only from publicly known cards. Opponent hole cards are sampled through a range-model boundary before future board cards are sampled:
+
+```text
+public opponent position
+        |
+        v
+ PositionRangeModel
+        |
+        v
+weighted legal two-card combos
+        |
+        v
+MonteCarloEquityEstimator
+        |
+        +--> sample opponent cards without collisions
+        +--> sample remaining board cards
+        +--> seven-card evaluation
+```
+
+`PositionRangeModel` is deliberately conservative in scope: early positions receive a stronger preference for high/pair/suited-connected holdings, while late positions remain wider. `UniformRangeModel` is retained for control experiments. Because `HandStateView` does not yet expose public action history, the range model must not infer raise/call/bet history from hidden engine state. This remains an explicit heuristic teacher boundary, not a solver or GTO claim.
 
 Teacher quality is measured outside the agent:
 
