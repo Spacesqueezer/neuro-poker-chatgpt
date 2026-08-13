@@ -74,8 +74,18 @@ class HandReplayVerifier:
 				break
 
 		if not errors:
-			expected = self._canonical(history)
-			actual = self._canonical(controller.hand_history)
+			include_position = all(
+				"position" in player
+				for player in history.players
+			)
+			expected = self._canonical(
+				history,
+				include_position=include_position,
+			)
+			actual = self._canonical(
+				controller.hand_history,
+				include_position=include_position,
+			)
 			if actual != expected:
 				errors.append("replayed history does not exactly match the recorded history")
 
@@ -117,7 +127,12 @@ class HandReplayVerifier:
 			errors=tuple(errors),
 		)
 
-	def _canonical(self, history):
+	def _canonical(self, history, include_position=True):
 		payload = history.to_dict()
 		payload.pop("hand_id", None)
+
+		if not include_position:
+			for player in payload.get("players", []):
+				player.pop("position", None)
+
 		return payload

@@ -56,7 +56,7 @@ play_hand(agents, seed, dealer_name=...) -> HandHistory
 - Random default hands with reproducible seeds.
 - Structured `HandHistory` and JSONL persistence.
 - Interactive history viewer.
-- Exact seed-based replay verification.
+- Exact seed-based replay verification, including backward compatibility with histories recorded before player-position metadata was introduced.
 - Structural verification fallback for scripted histories.
 - Randomized stress runner using the public simulation API.
 

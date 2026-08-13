@@ -16,6 +16,39 @@ def test_seeded_history_replays_exactly():
 	assert result.errors == ()
 
 
+def test_seeded_history_without_position_metadata_replays_exactly():
+	state, controller, _ = create_scenario("default", seed=12345)
+	controller.process_action(state, PlayerAction.FOLD)
+	controller.process_action(state, PlayerAction.FOLD)
+
+	payload = controller.hand_history.to_dict()
+	for player in payload["players"]:
+		player.pop("position", None)
+
+	legacy_history = HandHistory.from_dict(payload)
+	result = HandReplayVerifier().verify(legacy_history)
+
+	assert result.mode == "exact"
+	assert result.ok
+	assert result.errors == ()
+
+
+def test_seeded_history_with_position_metadata_still_replays_exactly():
+	state, controller, _ = create_scenario("default", seed=54321)
+	controller.process_action(state, PlayerAction.FOLD)
+	controller.process_action(state, PlayerAction.FOLD)
+
+	assert all(
+		"position" in player
+		for player in controller.hand_history.players
+	)
+
+	result = HandReplayVerifier().verify(controller.hand_history)
+
+	assert result.mode == "exact"
+	assert result.ok
+
+
 def test_scripted_history_uses_structural_verification():
 	history = HandHistory(
 		hand_id="scripted",

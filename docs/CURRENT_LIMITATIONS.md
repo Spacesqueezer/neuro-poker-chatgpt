@@ -53,6 +53,7 @@ External agents must not import `HandController`, `GameState` or `BettingRound`.
 - Seed-based random histories support exact replay through `HandReplayVerifier`.
 - Scripted scenario histories have `seed=None` and receive structural verification only.
 - Exact replay compares regenerated cards, actions, streets, pots and final stacks.
+- Player-position metadata is also compared for histories that recorded it; older seeded histories without `players[].position` remain exact-replay compatible by comparing the historical schema they actually contain.
 
 Commands:
 
