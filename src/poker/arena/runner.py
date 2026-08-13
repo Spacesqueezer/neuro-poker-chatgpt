@@ -10,6 +10,7 @@ class ArenaRunner:
 		starting_stack=100,
 		statistics_service=None,
 		player_ids=None,
+		decision_observer=None,
 	):
 		if len(agents) < 2:
 			raise ValueError("Arena requires at least two agents")
@@ -17,6 +18,7 @@ class ArenaRunner:
 		self.starting_stack = starting_stack
 		self.statistics_service = statistics_service
 		self.player_ids = dict(player_ids or {})
+		self.decision_observer = decision_observer
 		self.last_statistics_collector = None
 
 	def run(self, hands, seed=42):
@@ -31,6 +33,7 @@ class ArenaRunner:
 			seed,
 			stats,
 			hand_observer=statistics_adapter.process_hand,
+			decision_observer=self.decision_observer,
 		)
 		stats.update_players(session.current_stacks(), self.starting_stack)
 

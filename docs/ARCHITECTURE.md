@@ -283,8 +283,24 @@ LearningActionEncoder   chosen ActionDecision
         versioned LearningSample
                  |
                  v
-       future dataset / policy
+       LearningDatasetCapture
+                 |
+                 v
+       LearningDatasetWriter
+                 |
+                 v
+              JSONL
+                 |
+                 v
+       LearningDatasetAnalyzer
+                 |
+                 v
+          future policy
 ```
+
+The public simulation loop owns the only decision-capture hook. `play_hand()` invokes an optional `decision_observer(view, legal, decision)` only after the agent decision has passed `LegalActions` validation and before `HandController` mutates state. Arena forwards the callback but remains unaware of learning/dataset classes. To preserve the historical Arena/session call contract, `ArenaSession` omits the `decision_observer` keyword entirely when no observer is configured. This keeps existing alternate `play_hand` callables and monkeypatch tests compatible. The dependency direction remains `poker.api` exposes observations/events while `poker.learning` subscribes from outside.
+
+`LearningDatasetCapture` converts each validated decision into a versioned sample, `LearningDatasetWriter` appends one compact JSON object per line, and `LearningDatasetAnalyzer` rejects unsupported versions, malformed action masks and masked target actions before reporting dataset distributions.
 
 `LearningActionEncoder` consumes the same public `LegalActions` contract used to validate agents. Its action order is fixed as fold/check/call/bet/raise/all-in, with a six-element legality mask and normalized call/bet/raise sizing bounds. `LearningSampleBuilder` validates the chosen `ActionDecision` against `LegalActions` before recording its action index and normalized amount, so invalid labels cannot silently enter a dataset. `LearningSample` is versioned and serializable without engine or persistence objects.
 

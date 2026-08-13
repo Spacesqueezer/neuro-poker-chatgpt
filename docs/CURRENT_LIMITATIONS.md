@@ -93,7 +93,9 @@ Current limitation:
 - `LearningObservationEncoder` supports 2-9 handed tables and pads unused opponent slots to a fixed shape;
 - opponent information scope is explicit: `private` exposes only agent-specific memory, `global` exposes shared persisted tracker statistics, and `combined` exposes both;
 - legal actions now have a stable six-action mask plus normalized call/bet/raise sizing bounds, and chosen decisions can be encoded as supervised targets;
-- `LearningSample` is a versioned observation/action contract, but automatic capture from `play_hand()` / Arena and dataset persistence/analysis are not yet connected;
+- versioned `LearningSample` records can now be captured automatically from validated `play_hand()`/Arena decisions and persisted as JSONL;
+- the dataset analyzer validates version, legal targets and vector shapes and reports basic action/player distributions;
+- reproducible large-scale dataset-generation CLI/configuration, train/validation splits and richer quality analysis are not yet implemented;
 - no trainable policy consumes the learning samples yet.
 
 ## Stress verification

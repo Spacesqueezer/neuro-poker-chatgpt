@@ -18,6 +18,7 @@ def play_hand(
 	max_actions=500,
 	dealer_name=None,
 	starting_stacks=None,
+	decision_observer=None,
 ):
 	if len(agents) < 2:
 		raise ValueError("At least two agents are required")
@@ -65,6 +66,13 @@ def play_hand(
 		if not legal.allows(decision.action, decision.amount):
 			raise ValueError(
 				f"Illegal agent decision: {player.name} {decision.action.value} {decision.amount}"
+			)
+
+		if decision_observer is not None:
+			decision_observer(
+				view,
+				legal,
+				decision,
 			)
 
 		controller.process_action(state, decision.action, decision.amount)

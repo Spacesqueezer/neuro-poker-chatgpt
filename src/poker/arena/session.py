@@ -42,12 +42,24 @@ class ArenaSession:
 		self.stacks = dict(history.final_stacks)
 		self.completed_hands += 1
 
-	def play_next_hand(self, agents, seed, dealer_name):
+	def play_next_hand(
+		self,
+		agents,
+		seed,
+		dealer_name,
+		decision_observer=None,
+	):
+		kwargs = {
+			"seed": seed,
+			"starting_stacks": self.current_stacks(),
+			"dealer_name": dealer_name,
+		}
+		if decision_observer is not None:
+			kwargs["decision_observer"] = decision_observer
+
 		result = play_hand(
 			agents,
-			seed=seed,
-			starting_stacks=self.current_stacks(),
-			dealer_name=dealer_name,
+			**kwargs,
 		)
 		self.apply_hand_result(result)
 		return result
@@ -59,6 +71,7 @@ class ArenaSession:
 		seed,
 		stats,
 		hand_observer=None,
+		decision_observer=None,
 	):
 		players = list(agents)
 
@@ -72,6 +85,7 @@ class ArenaSession:
 					agents,
 					seed=current_seed,
 					dealer_name=players[index % len(players)],
+					decision_observer=decision_observer,
 				)
 				stats.record_result(current_seed, result)
 			except Exception:
