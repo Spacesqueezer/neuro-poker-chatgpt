@@ -152,6 +152,7 @@ Poker engine internals
         v
 poker.api
 ├── HandStateView
+│   └── PublicActionView[]  # prior public actions only
 ├── PublicPlayerView
 ├── LegalActions
 ├── ActionDecision
@@ -161,7 +162,7 @@ poker.api
 Agents / Arena
 ```
 
-`HandStateView` contains public state and only the acting player's hole cards. `LegalActions` contains action availability and sizing bounds. `play_hand()` validates an agent decision against that query surface and then delegates mutation to `HandController`, which remains the source of truth for action execution.
+`HandStateView` contains public state, canonical table positions, only the acting player's hole cards, and an immutable projection of prior public action events. `PublicActionView` is derived from the current `HandHistory` action events and never exposes future actions, hidden cards, deck state or controller internals. `LegalActions` contains action availability and sizing bounds. `play_hand()` validates an agent decision against that query surface and then delegates mutation to `HandController`, which remains the source of truth for action execution.
 
 This boundary prevents Arena, baseline agents and future learning systems from duplicating poker legality rules.
 

@@ -26,7 +26,7 @@ class PositionRangeModel:
 		if not combos:
 			raise ValueError("No opponent hole-card combinations available")
 
-		exponent = _POSITION_EXPONENT.get(player.position, 2.5)
+		exponent = self._range_exponent(player, state)
 		weights = [
 			self._weight(combo) ** exponent + 0.002
 			for combo in combos
@@ -39,6 +39,28 @@ class PositionRangeModel:
 				k=1,
 			)[0]
 		)
+
+	def _range_exponent(self, player, state):
+		exponent = _POSITION_EXPONENT.get(player.position, 2.5)
+
+		if state is None:
+			return exponent
+
+		actions = [
+			action
+			for action in state.action_history
+			if action.player == player.name
+		]
+
+		for action in actions:
+			if action.action in {"raise", "bet"}:
+				exponent += 1.15
+			elif action.action == "all_in":
+				exponent += 1.60
+			elif action.action == "call":
+				exponent += 0.25
+
+		return min(8.0, exponent)
 
 	def _weight(self, combo):
 		first, second = combo

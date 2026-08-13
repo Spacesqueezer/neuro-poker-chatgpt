@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from poker.game.actions import PlayerAction
+from poker.game.positions import positions_by_player
 
 
 @dataclass(frozen=True)
@@ -11,6 +12,18 @@ class PublicPlayerView:
 	total_contribution: int
 	folded: bool
 	position: str
+
+
+@dataclass(frozen=True)
+class PublicActionView:
+	street: str
+	player: str
+	action: str
+	contributed: int
+	bet_before: int
+	bet_after: int
+	pot: int
+	target: int
 
 
 @dataclass(frozen=True)
@@ -26,6 +39,7 @@ class HandStateView:
 	small_blind: str
 	big_blind: str
 	players: tuple[PublicPlayerView, ...]
+	action_history: tuple[PublicActionView, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -69,6 +83,11 @@ def build_hand_state_view(game_state, controller, player=None):
 	dealer = game_state.players[game_state.dealer_button_index]
 	small_blind = game_state.players[controller.small_blind_index]
 	big_blind = game_state.players[controller.big_blind_index]
+	positions = positions_by_player(
+		game_state.players,
+		game_state.dealer_button_index,
+	)
+	action_history = _public_action_history(controller)
 
 	return HandStateView(
 		street=game_state.round_manager.street.value,
@@ -88,10 +107,32 @@ def build_hand_state_view(game_state, controller, player=None):
 				current_bet=item.current_bet,
 				total_contribution=item.total_contribution,
 				folded=item.folded,
-				position=controller.position_name(game_state, index),
+				position=positions[item.name],
 			)
-			for index, item in enumerate(game_state.players)
+			for item in game_state.players
 		),
+		action_history=action_history,
+	)
+
+
+def _public_action_history(controller):
+	history = getattr(controller, "hand_history", None)
+	if history is None:
+		return ()
+
+	return tuple(
+		PublicActionView(
+			street=event.data["street"],
+			player=event.data["player"],
+			action=event.data["action"],
+			contributed=event.data["contributed"],
+			bet_before=event.data["bet_before"],
+			bet_after=event.data["bet_after"],
+			pot=event.data["pot"],
+			target=event.data["target"],
+		)
+		for event in history.events
+		if event.type == "action"
 	)
 
 
