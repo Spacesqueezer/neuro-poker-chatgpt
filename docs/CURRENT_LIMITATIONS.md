@@ -89,8 +89,10 @@ Current limitation:
 - Alembic owns schema evolution and the initial persistence revision is upgrade/downgrade tested;
 - real PostgreSQL integration coverage is opt-in and requires `POKER_TEST_DATABASE_URL`; it is skipped in environments without a disposable PostgreSQL test database;
 - turn/river barrel frequencies, fold-to-turn/river-bet and other advanced tracker metrics are not yet modeled;
-- persisted tracker data now has a fixed opponent-profile feature boundary, but no neural observation or policy consumes it yet;
-- `OpponentProfile` deliberately keeps global tracker history and agent-specific memory distinct; future decision integration must explicitly select the intended information scope and must not leak omniscient global history into experiments intended to model private agent knowledge.
+- persisted tracker data now feeds a fixed learning-observation boundary, but no trainable policy consumes it yet;
+- `LearningObservationEncoder` supports 2-9 handed tables and pads unused opponent slots to a fixed shape;
+- opponent information scope is explicit: `private` exposes only agent-specific memory, `global` exposes shared persisted tracker statistics, and `combined` exposes both;
+- legal-action mask/sizing encoding and the dataset sample contract are not yet attached to the learning observation.
 
 ## Stress verification
 

@@ -263,8 +263,20 @@ OpponentProfileEncoder
 fixed named feature tuple
       |
       v
-future observation / strategy code
+LearningObservationEncoder
+      |
+      +--> HandStateView public/card/table features
+      +--> zero-padded opponent slots (max 8)
+      +--> explicitly scoped opponent-profile features
+      |
+      v
+fixed LearningObservation
+      |
+      v
+future dataset / policy code
 ```
+
+`LearningObservationEncoder` is the learning-facing state boundary. It consumes only `poker.api.HandStateView` plus `OpponentProfileProvider`; it does not import engine internals or persistence models. Hole cards and board cards use independent fixed 52-way one-hot sections, streets use one-hot encoding, chip/bet values are normalized by the total chips represented in the public state, and opponent slots preserve public player order with zero padding up to 9-max. Profile scope must be chosen explicitly: `private` masks all global tracker fields and exposes only agent-specific memory, `global` masks memory, and `combined` exposes both.
 
 `OpponentProfileProvider` is the composition boundary for opponent snapshots. Strategy and learning code must not query SQLAlchemy models or repositories directly. `OpponentProfileEncoder` currently exposes a fixed 22-feature schema containing global rates, a selected-position slice, street aggression, showdown metrics and agent-memory estimates/confidence. Missing statistics, positions or memory are represented by zero-valued features so dimensionality remains stable. Global tracker history and agent-specific memory are deliberately represented as distinct concepts. Future live-agent integration must choose the permitted information scope explicitly instead of accidentally giving an agent global knowledge it could not have observed.
 
