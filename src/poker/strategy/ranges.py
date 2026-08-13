@@ -50,16 +50,27 @@ class UniformRangeModel:
 
 
 class PositionRangeModel:
-	def sample_hole_cards(self, available, player, state, rng):
+	def combo_distribution(self, available, player, state):
 		combos = list(combinations(available, 2))
 		if not combos:
 			raise ValueError("No opponent hole-card combinations available")
 
 		exponent = self._range_exponent(player, state)
-		weights = [
+		raw_weights = [
 			self._weight(combo) ** exponent + 0.002
 			for combo in combos
 		]
+		total = sum(raw_weights)
+
+		return tuple(
+			(combo, weight / total)
+			for combo, weight in zip(combos, raw_weights)
+		)
+
+	def sample_hole_cards(self, available, player, state, rng):
+		distribution = self.combo_distribution(available, player, state)
+		combos = [combo for combo, _ in distribution]
+		weights = [weight for _, weight in distribution]
 
 		return tuple(
 			rng.choices(
