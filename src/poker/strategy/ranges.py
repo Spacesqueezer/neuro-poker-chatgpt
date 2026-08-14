@@ -66,18 +66,33 @@ class UniformRangeModel:
 
 
 class PositionRangeModel:
+	def __init__(
+		self,
+		profile_provider=None,
+		agent_id=None,
+	):
+		self.profile_provider = profile_provider
+		self.agent_id = agent_id
+
 	def combo_distribution(self, available, player, state):
 		combos = list(combinations(available, 2))
 		if not combos:
 			raise ValueError("No opponent hole-card combinations available")
 
 		range_state = self.build_range_state(player, state)
+		profile = self._profile_for(player)
 		exponent = self._range_exponent_from_state(range_state)
 		raw_weights = [
 			(
 				self._weight(combo) ** exponent
 				* self._evidence_multiplier(combo, range_state)
 				* self._board_evidence_multiplier(combo, state, range_state)
+				* self._profile_evidence_multiplier(
+					combo,
+					state,
+					range_state,
+					profile,
+				)
 			)
 			+ 0.002
 			for combo in combos
@@ -193,6 +208,190 @@ class PositionRangeModel:
 	def _aggression_ratio(self, action):
 		pot_before = max(1, action.pot - action.contributed)
 		return action.contributed / pot_before
+
+	def _profile_for(self, player):
+		if self.profile_provider is None:
+			return None
+
+		return self.profile_provider.get(
+			player.name,
+			agent_id=self.agent_id,
+		)
+
+	def _profile_evidence_multiplier(
+		self,
+		combo,
+		state,
+		range_state,
+		profile,
+	):
+		if profile is None or profile.hands <= 0:
+			return 1.0
+
+		reliability = min(1.0, profile.hands / 200.0)
+		position = profile.position(range_state.position)
+		position_reliability = (
+			min(1.0, position.hands / 100.0)
+			if position is not None
+			else 0.0
+		)
+
+		vpip = self._blend_rate(
+			profile.vpip,
+			position.vpip if position is not None else None,
+			position_reliability,
+		)
+		pfr = self._blend_rate(
+			profile.pfr,
+			position.pfr if position is not None else None,
+			position_reliability,
+		)
+		three_bet = self._blend_rate(
+			profile.three_bet,
+			position.three_bet if position is not None else None,
+			position_reliability,
+		)
+
+		memory = profile.memory
+		memory_weight = min(
+			reliability,
+			memory.confidence,
+		)
+		if memory_weight > 0:
+			vpip = self._blend_rate(
+				vpip,
+				memory.vpip_estimate,
+				memory_weight,
+			)
+			pfr = self._blend_rate(
+				pfr,
+				memory.pfr_estimate,
+				memory_weight,
+			)
+
+		first, second = combo
+		high = max(first.rank.value, second.rank.value)
+		low = min(first.rank.value, second.rank.value)
+		pair = first.rank == second.rank
+		suited = first.suit == second.suit
+		gap = abs(first.rank.value - second.rank.value)
+
+		premium_pair = pair and high >= 11
+		broadway = high >= 13 and low >= 10
+		suited_ace = suited and high == 14
+		suited_connector = suited and gap == 1 and high <= 11
+		speculative = suited_connector or (pair and high <= 10)
+		weak_offsuit = (
+			not pair
+			and not suited
+			and high <= 10
+			and low <= 7
+		)
+		value_heavy = premium_pair or broadway
+
+		multiplier = 1.0
+		action_class = range_state.preflop_action_class
+
+		if action_class in {"3bet", "4bet_plus", "all_in"}:
+			tendency = self._centered_rate(
+				three_bet,
+				center=0.08,
+				scale=0.12,
+			)
+			if value_heavy:
+				multiplier *= 1.0 - 0.18 * reliability * tendency
+			if speculative or suited_ace:
+				multiplier *= 1.0 + 0.38 * reliability * tendency
+			if weak_offsuit:
+				multiplier *= 1.0 + 0.18 * reliability * tendency
+		elif action_class == "open_raise":
+			tendency = self._centered_rate(
+				pfr,
+				center=0.20,
+				scale=0.20,
+			)
+			if value_heavy:
+				multiplier *= 1.0 - 0.10 * reliability * tendency
+			if speculative or suited_ace:
+				multiplier *= 1.0 + 0.28 * reliability * tendency
+			if weak_offsuit:
+				multiplier *= 1.0 + 0.12 * reliability * tendency
+		elif action_class == "call":
+			call_gap = max(0.0, vpip - pfr)
+			tendency = self._centered_rate(
+				call_gap,
+				center=0.10,
+				scale=0.20,
+			)
+			if speculative:
+				multiplier *= 1.0 + 0.30 * reliability * tendency
+			if premium_pair:
+				multiplier *= 1.0 - 0.12 * reliability * tendency
+
+		if state is not None and state.street in {"flop", "turn", "river"}:
+			street_aggression = getattr(
+				profile,
+				f"{state.street}_aggression",
+			)
+			if memory_weight > 0:
+				street_aggression = self._blend_rate(
+					street_aggression,
+					memory.aggression_estimate,
+					memory_weight,
+				)
+
+			aggression_tendency = self._centered_rate(
+				street_aggression,
+				center=1.5,
+				scale=2.0,
+			)
+			interaction = self.combo_board_interaction(combo, state)
+			draw = interaction.straight_draw or interaction.flush_draw
+			made = (
+				interaction.pair_or_better
+				or interaction.straight
+				or interaction.flush
+			)
+			air = not made and not draw
+
+			if draw:
+				multiplier *= (
+					1.0
+					+ 0.30 * reliability * aggression_tendency
+				)
+			elif air:
+				multiplier *= (
+					1.0
+					+ 0.22 * reliability * aggression_tendency
+				)
+			elif made:
+				multiplier *= (
+					1.0
+					- 0.10 * reliability * aggression_tendency
+				)
+
+		return max(0.10, multiplier)
+
+	def _blend_rate(self, base, override, weight):
+		if override is None:
+			return base
+
+		return (
+			base * (1.0 - weight)
+			+ override * weight
+		)
+
+	def _centered_rate(self, value, center, scale):
+		if scale <= 0:
+			return 0.0
+
+		return max(
+			-1.0,
+			min(
+				1.0,
+				(value - center) / scale,
+			),
+		)
 
 	def combo_board_interaction(self, combo, state):
 		if state is None or not state.board:

@@ -50,13 +50,18 @@ class MonteCarloEquityEstimator:
 		samples=300,
 		seed=None,
 		range_model=None,
+		profile_provider=None,
+		agent_id=None,
 	):
 		if samples <= 0:
 			raise ValueError("samples must be positive")
 
 		self.samples = samples
 		self.random = random.Random(seed)
-		self.range_model = range_model or PositionRangeModel()
+		self.range_model = range_model or PositionRangeModel(
+			profile_provider=profile_provider,
+			agent_id=agent_id,
+		)
 
 	def estimate(self, state):
 		hero_cards = [parse_card(value) for value in state.hole_cards]
@@ -141,11 +146,15 @@ class ExpertAgent:
 		raise_margin=0.18,
 		value_bet_threshold=0.58,
 		range_model=None,
+		profile_provider=None,
+		agent_id=None,
 	):
 		self.equity = MonteCarloEquityEstimator(
 			samples=equity_samples,
 			seed=seed,
 			range_model=range_model,
+			profile_provider=profile_provider,
+			agent_id=agent_id,
 		)
 		self.raise_margin = raise_margin
 		self.value_bet_threshold = value_bet_threshold
