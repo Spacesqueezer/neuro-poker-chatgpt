@@ -70,3 +70,17 @@ Seat status is explicit (`ACTIVE`, `SITTING_OUT`, `BUSTED`). A status change doe
 
 Reason:
 Physical seating lifetime and one-hand participant lifetime are different concerns. Keeping busted-player removal in `manual_hand.py` made debug tooling responsible for poker lifecycle rules and lost persistent seat identity. The projection approach preserves existing betting/evaluation code while moving lifecycle ownership into the domain model.
+
+
+## ADR-007: Solver Game Boundary Before Full Hold'em Solving
+
+Date:
+2026-08-14
+
+Decision:
+CFR depends on a generic two-player extensive-form game interface rather than Kuhn-specific cards/history. The first Hold'em adapter is deliberately restricted to heads-up push/fold play over an explicit finite weighted set of private deals and a fixed public board.
+
+The solver information set may contain only information available to the acting player. Hold'em showdown reuses the production seven-card evaluator, but the adapter does not import `HandController`, Arena or learning code.
+
+Reason:
+Full no-limit Hold'em has a state/action/chance space that is far too large for exhaustive tabular CFR. A small real-card adapter validates the solver boundary and hidden-information semantics before MCCFR/chance sampling and larger abstractions are introduced.

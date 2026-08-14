@@ -365,7 +365,7 @@ KuhnPokerGame
   CFRResult
 ```
 
-`poker.solver` currently uses Kuhn poker only as a correctness harness for tabular CFR. It has explicit information sets and zero-sum terminal utilities, and tests require deterministic normalized strategies plus convergence near the known Kuhn game value. It does not consume `HandStateView`, opponent profiles or hidden production engine state. The next solver step is to introduce a game-interface abstraction and a restricted heads-up Hold'em adapter; only after that boundary is stable should MCCFR sampling and solver-generated teacher labels be connected to learning.
+`poker.solver` now separates CFR from individual games through `TwoPlayerSolverGame`. Games expose weighted initial chance nodes, player-to-act, terminal utility, information sets, legal actions and child transitions. `KuhnPokerGame` remains the deterministic correctness harness and still converges near the known Kuhn game value. `RestrictedHeadsUpHoldemGame` is the first Hold'em adapter: it accepts an explicit finite weighted deal set, a fixed five-card public board, equal starting stacks and a push/fold action tree. Showdown uses the production seven-card evaluator, while information sets contain only the acting player's hole cards plus public board/history. CFR accumulation includes chance reach so non-uniform deal weights remain mathematically meaningful. The adapter deliberately does not consume `HandStateView`, opponent profiles, `HandController` or hidden production engine state. The next solver step is chance-sampled/external-sampling MCCFR and richer Hold'em action/state abstraction; solver-generated teacher labels remain blocked until that boundary is stable.
 
 Teacher quality is measured outside the agent:
 

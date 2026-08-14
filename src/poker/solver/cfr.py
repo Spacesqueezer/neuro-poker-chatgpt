@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from math import fsum
 
+from poker.solver.game import InitialNode
+
 
 @dataclass(frozen=True)
 class CFRResult:
@@ -80,6 +82,40 @@ class KuhnPokerGame:
 	def information_set(self, cards, history, player):
 		return (player, cards[player], history)
 
+	def initial_nodes(self):
+		deals = self.deals()
+		probability = 1.0 / len(deals)
+		return tuple(
+			InitialNode(
+				state=(cards, ()),
+				probability=probability,
+			)
+			for cards in deals
+		)
+
+	def player_to_act(self, state):
+		_, history = state
+		return self.current_player(history)
+
+	def is_terminal_node(self, state):
+		_, history = state
+		return self.is_terminal(history)
+
+	def terminal_node_utility(self, state, player):
+		cards, history = state
+		return self.terminal_utility(cards, history, player)
+
+	def information_set_for_node(self, state, player):
+		cards, history = state
+		return self.information_set(cards, history, player)
+
+	def legal_actions(self, state):
+		return self.ACTIONS
+
+	def next_node(self, state, action):
+		cards, history = state
+		return (cards, history + (action,))
+
 
 class CFRTrainer:
 	def __init__(self, game=None):
@@ -92,18 +128,30 @@ class CFRTrainer:
 		if iterations <= 0:
 			raise ValueError("iterations must be positive")
 
+		initial_nodes = self.game.initial_nodes()
+		if not initial_nodes:
+			raise ValueError("solver game must expose initial nodes")
+
+		if any(node.probability <= 0.0 for node in initial_nodes):
+			raise ValueError("initial node probabilities must be positive")
+
+		probability_total = fsum(
+			node.probability
+			for node in initial_nodes
+		)
+		if abs(probability_total - 1.0) > 1e-12:
+			raise ValueError("initial node probabilities must sum to 1")
+
 		utility = 0.0
-		deals = self.game.deals()
-		deal_probability = 1.0 / len(deals)
 
 		for _ in range(iterations):
-			for cards in deals:
+			for initial in initial_nodes:
 				utility += (
-					deal_probability
+					initial.probability
 					* self._cfr(
-						cards,
-						(),
+						initial.state,
 						(1.0, 1.0),
+						initial.probability,
 					)
 				)
 
@@ -129,39 +177,49 @@ class CFRTrainer:
 			average_utility=utility / iterations,
 		)
 
-	def _cfr(self, cards, history, reach):
-		if self.game.is_terminal(history):
-			return self.game.terminal_utility(
-				cards,
-				history,
+	def _cfr(self, state, reach, chance_reach):
+		if self.game.is_terminal_node(state):
+			return self.game.terminal_node_utility(
+				state,
 				player=0,
 			)
 
-		player = self.game.current_player(history)
-		info_set = self.game.information_set(
-			cards,
-			history,
+		player = self.game.player_to_act(state)
+		actions = self.game.legal_actions(state)
+		if not actions:
+			raise ValueError(
+				"non-terminal solver node has no legal actions"
+			)
+
+		info_set = self.game.information_set_for_node(
+			state,
 			player,
 		)
 		regrets = self.regret_sum.setdefault(
 			info_set,
 			{
 				action: 0.0
-				for action in self.game.ACTIONS
+				for action in actions
 			},
 		)
+		if tuple(regrets) != tuple(actions):
+			raise ValueError(
+				"information set exposes inconsistent legal actions"
+			)
+
 		strategy = self.regret_matching.strategy(regrets)
 		strategy_sum = self.strategy_sum.setdefault(
 			info_set,
 			{
 				action: 0.0
-				for action in self.game.ACTIONS
+				for action in actions
 			},
 		)
 
 		for action, probability in strategy.items():
 			strategy_sum[action] += (
-				reach[player]
+				chance_reach
+				* reach[player]
 				* probability
 			)
 
@@ -172,9 +230,9 @@ class CFRTrainer:
 			next_reach = list(reach)
 			next_reach[player] *= probability
 			child_utility = self._cfr(
-				cards,
-				history + (action,),
+				self.game.next_node(state, action),
 				tuple(next_reach),
+				chance_reach,
 			)
 			action_utility = (
 				child_utility
@@ -185,9 +243,13 @@ class CFRTrainer:
 			node_utility += probability * action_utility
 
 		opponent = 1 - player
-		for action in self.game.ACTIONS:
+		for action in actions:
 			regret = action_utilities[action] - node_utility
-			regrets[action] += reach[opponent] * regret
+			regrets[action] += (
+				chance_reach
+				* reach[opponent]
+				* regret
+			)
 
 		return node_utility if player == 0 else -node_utility
 
