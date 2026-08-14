@@ -102,7 +102,8 @@ Current limitation:
 - `ExpertAgent` provides deterministic Monte-Carlo equity/pot-odds teacher decisions through the public API, and dataset generation can record only the configured teacher's decisions;
 - the expert is intentionally heuristic and is not claimed to be GTO: opponent holdings are sampled from an explicit normalized combo distribution conditioned on position, `OpponentRangeState`, board interaction and optional persisted `OpponentProfile`; profile influence is confidence/sample-size weighted, including positional VPIP/PFR/3-bet, street aggression and optional agent-memory estimates, but board-texture-specific frequencies, blocker effects beyond impossible-card removal, explicit Bayesian normalization and strategic action-tree lookahead beyond showdown equity/pot odds remain limited;
 - reproducible teacher benchmarks now run multiple reset Arena sessions against Random/CallingStation/Nit and aggregate Expert profit, bb/100, failures and completion rate; this measures empirical strength but is not an exploitability/GTO metric;
-- no trainable policy consumes the learning samples yet; longer teacher benchmarks and explicit range modeling remain prerequisites before imitation learning is treated as a strength-improving step.
+- a deterministic tabular CFR implementation now exists under `poker.solver`, but it currently solves only the tiny Kuhn-poker validation game; it is deliberately isolated from the production Hold'em engine until state/action abstraction and a restricted heads-up solver adapter are defined;
+- no trainable policy consumes the learning samples yet; solver-backed teacher data and stronger benchmark evidence remain prerequisites before imitation learning is treated as a strength-improving step.
 
 ## Stress verification
 

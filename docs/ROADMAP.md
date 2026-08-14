@@ -103,7 +103,8 @@ Current direction:
 - use a deterministic Monte-Carlo equity expert as the first meaningful teacher;
 - record teacher-only labels while baseline agents provide varied opposition;
 - benchmark the teacher before treating imitation learning as an improvement path;
-- if teacher quality plateaus, introduce CFR/MCCFR first on a restricted heads-up abstraction rather than scaling weak supervised labels.
+- a deterministic tabular CFR core now exists on a deliberately tiny Kuhn-poker game to validate regret matching, information-set accounting and average-strategy accumulation independently of the production Hold'em engine;
+- next extend the solver boundary toward a restricted heads-up Hold'em abstraction before using solver output as teacher data.
 
 ## Phase 7 — Advanced Opponent Memory
 

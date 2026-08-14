@@ -346,7 +346,26 @@ MonteCarloEquityEstimator
         +--> seven-card evaluation
 ```
 
-`PositionRangeModel` starts from a position prior and derives an immutable `OpponentRangeState` only from `HandStateView.action_history`. The state classifies the opponent's preflop line as unopened/call/open-raise/3-bet/4-bet+/all-in, tracks calls/aggression separately on flop, turn and river, and retains maximum public aggression sizing ratios for each street. `combo_distribution()` materializes every legal two-card combination and assigns a normalized probability to each. Preflop evidence reweights structural hand classes, while `BoardInteraction` classifies every postflop candidate against the public board as pair/two-pair+/trips+, overpair, straight, flush, straight draw or flush draw. An optional `OpponentProfileProvider` supplies storage-agnostic persisted evidence: position/global VPIP/PFR/3-bet and street aggression adjust combo weights with influence capped by hand-sample reliability; agent-specific memory can be blended by its confidence when an agent id is supplied. `ExpertAgent` only receives the provider abstraction and never repositories/SQLAlchemy. Monte-Carlo sampling consumes the resulting explicit distribution. `UniformRangeModel` remains a control. No range code may inspect hidden engine state. These probabilities are exploit-oriented heuristic beliefs, not a solved equilibrium; the solver layer must remain a separate abstraction.
+`PositionRangeModel` starts from a position prior and derives an immutable `OpponentRangeState` only from `HandStateView.action_history`. The state classifies the opponent's preflop line as unopened/call/open-raise/3-bet/4-bet+/all-in, tracks calls/aggression separately on flop, turn and river, and retains maximum public aggression sizing ratios for each street. `combo_distribution()` materializes every legal two-card combination and assigns a normalized probability to each. Preflop evidence reweights structural hand classes, while `BoardInteraction` classifies every postflop candidate against the public board as pair/two-pair+/trips+, overpair, straight, flush, straight draw or flush draw. An optional `OpponentProfileProvider` supplies storage-agnostic persisted evidence: position/global VPIP/PFR/3-bet and street aggression adjust combo weights with influence capped by hand-sample reliability; agent-specific memory can be blended by its confidence when an agent id is supplied. `ExpertAgent` only receives the provider abstraction and never repositories/SQLAlchemy. Monte-Carlo sampling consumes the resulting explicit distribution. `UniformRangeModel` remains a control. No range code may inspect hidden engine state. These probabilities are exploit-oriented heuristic beliefs, not a solved equilibrium; the solver layer remains a separate abstraction.
+
+The first solver boundary is intentionally independent from the production Hold'em engine:
+
+```text
+KuhnPokerGame
+     |
+     v
+ CFRTrainer
+     |
+     +--> regret matching
+     +--> reach probabilities
+     +--> cumulative regrets
+     +--> average strategy
+     |
+     v
+  CFRResult
+```
+
+`poker.solver` currently uses Kuhn poker only as a correctness harness for tabular CFR. It has explicit information sets and zero-sum terminal utilities, and tests require deterministic normalized strategies plus convergence near the known Kuhn game value. It does not consume `HandStateView`, opponent profiles or hidden production engine state. The next solver step is to introduce a game-interface abstraction and a restricted heads-up Hold'em adapter; only after that boundary is stable should MCCFR sampling and solver-generated teacher labels be connected to learning.
 
 Teacher quality is measured outside the agent:
 
