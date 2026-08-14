@@ -168,3 +168,15 @@ Solver strategy artifacts are fully validated before lookup. `StrategyLookup` us
 
 Reason:
 Strategy artifacts are research inputs and must fail loudly when corrupted or incompatible. Exact lookup keeps artifact compatibility observable and prevents accidental policy behavior from being hidden inside persistence code. Fallback and legal-action reconciliation belong in a later solver-policy adapter where they can be tested as strategy semantics rather than file-format behavior.
+
+
+## ADR-015: Solver Policy Fallback Is Uniform And Deterministic
+
+Date:
+2026-08-14
+
+Decision:
+`RestrictedSolverPolicy` reconciles an exact stored strategy with the current restricted node's legal actions by dropping unavailable actions and renormalizing the remaining mass. If the information set is missing or no stored probability mass overlaps the legal action set, it returns a uniform distribution over legal actions. Deterministic action selection chooses the maximum-probability legal action and uses the game's legal-action order as the tie-breaker.
+
+Reason:
+The lookup layer must remain exact and format-focused, while policy behavior needs an explicit response to incomplete research artifacts or tree changes. Uniform fallback is neutral and observable, and deterministic argmax makes coverage/evaluation runs reproducible before any stochastic production-agent integration is considered.

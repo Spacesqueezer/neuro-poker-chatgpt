@@ -384,7 +384,9 @@ versioned JSON strategy artifact
 
 The export contains benchmark/configuration metadata plus sorted average-strategy entries. Information-set serialization is explicit rather than generic tuple serialization: only acting-player hole cards and solver-public fields are emitted. This preserves the solver's imperfect-information boundary and makes the artifact deterministic for equal inputs.
 
-Artifact loading validates the complete versioned boundary before use. `StrategyLookup` then indexes entries by canonical JSON serialization of the explicit information-set object and performs exact lookup from live restricted-solver information sets. Missing entries return `None`; no nearest-neighbor, card abstraction or silent strategy synthesis happens at this layer. The artifact is still not a production-agent policy. The next boundary is a solver-local policy adapter that can reconcile exact lookup results with the current restricted node's legal actions and define explicit fallback behavior without importing `poker.api`.
+Artifact loading validates the complete versioned boundary before use. `StrategyLookup` then indexes entries by canonical JSON serialization of the explicit information-set object and performs exact lookup from live restricted-solver information sets. Missing entries return `None`; no nearest-neighbor or card abstraction happens at this layer.
+
+`RestrictedSolverPolicy` sits above lookup but remains inside `poker.solver`. It asks the game for the current acting player, information set and legal actions, filters an exact stored strategy to those legal actions and renormalizes the remaining probability mass. Missing lookup entries or zero legal overlap produce an explicit uniform strategy over the current legal actions. Deterministic action selection uses argmax and preserves the game's legal-action order for ties. This adapter still does not implement `poker.api.Agent`; the next boundary is opt-in solver-policy evaluation/coverage measurement before any production integration.
 
 Teacher quality is measured outside the agent:
 

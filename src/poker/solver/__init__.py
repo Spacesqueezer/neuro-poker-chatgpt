@@ -21,6 +21,7 @@ from poker.solver.holdem import (
 	RestrictedHeadsUpHoldemGame,
 )
 from poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult
+from poker.solver.policy import RestrictedSolverPolicy
 
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
 	"KuhnPokerGame",
 	"RegretMatching",
 	"RestrictedHeadsUpHoldemGame",
+	"RestrictedSolverPolicy",
 	"STRATEGY_EXPORT_VERSION",
 	"StrategyLookup",
 	"TwoPlayerSolverGame",
