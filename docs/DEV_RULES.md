@@ -56,6 +56,59 @@ Every patch must:
 - include validation commands;
 - update documentation when required.
 
+## Validation profiles
+
+Validation commands are selected according to patch impact.
+
+Default profile:
+
+```text
+fast
+```
+
+Runs after every patch:
+
+```text
+python -m pytest -q
+```
+
+Extended profile:
+
+```text
+extended
+```
+
+Runs when a patch affects shared contracts, architecture boundaries or complex internal logic:
+
+```text
+python -m pytest -q
+python tools/verify_history.py
+```
+
+Full profile:
+
+```text
+full
+```
+
+Runs before milestone completion and after risky gameplay changes:
+
+```text
+python -m pytest -q
+python tools/stress_poker.py --hands 10000 --seed 42
+python tools/verify_history.py
+```
+
+AI generating NeuroPatches must choose the smallest sufficient profile.
+
+Use `fast` for isolated utilities, tests, documentation and internal refactoring without changed public contracts.
+
+Use `extended` for API changes, serialization changes, database changes, migration changes, shared domain models and agent interfaces.
+
+Use `full` for poker engine changes, hand lifecycle, betting logic, stacks, pots, randomness, replay/history, Arena behavior and milestone patches.
+
+The selected validation profile must be justified by the affected systems.
+
 ## Git commit rules
 
 A successfully applied patch MUST create a git commit automatically.
