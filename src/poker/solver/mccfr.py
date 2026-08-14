@@ -53,17 +53,83 @@ class ExternalSamplingMCCFR:
 			{action: 0.0 for action in actions},
 		)
 
-		for action in actions:
-			self.strategy_sum.setdefault(
-				info,
-				{item: 0.0 for item in actions},
-			)
-			break
+		self.strategy_sum.setdefault(
+			info,
+			{item: 0.0 for item in actions},
+		)
 
-		return 0.0
+		strategy = self._regret_matching(regrets)
+
+		for action, probability in strategy.items():
+			self.strategy_sum[info][action] += probability
+
+		if player != traversing_player:
+			action = self.random_choice(strategy)
+			return self._traverse(
+				self.game.next_node(state, action),
+				traversing_player,
+			)
+
+		utilities = {}
+
+		for action in actions:
+			utilities[action] = self._traverse(
+				self.game.next_node(state, action),
+				traversing_player,
+			)
+
+		expected = sum(
+			strategy[action] * value
+			for action, value in utilities.items()
+		)
+
+		for action, value in utilities.items():
+			regrets[action] += (
+				self.chance_weight
+				* (value - expected)
+			)
+
+		return expected
+
+	def _regret_matching(self, regrets):
+		positive = {
+			action: max(0.0, value)
+			for action, value in regrets.items()
+		}
+
+		total = sum(positive.values())
+
+		if total == 0.0:
+			probability = 1.0 / len(positive)
+			return {
+				action: probability
+				for action in positive
+			}
+
+		return {
+			action: value / total
+			for action, value in positive.items()
+		}
+
+	def random_choice(self, strategy):
+		return max(
+			strategy,
+			key=strategy.get,
+		)
 
 	def _average_strategy(self):
-		return {
-			key: dict(value)
-			for key, value in self.strategy_sum.items()
-		}
+		result = {}
+
+		for key, value in self.strategy_sum.items():
+			total = sum(value.values())
+
+			if total == 0.0:
+				result[key] = dict(value)
+				continue
+
+			result[key] = {
+				action: weight / total
+				for action, weight in value.items()
+			}
+
+		return result
