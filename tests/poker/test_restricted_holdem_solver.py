@@ -279,6 +279,37 @@ def test_restricted_holdem_progresses_public_streets_by_checking_down():
 	assert game.is_terminal_node(showdown)
 
 
+def test_restricted_holdem_tracks_player_commitments_explicitly():
+	game = RestrictedHeadsUpHoldemGame((
+		deal(
+			(
+				card(Rank.ACE, Suit.SPADES),
+				card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				card(Rank.KING, Suit.SPADES),
+				card(Rank.KING, Suit.HEARTS),
+			),
+		),
+	))
+	root = game.initial_nodes()[0].state
+
+	assert root.commitments == (1, 2)
+
+	raised = game.next_node(root, "raise")
+	assert raised.commitments == (6, 2)
+
+	flop = game.next_node(raised, "call")
+	assert flop.commitments == (6, 6)
+
+	bet = game.next_node(flop, "bet_2bb")
+	assert bet.commitments == (6, 10)
+
+	turn = game.next_node(bet, "call")
+	assert turn.commitments == (10, 10)
+	assert turn.matched_stake == 10
+
+
 def test_restricted_holdem_postflop_bet_call_tracks_matched_stake():
 	game = RestrictedHeadsUpHoldemGame((
 		deal(

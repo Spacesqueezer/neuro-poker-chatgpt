@@ -96,3 +96,15 @@ Restricted Hold'em solver sizing is configured through `HoldemActionAbstraction`
 
 Reason:
 Bet sizing determines solver tree shape and strategy meaning. Encoding each configured size as a distinct finite action lets CFR/MCCFR learn separate branches while keeping the abstraction independent from production no-limit betting internals. Ordering and uniqueness are validated so action identity remains deterministic across runs.
+
+
+## ADR-009: Solver Commitments Are Player-Explicit
+
+Date:
+2026-08-14
+
+Decision:
+Restricted Hold'em solver nodes store public commitments separately for player 0 and player 1. `matched_stake` is only a derived compatibility view equal to the smaller commitment.
+
+Reason:
+A single shared matched-stake scalar cannot represent an outstanding bet, a future raise or asymmetric commitments. Player-explicit accounting preserves finite solver abstractions while providing enough public state for correct fold refunds, calls and later raise branches.

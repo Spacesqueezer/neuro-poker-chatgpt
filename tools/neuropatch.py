@@ -15,10 +15,12 @@ Transaction patch engine:
 """
 
 import argparse
+import ctypes
 import datetime
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -43,6 +45,54 @@ def save_json(path, data):
 		json.dumps(data, indent=2, ensure_ascii=False),
 		encoding="utf-8"
 	)
+
+
+def play_result_sound(success):
+	if sys.platform != "win32":
+		return
+
+	filename = (
+		"alarm_seccuss.mp3"
+		if success
+		else "alarm_error.mp3"
+	)
+	path = PROJECT_ROOT / "sound" / filename
+
+	if not path.exists():
+		return
+
+	alias = "neuropatch_result"
+	winmm = None
+	opened = False
+
+	try:
+		winmm = ctypes.windll.winmm
+		open_result = winmm.mciSendStringW(
+			f'open "{path}" type mpegvideo alias {alias}',
+			None,
+			0,
+			None,
+		)
+		if open_result != 0:
+			return
+
+		opened = True
+		winmm.mciSendStringW(
+			f"play {alias} wait",
+			None,
+			0,
+			None,
+		)
+	except Exception:
+		return
+	finally:
+		if opened and winmm is not None:
+			winmm.mciSendStringW(
+				f"close {alias}",
+				None,
+				0,
+				None,
+			)
 
 
 def git_status():
@@ -263,7 +313,14 @@ def main():
 		save_json(transaction / "report.json", report)
 
 		print(json.dumps(report, indent=2, ensure_ascii=False))
+		play_result_sound(
+			report["status"] == "SUCCESS"
+		)
 
 
 if __name__ == "__main__":
-	main()
+	try:
+		main()
+	except Exception:
+		play_result_sound(False)
+		raise
