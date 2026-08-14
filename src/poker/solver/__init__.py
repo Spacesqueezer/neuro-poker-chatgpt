@@ -10,6 +10,7 @@ from poker.solver.holdem import (
 	HeadsUpHoldemNode,
 	RestrictedHeadsUpHoldemGame,
 )
+from poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult
 
 
 __all__ = [
@@ -22,4 +23,6 @@ __all__ = [
 	"RegretMatching",
 	"RestrictedHeadsUpHoldemGame",
 	"TwoPlayerSolverGame",
+	"ExternalSamplingMCCFR",
+	"MCCFRResult",
 ]
