@@ -10,9 +10,11 @@ from poker.solver.evaluation import (
 	validate_policy_game_compatibility,
 )
 from poker.solver.export import (
+	CHANCE_SPACE_VERSION,
 	STRATEGY_EXPORT_VERSION,
 	StrategyLookup,
 	build_strategy_export,
+	chance_space_metadata,
 	load_strategy_export,
 	serialize_information_set,
 	validate_strategy_export,
@@ -32,6 +34,7 @@ from poker.solver.policy import RestrictedSolverPolicy
 __all__ = [
 	"CFRResult",
 	"CFRTrainer",
+	"CHANCE_SPACE_VERSION",
 	"HeadsUpHoldemDeal",
 	"HeadsUpHoldemNode",
 	"HoldemActionAbstraction",
@@ -47,6 +50,7 @@ __all__ = [
 	"ExternalSamplingMCCFR",
 	"MCCFRResult",
 	"build_strategy_export",
+	"chance_space_metadata",
 	"evaluate_restricted_policy",
 	"load_strategy_export",
 	"serialize_information_set",

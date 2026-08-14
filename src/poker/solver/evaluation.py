@@ -1,6 +1,7 @@
 from collections import Counter
 
 from poker.solver.export import (
+	chance_space_metadata,
 	information_set_key,
 	serialize_information_set,
 )
@@ -28,6 +29,11 @@ def validate_policy_game_compatibility(payload, game):
 	if benchmark["big_blind"] != game.big_blind:
 		raise ValueError(
 			"strategy artifact big_blind does not match evaluation game"
+		)
+
+	if benchmark["chance_space"] != chance_space_metadata(game):
+		raise ValueError(
+			"strategy artifact chance_space does not match evaluation game"
 		)
 
 	expected_abstraction = {

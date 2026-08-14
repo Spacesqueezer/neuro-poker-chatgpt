@@ -60,15 +60,19 @@ def test_strategy_export_is_deterministic_and_carries_metadata(tmp_path):
 	)
 
 	assert first == second
-	assert first["format_version"] == 1
+	assert first["format_version"] == 2
 	assert first["solver"] == "external_sampling_mccfr"
-	assert first["benchmark"] == {
-		"version": 2,
-		"scenario": "asymmetric",
-		"starting_stacks": [8, 20],
-		"small_blind": 1,
-		"big_blind": 2,
-	}
+	assert first["benchmark"]["version"] == 2
+	assert first["benchmark"]["scenario"] == "asymmetric"
+	assert first["benchmark"]["starting_stacks"] == [8, 20]
+	assert first["benchmark"]["small_blind"] == 1
+	assert first["benchmark"]["big_blind"] == 2
+	assert first["benchmark"]["chance_space"]["version"] == 1
+	assert first["benchmark"]["chance_space"]["deal_count"] == 1
+	assert first["benchmark"]["chance_space"]["probabilities"] == [1.0]
+	assert first["benchmark"]["chance_space"]["identity"].startswith(
+		"sha256:"
+	)
 	assert first["action_abstraction"] == {
 		"preflop_raise_bb": 3,
 		"postflop_bet_sizes_bb": [1, 2],
@@ -82,6 +86,35 @@ def test_strategy_export_is_deterministic_and_carries_metadata(tmp_path):
 
 	assert loaded == first
 	assert load_strategy_export(output) == first
+
+
+def test_strategy_export_chance_space_identity_tracks_weighted_deals():
+	game = create_benchmark_game("weighted_multi")
+	root = game.initial_nodes()[0].state
+	info_set = game.information_set_for_node(root, player=0)
+	payload = build_strategy_export(
+		MCCFRResult(
+			iterations=1,
+			average_strategy={
+				info_set: {
+					"call": 1.0,
+				},
+			},
+			cumulative_regret={},
+		),
+		game,
+		seed=42,
+		scenario="weighted_multi",
+		benchmark_version=2,
+	)
+
+	chance_space = payload["benchmark"]["chance_space"]
+
+	assert chance_space["version"] == 1
+	assert chance_space["deal_count"] == 3
+	assert chance_space["probabilities"] == [0.5, 0.3, 0.2]
+	assert chance_space["identity"].startswith("sha256:")
+	assert len(chance_space["identity"]) == 71
 
 
 def test_strategy_lookup_resolves_exact_information_set():
@@ -170,6 +203,37 @@ def test_strategy_export_validation_rejects_invalid_version():
 		assert "format_version" in str(error)
 	else:
 		raise AssertionError("invalid format version must fail validation")
+
+
+def test_strategy_export_validation_rejects_missing_chance_space():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	info_set = game.information_set_for_node(root, player=0)
+	payload = build_strategy_export(
+		MCCFRResult(
+			iterations=1,
+			average_strategy={
+				info_set: {
+					"call": 1.0,
+				},
+			},
+			cumulative_regret={},
+		),
+		game,
+		seed=42,
+		scenario="equal",
+		benchmark_version=2,
+	)
+	del payload["benchmark"]["chance_space"]
+
+	try:
+		validate_strategy_export(payload)
+	except ValueError as error:
+		assert "chance_space" in str(error)
+	else:
+		raise AssertionError(
+			"missing chance space metadata must fail validation"
+		)
 
 
 def test_strategy_export_validation_rejects_duplicate_information_sets():

@@ -415,6 +415,8 @@ full-tree coverage report
 
 Benchmark chance space is also explicit. `equal` and `asymmetric` retain the original single deterministic AA-vs-KK deal. `weighted_multi` supplies three fixed deals with positive weights 5/3/2; `RestrictedHeadsUpHoldemGame.initial_nodes()` normalizes those weights to 0.5/0.3/0.2. Distinct chance nodes may intentionally collapse to the same information set when the acting player cannot distinguish them. In particular, two weighted benchmark deals share player 0's preflop AA while differing in opponent private cards and unrevealed board cards. This preserves imperfect-information semantics while exercising weighted external sampling over more than one initial chance state.
 
+Strategy artifact format version 2 binds persistence to that hidden chance model. `chance_space_metadata()` canonicalizes the ordered deal list including both players' private cards, complete fixed board and raw weights, hashes the canonical JSON with SHA-256, and stores the identity together with deal count and normalized initial probabilities. These hidden cards are artifact metadata, not information-set data: they are used only to identify the training game and are never exposed through policy lookup. Loading validates the metadata shape, and policy evaluation requires the artifact identity to exactly match the live restricted game before strategy traversal.
+
 Teacher quality is measured outside the agent:
 
 ```text

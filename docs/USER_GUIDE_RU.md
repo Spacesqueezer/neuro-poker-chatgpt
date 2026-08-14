@@ -617,10 +617,22 @@ solver
 iterations
 seed
 benchmark
+  version
+  scenario
+  starting_stacks
+  small_blind
+  big_blind
+  chance_space
+    version
+    identity
+    deal_count
+    probabilities
 action_abstraction
 information_set_count
 average_strategy
 ```
+
+Текущий `format_version = 2`. `chance_space.identity` — SHA-256 идентификатор точного упорядоченного набора weighted deals. Поэтому artifact нельзя незаметно применить к другой конфигурации скрытых карт/board/весов даже при совпадающих стеках и action abstraction.
 
 Каждая запись `average_strategy` содержит сериализованный information set и вероятности действий. В information set попадают только hole cards действующего игрока и публичное состояние solver'а; скрытые карты соперника туда не записываются.
 
@@ -640,7 +652,7 @@ python tools/evaluate_solver_policy.py --strategy artifacts/mccfr_equal_strategy
 python tools/evaluate_solver_policy.py --strategy artifacts/mccfr_equal_strategy.json --output artifacts/mccfr_equal_policy_evaluation.json
 ```
 
-`--strategy` обязателен. Сценарий и конфигурация стеков берутся из самого strategy artifact. Перед обходом harness проверяет совпадение стартовых стеков, блайндов и `HoldemActionAbstraction` с текущим benchmark-сценарием.
+`--strategy` обязателен. Сценарий и конфигурация стеков берутся из самого strategy artifact. Перед обходом harness проверяет совпадение стартовых стеков, блайндов, `HoldemActionAbstraction` и полного `chance_space` identity с текущим benchmark-сценарием. Artifact от изменённого набора deals/boards/weights будет отклонён до traversal.
 
 Evaluation обходит всё конечное restricted Hold'em дерево по всем legal branches, а не только одну выбранную policy-траекторию. В отчёте есть:
 

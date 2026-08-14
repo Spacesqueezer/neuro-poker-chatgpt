@@ -162,3 +162,27 @@ def test_policy_evaluation_rejects_incompatible_game_metadata():
 		raise AssertionError(
 			"incompatible strategy metadata must fail"
 		)
+
+
+def test_policy_evaluation_rejects_incompatible_chance_space():
+	game = create_benchmark_game("weighted_multi")
+	policy = make_policy(
+		game,
+		collect_uniform_strategy(game),
+		scenario="weighted_multi",
+	)
+	policy.lookup.payload["benchmark"]["chance_space"][
+		"identity"
+	] = "sha256:" + ("0" * 64)
+
+	try:
+		validate_policy_game_compatibility(
+			policy.lookup.payload,
+			game,
+		)
+	except ValueError as error:
+		assert "chance_space" in str(error)
+	else:
+		raise AssertionError(
+			"incompatible chance space must fail"
+		)

@@ -180,3 +180,15 @@ Decision:
 
 Reason:
 The lookup layer must remain exact and format-focused, while policy behavior needs an explicit response to incomplete research artifacts or tree changes. Uniform fallback is neutral and observable, and deterministic argmax makes coverage/evaluation runs reproducible before any stochastic production-agent integration is considered.
+
+
+## ADR-016: Strategy Artifacts Are Bound To An Explicit Chance Space
+
+Date:
+2026-08-14
+
+Decision:
+Strategy export format version 2 stores versioned chance-space metadata. Its identity is a SHA-256 hash of canonical JSON for the ordered restricted-Hold'em deal set, including both players' private cards, complete fixed boards and raw deal weights. Deal count and normalized initial-node probabilities are stored alongside the identity. Policy evaluation recomputes the metadata from the current game and rejects mismatches.
+
+Reason:
+Stacks, blinds, action abstraction and scenario names do not fully define the game solved by MCCFR. Changing hidden deals, board runouts, weights or deal order can change the sampled extensive-form game while leaving those visible fields unchanged. Binding artifacts to the exact chance model prevents silent cross-game strategy reuse. Hidden cards remain compatibility metadata only and are not added to information sets or policy observations.

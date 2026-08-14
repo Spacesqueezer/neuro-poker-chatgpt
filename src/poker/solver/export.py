@@ -1,8 +1,10 @@
+import hashlib
 import json
 from pathlib import Path
 
 
-STRATEGY_EXPORT_VERSION = 1
+STRATEGY_EXPORT_VERSION = 2
+CHANCE_SPACE_VERSION = 1
 SUPPORTED_SOLVER = "external_sampling_mccfr"
 
 
@@ -10,6 +12,48 @@ def serialize_card(card):
 	return {
 		"rank": card.rank.value,
 		"suit": card.suit.value,
+	}
+
+
+def serialize_deal(deal):
+	return {
+		"hole_cards": [
+			[
+				serialize_card(card)
+				for card in player_cards
+			]
+			for player_cards in deal.hole_cards
+		],
+		"board": [
+			serialize_card(card)
+			for card in deal.board
+		],
+		"weight": deal.weight,
+	}
+
+
+def chance_space_metadata(game):
+	serialized_deals = [
+		serialize_deal(deal)
+		for deal in game.deals
+	]
+	canonical = json.dumps(
+		serialized_deals,
+		sort_keys=True,
+		separators=(",", ":"),
+	)
+	digest = hashlib.sha256(
+		canonical.encode("utf-8")
+	).hexdigest()
+
+	return {
+		"version": CHANCE_SPACE_VERSION,
+		"identity": f"sha256:{digest}",
+		"deal_count": len(serialized_deals),
+		"probabilities": [
+			node.probability
+			for node in game.initial_nodes()
+		],
 	}
 
 
@@ -82,6 +126,7 @@ def build_strategy_export(
 			"starting_stacks": list(game.starting_stacks),
 			"small_blind": game.small_blind,
 			"big_blind": game.big_blind,
+			"chance_space": chance_space_metadata(game),
 		},
 		"action_abstraction": {
 			"preflop_raise_bb": abstraction.preflop_raise_bb,
@@ -162,6 +207,8 @@ def validate_strategy_export(payload):
 				f"strategy export {blind_name} must be positive"
 		)
 
+	_validate_chance_space(benchmark.get("chance_space"))
+
 	action_abstraction = payload.get("action_abstraction")
 	if not isinstance(action_abstraction, dict):
 		raise ValueError(
@@ -218,6 +265,55 @@ class StrategyLookup:
 		)
 		strategy = self._strategies.get(key)
 		return dict(strategy) if strategy is not None else None
+
+
+def _validate_chance_space(chance_space):
+	if not isinstance(chance_space, dict):
+		raise ValueError(
+			"strategy export chance_space metadata is required"
+		)
+
+	if chance_space.get("version") != CHANCE_SPACE_VERSION:
+		raise ValueError(
+			"unsupported strategy export chance_space version"
+		)
+
+	identity = chance_space.get("identity")
+	if (
+		not isinstance(identity, str)
+		or not identity.startswith("sha256:")
+		or len(identity) != len("sha256:") + 64
+	):
+		raise ValueError(
+			"strategy export chance_space identity is invalid"
+		)
+
+	deal_count = chance_space.get("deal_count")
+	if not isinstance(deal_count, int) or deal_count <= 0:
+		raise ValueError(
+			"strategy export chance_space deal_count must be positive"
+		)
+
+	probabilities = chance_space.get("probabilities")
+	if (
+		not isinstance(probabilities, list)
+		or len(probabilities) != deal_count
+		or any(
+			not isinstance(probability, (int, float))
+			or isinstance(probability, bool)
+			or probability <= 0.0
+			or probability > 1.0
+			for probability in probabilities
+		)
+	):
+		raise ValueError(
+			"strategy export chance_space probabilities are invalid"
+		)
+
+	if abs(sum(probabilities) - 1.0) > 1e-12:
+		raise ValueError(
+			"strategy export chance_space probabilities must sum to 1"
+		)
 
 
 def _validate_serialized_information_set(information_set):
