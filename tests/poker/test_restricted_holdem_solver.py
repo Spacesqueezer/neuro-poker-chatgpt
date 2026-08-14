@@ -101,6 +101,45 @@ def test_restricted_holdem_information_set_hides_opponent_cards():
 	)
 
 
+def test_restricted_holdem_preflop_information_set_hides_future_board():
+	hero = (
+		card(Rank.ACE, Suit.SPADES),
+		card(Rank.ACE, Suit.HEARTS),
+	)
+	villain = (
+		card(Rank.KING, Suit.SPADES),
+		card(Rank.KING, Suit.HEARTS),
+	)
+	first = deal(hero, villain)
+	second = HeadsUpHoldemDeal(
+		hole_cards=(hero, villain),
+		board=(
+			card(Rank.FOUR, Suit.CLUBS),
+			card(Rank.FIVE, Suit.DIAMONDS),
+			card(Rank.SIX, Suit.HEARTS),
+			card(Rank.EIGHT, Suit.SPADES),
+			card(Rank.TEN, Suit.CLUBS),
+		),
+	)
+	game = RestrictedHeadsUpHoldemGame(
+		(first, second)
+	)
+	nodes = game.initial_nodes()
+
+	first_info = game.information_set_for_node(
+		nodes[0].state,
+		player=0,
+	)
+	second_info = game.information_set_for_node(
+		nodes[1].state,
+		player=0,
+	)
+
+	assert first_info == second_info
+	assert first_info[2] == "preflop"
+	assert first_info[3] == ()
+
+
 def test_restricted_holdem_terminal_utilities_are_zero_sum():
 	game = RestrictedHeadsUpHoldemGame((
 		deal(

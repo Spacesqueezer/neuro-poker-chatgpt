@@ -20,7 +20,22 @@ class HeadsUpHoldemDeal:
 @dataclass(frozen=True)
 class HeadsUpHoldemNode:
 	deal: HeadsUpHoldemDeal
+	street: str = "preflop"
 	history: tuple[str, ...] = ()
+
+	@property
+	def public_board(self):
+		if self.street == "preflop":
+			return ()
+		if self.street == "flop":
+			return self.deal.board[:3]
+		if self.street == "turn":
+			return self.deal.board[:4]
+		if self.street == "river":
+			return self.deal.board
+		raise ValueError(
+			f"Unsupported Hold'em solver street: {self.street}"
+		)
 
 
 class RestrictedHeadsUpHoldemGame:
@@ -123,7 +138,8 @@ class RestrictedHeadsUpHoldemGame:
 		return (
 			player,
 			hole_cards,
-			state.deal.board,
+			state.street,
+			state.public_board,
 			state.history,
 		)
 
@@ -143,6 +159,7 @@ class RestrictedHeadsUpHoldemGame:
 			)
 		return HeadsUpHoldemNode(
 			deal=state.deal,
+			street=state.street,
 			history=state.history + (action,),
 		)
 
