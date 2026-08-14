@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import random
 
 
 @dataclass(frozen=True)
@@ -11,7 +12,7 @@ class MCCFRResult:
 class ExternalSamplingMCCFR:
 	def __init__(self, game, seed=0):
 		self.game = game
-		self.seed = seed
+		self.random = random.Random(seed)
 		self.regret_sum = {}
 		self.strategy_sum = {}
 		self.chance_weight = 1.0
@@ -112,10 +113,10 @@ class ExternalSamplingMCCFR:
 		}
 
 	def random_choice(self, strategy):
-		return max(
-			strategy,
-			key=strategy.get,
-		)
+		return self.random.choices(
+			list(strategy.keys()),
+			weights=list(strategy.values()),
+		)[0]
 
 	def _average_strategy(self):
 		result = {}
