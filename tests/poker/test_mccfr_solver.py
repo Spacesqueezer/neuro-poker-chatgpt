@@ -48,3 +48,22 @@ def test_seeded_sampling_is_reproducible():
 	}
 
 	assert first.random_choice(strategy) == second.random_choice(strategy)
+
+
+def test_sampling_probability_is_not_greedy_only():
+	solver = ExternalSamplingMCCFR(
+		MinimalSolverGame(),
+		seed=1,
+	)
+
+	strategy = {
+		"fold": 0.9,
+		"call": 0.1,
+	}
+
+	results = {
+		solver.random_choice(strategy)
+		for _ in range(50)
+	}
+
+	assert "fold" in results
