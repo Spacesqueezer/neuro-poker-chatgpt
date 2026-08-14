@@ -214,19 +214,12 @@ class RestrictedHeadsUpHoldemGame:
 				"check",
 				*self._postflop_bet_actions(),
 			)
-		if (
-			len(state.street_history) == 1
-			and self._is_postflop_bet_action(
-				state.street_history[0]
-			)
+		if self._is_postflop_open_bet(
+			state.street_history
 		):
-			return ("fold", "call")
-		if (
-			len(state.street_history) == 2
-			and state.street_history[0] == "check"
-			and self._is_postflop_bet_action(
-				state.street_history[1]
-			)
+			return ("fold", "call", "raise")
+		if self._is_postflop_raise(
+			state.street_history
 		):
 			return ("fold", "call")
 		return ()
@@ -285,6 +278,13 @@ class RestrictedHeadsUpHoldemGame:
 					* self._postflop_bet_size_bb(action)
 				),
 			)
+		elif action == "raise":
+			outstanding = max(commitments)
+			commitments[actor] = min(
+				self.starting_stack,
+				outstanding
+				+ (outstanding - commitments[actor]),
+			)
 		elif action == "call":
 			commitments[actor] = max(commitments)
 
@@ -331,10 +331,17 @@ class RestrictedHeadsUpHoldemGame:
 		if self._is_postflop_fold(
 			state.street_history
 		):
+			prefix = state.street_history[:-1]
+			if self._is_postflop_raise(prefix):
+				return (
+					0
+					if prefix[0] == "check"
+					else 1
+				)
 			return (
-				0
-				if len(state.street_history) == 2
-				else 1
+				1
+				if prefix[0] == "check"
+				else 0
 			)
 
 		return None
@@ -359,36 +366,52 @@ class RestrictedHeadsUpHoldemGame:
 			f"Unknown postflop bet action: {action}"
 		)
 
-	def _is_postflop_fold(self, street_history):
+	def _is_postflop_open_bet(self, street_history):
 		return (
-			len(street_history) == 2
+			len(street_history) == 1
 			and self._is_postflop_bet_action(
 				street_history[0]
 			)
-			and street_history[1] == "fold"
 		) or (
-			len(street_history) == 3
+			len(street_history) == 2
 			and street_history[0] == "check"
 			and self._is_postflop_bet_action(
 				street_history[1]
 			)
-			and street_history[2] == "fold"
+		)
+
+	def _is_postflop_raise(self, street_history):
+		return (
+			street_history[-1:] == ("raise",)
+			and self._is_postflop_open_bet(
+				street_history[:-1]
+			)
+		)
+
+	def _is_postflop_fold(self, street_history):
+		return (
+			street_history[-1:] == ("fold",)
+			and (
+				self._is_postflop_open_bet(
+					street_history[:-1]
+				)
+				or self._is_postflop_raise(
+					street_history[:-1]
+				)
+			)
 		)
 
 	def _is_postflop_bet_call(self, street_history):
 		return (
-			len(street_history) == 2
-			and self._is_postflop_bet_action(
-				street_history[0]
+			street_history[-1:] == ("call",)
+			and (
+				self._is_postflop_open_bet(
+					street_history[:-1]
+				)
+				or self._is_postflop_raise(
+					street_history[:-1]
+				)
 			)
-			and street_history[1] == "call"
-		) or (
-			len(street_history) == 3
-			and street_history[0] == "check"
-			and self._is_postflop_bet_action(
-				street_history[1]
-			)
-			and street_history[2] == "call"
 		)
 
 	def _next_street(self, street):

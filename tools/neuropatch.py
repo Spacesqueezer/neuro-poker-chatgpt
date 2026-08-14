@@ -52,7 +52,7 @@ def play_result_sound(success):
 		return
 
 	filename = (
-		"alarm_seccuss.mp3"
+		"alarm_success.mp3"
 		if success
 		else "alarm_error.mp3"
 	)
@@ -77,6 +77,12 @@ def play_result_sound(success):
 			return
 
 		opened = True
+		winmm.mciSendStringW(
+			f"setaudio {alias} volume to 1000",
+			None,
+			0,
+			None,
+		)
 		winmm.mciSendStringW(
 			f"play {alias} wait",
 			None,

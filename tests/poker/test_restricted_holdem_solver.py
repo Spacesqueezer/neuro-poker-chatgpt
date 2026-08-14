@@ -334,7 +334,11 @@ def test_restricted_holdem_postflop_bet_call_tracks_matched_stake():
 	)
 
 	bet = game.next_node(flop, "bet_1bb")
-	assert game.legal_actions(bet) == ("fold", "call")
+	assert game.legal_actions(bet) == (
+		"fold",
+		"call",
+		"raise",
+	)
 
 	turn = game.next_node(bet, "call")
 	assert turn.street == "turn"
@@ -344,6 +348,67 @@ def test_restricted_holdem_postflop_bet_call_tracks_matched_stake():
 	assert game.terminal_node_utility(
 		showdown,
 		player=0,
+	) == 4.0
+
+
+def test_restricted_holdem_allows_one_postflop_raise():
+	game = RestrictedHeadsUpHoldemGame((
+		deal(
+			(
+				card(Rank.ACE, Suit.SPADES),
+				card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				card(Rank.KING, Suit.SPADES),
+				card(Rank.KING, Suit.HEARTS),
+			),
+		),
+	))
+	root = game.initial_nodes()[0].state
+	flop = game.next_node(root, "call")
+	bet = game.next_node(flop, "bet_1bb")
+	raised = game.next_node(bet, "raise")
+
+	assert raised.commitments == (6, 4)
+	assert game.legal_actions(raised) == (
+		"fold",
+		"call",
+	)
+
+	turn = game.next_node(raised, "call")
+	assert turn.street == "turn"
+	assert turn.commitments == (6, 6)
+
+
+def test_restricted_holdem_check_bet_raise_fold_refunds_unmatched_chips():
+	game = RestrictedHeadsUpHoldemGame((
+		deal(
+			(
+				card(Rank.ACE, Suit.SPADES),
+				card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				card(Rank.KING, Suit.SPADES),
+				card(Rank.KING, Suit.HEARTS),
+			),
+		),
+	))
+	root = game.initial_nodes()[0].state
+	flop = game.next_node(root, "call")
+	checked = game.next_node(flop, "check")
+	bet = game.next_node(checked, "bet_1bb")
+	raised = game.next_node(bet, "raise")
+	fold = game.next_node(raised, "fold")
+
+	assert raised.commitments == (4, 6)
+	assert game.is_terminal_node(fold)
+	assert game.terminal_node_utility(
+		fold,
+		player=0,
+	) == -4.0
+	assert game.terminal_node_utility(
+		fold,
+		player=1,
 	) == 4.0
 
 

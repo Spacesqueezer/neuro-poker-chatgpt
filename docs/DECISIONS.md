@@ -108,3 +108,15 @@ Restricted Hold'em solver nodes store public commitments separately for player 0
 
 Reason:
 A single shared matched-stake scalar cannot represent an outstanding bet, a future raise or asymmetric commitments. Player-explicit accounting preserves finite solver abstractions while providing enough public state for correct fold refunds, calls and later raise branches.
+
+
+## ADR-010: Restricted Postflop Tree Allows One Raise
+
+Date:
+2026-08-14
+
+Decision:
+After a restricted postflop opening bet, the responder may fold, call or make exactly one raise. The raise matches the outstanding commitment and adds one equal increment. After that raise the original bettor may only fold or call; re-raises are excluded.
+
+Reason:
+A single finite raise branch exercises the player-explicit commitment model and gives CFR/MCCFR strategically meaningful bet/raise decisions without exploding the tree or importing production no-limit betting rules.
