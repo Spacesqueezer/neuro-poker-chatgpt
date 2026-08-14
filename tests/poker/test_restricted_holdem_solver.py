@@ -31,6 +31,13 @@ def deal(hero, villain, weight=1.0):
 	)
 
 
+def check_down(game, state):
+	while not game.is_terminal_node(state):
+		assert game.legal_actions(state) == ("check",)
+		state = game.next_node(state, "check")
+	return state
+
+
 def test_restricted_holdem_normalizes_explicit_deal_weights():
 	first = deal(
 		(
@@ -156,10 +163,16 @@ def test_restricted_holdem_terminal_utilities_are_zero_sum():
 	root = game.initial_nodes()[0].state
 
 	fold = game.next_node(root, "fold")
-	call = game.next_node(root, "call")
-	raise_call = game.next_node(
-		game.next_node(root, "raise"),
-		"call",
+	call = check_down(
+		game,
+		game.next_node(root, "call"),
+	)
+	raise_call = check_down(
+		game,
+		game.next_node(
+			game.next_node(root, "raise"),
+			"call",
+		),
 	)
 	shove_fold = game.next_node(
 		game.next_node(root, "all_in"),
@@ -221,9 +234,48 @@ def test_restricted_holdem_exposes_small_preflop_action_abstraction():
 		"call",
 		"all_in",
 	)
-	assert game.is_terminal_node(
-		game.next_node(root, "call")
-	)
+	flop = game.next_node(root, "call")
+	assert not game.is_terminal_node(flop)
+	assert flop.street == "flop"
+	assert flop.public_board == board()[:3]
+
+
+def test_restricted_holdem_progresses_public_streets_by_checking_down():
+	game = RestrictedHeadsUpHoldemGame((
+		deal(
+			(
+				card(Rank.ACE, Suit.SPADES),
+				card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				card(Rank.KING, Suit.SPADES),
+				card(Rank.KING, Suit.HEARTS),
+			),
+		),
+	))
+	root = game.initial_nodes()[0].state
+
+	flop = game.next_node(root, "call")
+	assert flop.street == "flop"
+	assert flop.public_board == board()[:3]
+	assert game.player_to_act(flop) == 1
+
+	flop_second = game.next_node(flop, "check")
+	assert flop_second.street == "flop"
+	assert game.player_to_act(flop_second) == 0
+
+	turn = game.next_node(flop_second, "check")
+	assert turn.street == "turn"
+	assert turn.public_board == board()[:4]
+
+	turn_second = game.next_node(turn, "check")
+	river = game.next_node(turn_second, "check")
+	assert river.street == "river"
+	assert river.public_board == board()
+
+	river_second = game.next_node(river, "check")
+	showdown = game.next_node(river_second, "check")
+	assert game.is_terminal_node(showdown)
 
 
 def test_restricted_holdem_cfr_uses_generic_solver_boundary():

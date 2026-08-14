@@ -22,6 +22,7 @@ class HeadsUpHoldemNode:
 	deal: HeadsUpHoldemDeal
 	street: str = "preflop"
 	history: tuple[str, ...] = ()
+	street_history: tuple[str, ...] = ()
 
 	@property
 	def public_board(self):
@@ -70,27 +71,35 @@ class RestrictedHeadsUpHoldemGame:
 		)
 
 	def player_to_act(self, state):
-		if state.history == ():
-			return 0
-		if state.history in {
-			("raise",),
-			("all_in",),
-		}:
+		if state.street == "preflop":
+			if state.street_history == ():
+				return 0
+			if state.street_history in {
+				("raise",),
+				("all_in",),
+			}:
+				return 1
+		elif state.street_history == ():
 			return 1
+		elif state.street_history == ("check",):
+			return 0
 		raise ValueError(
 			"Terminal Hold'em node has no acting player"
 		)
 
 	def is_terminal_node(self, state):
-		return state.history in {
-			("fold",),
-			("call",),
-			("raise", "fold"),
-			("raise", "call"),
-			("raise", "all_in"),
-			("all_in", "fold"),
-			("all_in", "call"),
-		}
+		if state.street == "preflop":
+			return state.street_history in {
+				("fold",),
+				("raise", "fold"),
+				("raise", "all_in"),
+				("all_in", "fold"),
+				("all_in", "call"),
+			}
+		return (
+			state.street == "river"
+			and state.street_history == ("check", "check")
+		)
 
 	def terminal_node_utility(self, state, player):
 		if not self.is_terminal_node(state):
@@ -110,9 +119,9 @@ class RestrictedHeadsUpHoldemGame:
 				state.deal.hole_cards[1] + state.deal.board
 			)
 			comparison = compare_hands(first, second)
-			if state.history == ("call",):
+			if state.history[:1] == ("call",):
 				showdown_stake = self.big_blind
-			elif state.history == ("raise", "call"):
+			elif state.history[:2] == ("raise", "call"):
 				showdown_stake = min(
 					self.starting_stack,
 					self.big_blind * 3,
@@ -144,12 +153,19 @@ class RestrictedHeadsUpHoldemGame:
 		)
 
 	def legal_actions(self, state):
-		if state.history == ():
-			return self.ROOT_ACTIONS
-		if state.history == ("raise",):
-			return self.RAISE_RESPONSE_ACTIONS
-		if state.history == ("all_in",):
-			return self.ALL_IN_RESPONSE_ACTIONS
+		if state.street == "preflop":
+			if state.street_history == ():
+				return self.ROOT_ACTIONS
+			if state.street_history == ("raise",):
+				return self.RAISE_RESPONSE_ACTIONS
+			if state.street_history == ("all_in",):
+				return self.ALL_IN_RESPONSE_ACTIONS
+			return ()
+		if state.street_history in {
+			(),
+			("check",),
+		}:
+			return ("check",)
 		return ()
 
 	def next_node(self, state, action):
@@ -157,11 +173,53 @@ class RestrictedHeadsUpHoldemGame:
 			raise ValueError(
 				f"Illegal restricted Hold'em action: {action}"
 			)
+
+		history = state.history + (action,)
+		street_history = state.street_history + (action,)
+
+		if state.street == "preflop":
+			if street_history in {
+				("call",),
+				("raise", "call"),
+			}:
+				return HeadsUpHoldemNode(
+					deal=state.deal,
+					street="flop",
+					history=history,
+				)
+			return HeadsUpHoldemNode(
+				deal=state.deal,
+				street=state.street,
+				history=history,
+				street_history=street_history,
+			)
+
+		if street_history == ("check", "check"):
+			if state.street == "river":
+				return HeadsUpHoldemNode(
+					deal=state.deal,
+					street=state.street,
+					history=history,
+					street_history=street_history,
+				)
+			return HeadsUpHoldemNode(
+				deal=state.deal,
+				street=self._next_street(state.street),
+				history=history,
+			)
+
 		return HeadsUpHoldemNode(
 			deal=state.deal,
 			street=state.street,
-			history=state.history + (action,),
+			history=history,
+			street_history=street_history,
 		)
+
+	def _next_street(self, street):
+		return {
+			"flop": "turn",
+			"turn": "river",
+		}[street]
 
 	def _validate(self):
 		if not self.deals:
