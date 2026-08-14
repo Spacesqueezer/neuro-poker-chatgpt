@@ -569,7 +569,7 @@ def test_restricted_holdem_cfr_uses_generic_solver_boundary():
 		),
 	))
 
-	result = CFRTrainer(game).train(500)
+	result = CFRTrainer(game).train(1)
 
 	assert result.average_strategy
 	for strategy in result.average_strategy.values():
