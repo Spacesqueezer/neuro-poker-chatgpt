@@ -15,20 +15,18 @@ class ExternalSamplingMCCFR:
 		self.random = random.Random(seed)
 		self.regret_sum = {}
 		self.strategy_sum = {}
-		self.chance_weight = 1.0
 
 	def train(self, iterations):
 		if iterations <= 0:
 			raise ValueError("iterations must be positive")
 
 		for _ in range(iterations):
-			for node in self.game.initial_nodes():
-				self.chance_weight = node.probability
-				for traversing_player in (0, 1):
-					self._traverse(
-						node.state,
-						traversing_player,
-					)
+			node = self._sample_initial_node()
+			for traversing_player in (0, 1):
+				self._traverse(
+					node.state,
+					traversing_player,
+				)
 
 		return MCCFRResult(
 			iterations=iterations,
@@ -89,12 +87,24 @@ class ExternalSamplingMCCFR:
 		)
 
 		for action, value in utilities.items():
-			regrets[action] += (
-				self.chance_weight
-				* (value - expected)
-			)
+			regrets[action] += value - expected
 
 		return expected
+
+	def _sample_initial_node(self):
+		nodes = self.game.initial_nodes()
+		if not nodes:
+			raise ValueError(
+				"solver game must provide at least one initial node"
+			)
+
+		return self.random.choices(
+			list(nodes),
+			weights=[
+				node.probability
+				for node in nodes
+			],
+		)[0]
 
 	def _regret_matching(self, regrets):
 		positive = {

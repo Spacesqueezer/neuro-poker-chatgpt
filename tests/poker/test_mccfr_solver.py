@@ -1,9 +1,23 @@
+from dataclasses import dataclass
+
 from poker.solver import ExternalSamplingMCCFR, MCCFRResult
+
+
+@dataclass(frozen=True)
+class MinimalNode:
+	state: str = "terminal"
+	probability: float = 1.0
 
 
 class MinimalSolverGame:
 	def initial_nodes(self):
-		return []
+		return (MinimalNode(),)
+
+	def is_terminal_node(self, state):
+		return True
+
+	def terminal_node_utility(self, state, player):
+		return 0.0
 
 
 
