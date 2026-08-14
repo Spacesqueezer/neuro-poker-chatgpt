@@ -51,13 +51,47 @@ def test_quality_harness_exposes_explicit_stack_scenarios():
 	assert BENCHMARK_SCENARIOS == {
 		"equal": (20, 20),
 		"asymmetric": (8, 20),
+		"weighted_multi": (20, 20),
 	}
 
 	equal = create_benchmark_game("equal")
 	asymmetric = create_benchmark_game("asymmetric")
+	weighted = create_benchmark_game("weighted_multi")
 
 	assert equal.starting_stacks == (20, 20)
 	assert asymmetric.starting_stacks == (8, 20)
+	assert weighted.starting_stacks == (20, 20)
+
+
+def test_quality_harness_weighted_multi_uses_explicit_chance_probabilities():
+	game = create_benchmark_game("weighted_multi")
+	initial_nodes = game.initial_nodes()
+
+	assert len(game.deals) == 3
+	assert [deal.weight for deal in game.deals] == [
+		5.0,
+		3.0,
+		2.0,
+	]
+	assert [
+		node.probability
+		for node in initial_nodes
+	] == [
+		0.5,
+		0.3,
+		0.2,
+	]
+
+	first_info = game.information_set_for_node(
+		initial_nodes[0].state,
+		0,
+	)
+	second_info = game.information_set_for_node(
+		initial_nodes[1].state,
+		0,
+	)
+
+	assert first_info == second_info
 
 
 def test_quality_harness_rejects_unknown_scenario():
@@ -73,6 +107,8 @@ def test_quality_harness_writes_reusable_json_report(tmp_path):
 		"benchmark_version": 2,
 		"scenario": "asymmetric",
 		"starting_stacks": [8, 20],
+		"deal_count": 1,
+		"chance_probabilities": [1.0],
 		"iterations": 100,
 		"seed": 42,
 		"information_sets": 123,

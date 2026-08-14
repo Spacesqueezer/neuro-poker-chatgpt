@@ -16,11 +16,12 @@ from poker.solver import (
 BENCHMARK_SCENARIOS = {
 	"equal": (20, 20),
 	"asymmetric": (8, 20),
+	"weighted_multi": (20, 20),
 }
 
 
-def create_benchmark_game(scenario="equal"):
-	deal = HeadsUpHoldemDeal(
+def _single_benchmark_deal():
+	return HeadsUpHoldemDeal(
 		hole_cards=(
 			(
 				Card(Rank.ACE, Suit.SPADES),
@@ -40,6 +41,73 @@ def create_benchmark_game(scenario="equal"):
 		),
 	)
 
+
+def _weighted_benchmark_deals():
+	return (
+		HeadsUpHoldemDeal(
+			hole_cards=(
+				(
+					Card(Rank.ACE, Suit.SPADES),
+					Card(Rank.ACE, Suit.HEARTS),
+				),
+				(
+					Card(Rank.KING, Suit.SPADES),
+					Card(Rank.KING, Suit.HEARTS),
+				),
+			),
+			board=(
+				Card(Rank.TWO, Suit.CLUBS),
+				Card(Rank.THREE, Suit.DIAMONDS),
+				Card(Rank.FOUR, Suit.HEARTS),
+				Card(Rank.FIVE, Suit.CLUBS),
+				Card(Rank.SEVEN, Suit.SPADES),
+			),
+			weight=5.0,
+		),
+		HeadsUpHoldemDeal(
+			hole_cards=(
+				(
+					Card(Rank.ACE, Suit.SPADES),
+					Card(Rank.ACE, Suit.HEARTS),
+				),
+				(
+					Card(Rank.QUEEN, Suit.SPADES),
+					Card(Rank.QUEEN, Suit.HEARTS),
+				),
+			),
+			board=(
+				Card(Rank.TWO, Suit.CLUBS),
+				Card(Rank.THREE, Suit.DIAMONDS),
+				Card(Rank.FOUR, Suit.HEARTS),
+				Card(Rank.NINE, Suit.CLUBS),
+				Card(Rank.TEN, Suit.SPADES),
+			),
+			weight=3.0,
+		),
+		HeadsUpHoldemDeal(
+			hole_cards=(
+				(
+					Card(Rank.JACK, Suit.SPADES),
+					Card(Rank.TEN, Suit.SPADES),
+				),
+				(
+					Card(Rank.ACE, Suit.CLUBS),
+					Card(Rank.KING, Suit.CLUBS),
+				),
+			),
+			board=(
+				Card(Rank.TWO, Suit.HEARTS),
+				Card(Rank.SEVEN, Suit.DIAMONDS),
+				Card(Rank.NINE, Suit.HEARTS),
+				Card(Rank.QUEEN, Suit.CLUBS),
+				Card(Rank.THREE, Suit.SPADES),
+			),
+			weight=2.0,
+		),
+	)
+
+
+def create_benchmark_game(scenario="equal"):
 	try:
 		starting_stacks = BENCHMARK_SCENARIOS[scenario]
 	except KeyError as error:
@@ -47,8 +115,14 @@ def create_benchmark_game(scenario="equal"):
 			f"unknown benchmark scenario: {scenario}"
 		) from error
 
+	deals = (
+		_weighted_benchmark_deals()
+		if scenario == "weighted_multi"
+		else (_single_benchmark_deal(),)
+	)
+
 	return RestrictedHeadsUpHoldemGame(
-		(deal,),
+		deals,
 		starting_stacks=starting_stacks,
 		action_abstraction=HoldemActionAbstraction(
 			postflop_bet_sizes_bb=(1, 2),
@@ -105,6 +179,11 @@ def run_benchmark(iterations, seed, scenario="equal"):
 		"benchmark_version": 2,
 		"scenario": scenario,
 		"starting_stacks": list(game.starting_stacks),
+		"deal_count": len(game.deals),
+		"chance_probabilities": [
+			node.probability
+			for node in game.initial_nodes()
+		],
 		"iterations": iterations,
 		"seed": seed,
 		"first_checkpoint_iterations": first_iterations,

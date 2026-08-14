@@ -21,7 +21,11 @@ def test_solver_artifact_smoke_runs_equal_and_asymmetric_round_trip(
 	assert [
 		item["scenario"]
 		for item in report["scenarios"]
-	] == ["equal", "asymmetric"]
+	] == [
+		"equal",
+		"asymmetric",
+		"weighted_multi",
+	]
 
 	for item in report["scenarios"]:
 		assert item["artifact_round_trip"]

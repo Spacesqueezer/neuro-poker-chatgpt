@@ -538,9 +538,12 @@ python tools/benchmark_mccfr.py --scenario asymmetric --iterations 100 --seed 42
 Сценарии фиксированы и воспроизводимы:
 
 ```text
-equal       -> starting_stacks = [20, 20]
-asymmetric  -> starting_stacks = [8, 20]
+equal          -> starting_stacks = [20, 20], 1 deal
+asymmetric     -> starting_stacks = [8, 20], 1 deal
+weighted_multi -> starting_stacks = [20, 20], 3 weighted deals
 ```
+
+`weighted_multi` использует веса сделок `5/3/2`, то есть initial chance probabilities `0.5/0.3/0.2`. Это небольшой сценарий для проверки weighted chance sampling и объединения information sets между скрытыми состояниями.
 
 Аргументы:
 
@@ -548,7 +551,7 @@ asymmetric  -> starting_stacks = [8, 20]
 --scenario NAME
 ```
 
-Выбор конфигурации стеков. Допустимые значения: `equal` и `asymmetric`. По умолчанию `equal`.
+Выбор benchmark-сценария. Допустимые значения: `equal`, `asymmetric` и `weighted_multi`. По умолчанию `equal`.
 
 ```text
 --iterations N
@@ -574,6 +577,8 @@ Seed для воспроизводимого sampling. По умолчанию 4
 benchmark_version
 scenario
 starting_stacks
+deal_count
+chance_probabilities
 iterations
 seed
 first_checkpoint_iterations
@@ -678,7 +683,7 @@ python tools/smoke_solver_artifacts.py
 ```text
 iterations = 10
 seed = 42
-scenarios = equal asymmetric
+scenarios = equal asymmetric weighted_multi
 output_dir = artifacts/solver_smoke
 ```
 
@@ -687,6 +692,7 @@ output_dir = artifacts/solver_smoke
 ```text
 equal_strategy.json
 asymmetric_strategy.json
+weighted_multi_strategy.json
 smoke_report.json
 ```
 

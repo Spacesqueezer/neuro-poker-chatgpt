@@ -413,6 +413,8 @@ full-tree coverage report
 
 `tools/smoke_solver_artifacts.py` runs this sequence for explicit benchmark scenarios and writes per-scenario strategy artifacts plus one structural report. Its default training workload is intentionally tiny; solver convergence remains the responsibility of `benchmark_mccfr.py`, not the smoke workflow.
 
+Benchmark chance space is also explicit. `equal` and `asymmetric` retain the original single deterministic AA-vs-KK deal. `weighted_multi` supplies three fixed deals with positive weights 5/3/2; `RestrictedHeadsUpHoldemGame.initial_nodes()` normalizes those weights to 0.5/0.3/0.2. Distinct chance nodes may intentionally collapse to the same information set when the acting player cannot distinguish them. In particular, two weighted benchmark deals share player 0's preflop AA while differing in opponent private cards and unrevealed board cards. This preserves imperfect-information semantics while exercising weighted external sampling over more than one initial chance state.
+
 Teacher quality is measured outside the agent:
 
 ```text
