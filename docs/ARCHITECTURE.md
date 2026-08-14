@@ -390,6 +390,29 @@ Artifact loading validates the complete versioned boundary before use. `Strategy
 
 Policy coverage is measured by a separate solver-local evaluation boundary. `evaluate_restricted_policy()` validates that artifact stacks, blinds and action abstraction match the evaluation game, then traverses every legal branch from every fixed initial chance node. It classifies each decision as exact action-set coverage, reconciled action-set coverage, missing-information fallback or zero-overlap fallback, while also counting unique information sets and deterministic policy selections. The harness does not train and does not use Arena, so artifact compatibility/coverage remains independently testable from MCCFR quality and production poker behavior.
 
+The artifact smoke workflow composes existing boundaries rather than creating another solver abstraction:
+
+```text
+small MCCFR train
+      |
+      v
+strategy export
+      |
+      v
+write -> load -> validate
+      |
+      v
+StrategyLookup
+      |
+      v
+RestrictedSolverPolicy
+      |
+      v
+full-tree coverage report
+```
+
+`tools/smoke_solver_artifacts.py` runs this sequence for explicit benchmark scenarios and writes per-scenario strategy artifacts plus one structural report. Its default training workload is intentionally tiny; solver convergence remains the responsibility of `benchmark_mccfr.py`, not the smoke workflow.
+
 Teacher quality is measured outside the agent:
 
 ```text

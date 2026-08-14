@@ -665,6 +665,50 @@ max_depth
 
 Эта команда не обучает solver и обычно является дешёвой проверкой совместимости/coverage. Она не запускает production Arena.
 
+## 8.4. End-to-end smoke solver artifact
+
+Быстро проверить весь research pipeline `train → export → reload → coverage` одной командой:
+
+```text
+python tools/smoke_solver_artifacts.py
+```
+
+По умолчанию используются:
+
+```text
+iterations = 10
+seed = 42
+scenarios = equal asymmetric
+output_dir = artifacts/solver_smoke
+```
+
+В каталоге результата создаются:
+
+```text
+equal_strategy.json
+asymmetric_strategy.json
+smoke_report.json
+```
+
+Настроить небольшой smoke можно аргументами:
+
+```text
+--output-dir PATH
+--iterations N
+--seed N
+--scenarios NAME [NAME ...]
+```
+
+Например только asymmetric:
+
+```text
+python tools/smoke_solver_artifacts.py --iterations 5 --seed 123 --scenarios asymmetric --output-dir artifacts/asymmetric_smoke
+```
+
+Для каждого сценария workflow обучает MCCFR, экспортирует versioned strategy JSON, читает его обратно через строгую validation boundary и запускает full-tree policy coverage evaluation. `smoke_report.json` содержит общие `iterations`/`seed` и отдельный structural evaluation для каждого сценария.
+
+Smoke намеренно не содержит wall-clock метрик и имеет маленький default workload. Это проверка целостности artifact pipeline, а не convergence/solver-quality benchmark. Для больших прогонов используй `tools/benchmark_mccfr.py` и `tools/export_mccfr_strategy.py` отдельно.
+
 ## 9. NeuroPatch
 
 Обычное применение скачанного патча:
