@@ -32,6 +32,7 @@ class HeadsUpHoldemNode:
 	street_history: tuple[str, ...] = ()
 	commitments: tuple[int, int] = (0, 0)
 	starting_stacks: tuple[int, int] = (20, 20)
+	showdown_runout: bool = False
 
 	@property
 	def matched_stake(self):
@@ -95,6 +96,10 @@ class RestrictedHeadsUpHoldemGame:
 						self.big_blind,
 					),
 					starting_stacks=self.starting_stacks,
+					showdown_runout=(
+						self.starting_stacks[0]
+						== self.small_blind
+					),
 				),
 				probability=deal.weight / total_weight,
 			)
@@ -142,6 +147,8 @@ class RestrictedHeadsUpHoldemGame:
 		)
 
 	def is_terminal_node(self, state):
+		if state.showdown_runout:
+			return True
 		if state.street == "preflop":
 			return state.street_history in {
 				("fold",),
@@ -208,30 +215,96 @@ class RestrictedHeadsUpHoldemGame:
 		)
 
 	def legal_actions(self, state):
+		actor = self.player_to_act(state)
+		opponent = 1 - actor
+		outstanding = max(state.commitments)
+		actor_commitment = state.commitments[actor]
+		actor_stack = self._stack_for(actor)
+		opponent_all_in = (
+			state.commitments[opponent]
+			>= self._stack_for(opponent)
+		)
+
 		if state.street == "preflop":
 			if state.street_history == ():
-				return self.ROOT_ACTIONS
+				actions = ["fold"]
+				if actor_stack > actor_commitment:
+					actions.append("call")
+				if not opponent_all_in:
+					raise_target = self._preflop_raise_target(actor)
+					if (
+						raise_target > outstanding
+						and raise_target < actor_stack
+					):
+						actions.append("raise")
+					if actor_stack > outstanding:
+						actions.append("all_in")
+				return tuple(actions)
+
 			if state.street_history == ("raise",):
-				return self.RAISE_RESPONSE_ACTIONS
+				actions = ["fold"]
+				if actor_stack > actor_commitment:
+					actions.append("call")
+				if (
+					not opponent_all_in
+					and actor_stack > outstanding
+				):
+					actions.append("all_in")
+				return tuple(actions)
+
 			if state.street_history == ("all_in",):
-				return self.ALL_IN_RESPONSE_ACTIONS
+				actions = ["fold"]
+				if actor_stack > actor_commitment:
+					actions.append("call")
+				return tuple(actions)
 			return ()
+
 		if state.street_history in {
 			(),
 			("check",),
 		}:
-			return (
-				"check",
-				*self._postflop_bet_actions(),
-			)
+			actions = ["check"]
+			seen_targets = set()
+			for action in self._postflop_bet_actions():
+				target = self._postflop_bet_target(
+					state,
+					actor,
+					action,
+				)
+				if (
+					target <= actor_commitment
+					or target in seen_targets
+				):
+					continue
+				seen_targets.add(target)
+				actions.append(action)
+			return tuple(actions)
+
 		if self._is_postflop_open_bet(
 			state.street_history
 		):
-			return ("fold", "call", "raise")
+			actions = ["fold"]
+			if actor_stack > actor_commitment:
+				actions.append("call")
+			bettor = 1 - actor
+			if (
+				state.commitments[bettor]
+				< self._stack_for(bettor)
+				and self._postflop_raise_target(
+					state,
+					actor,
+				) > outstanding
+			):
+				actions.append("raise")
+			return tuple(actions)
+
 		if self._is_postflop_raise(
 			state.street_history
 		):
-			return ("fold", "call")
+			actions = ["fold"]
+			if actor_stack > actor_commitment:
+				actions.append("call")
+			return tuple(actions)
 		return ()
 
 	def next_node(self, state, action):
@@ -252,10 +325,8 @@ class RestrictedHeadsUpHoldemGame:
 					max(commitments),
 				)
 			elif action == "raise":
-				commitments[actor] = min(
-					self._stack_for(actor),
-					self.big_blind
-					* self.action_abstraction.preflop_raise_bb,
+				commitments[actor] = self._preflop_raise_target(
+					actor
 				)
 			elif action == "all_in":
 				commitments[actor] = self._stack_for(actor)
@@ -273,12 +344,11 @@ class RestrictedHeadsUpHoldemGame:
 				("call",),
 				("raise", "call"),
 			}:
-				return HeadsUpHoldemNode(
-					deal=state.deal,
-					street="flop",
-					history=history,
-					commitments=tuple(commitments),
-					starting_stacks=state.starting_stacks,
+				return self._closed_betting_node(
+					state,
+					history,
+					street_history,
+					commitments,
 				)
 			return HeadsUpHoldemNode(
 				deal=state.deal,
@@ -290,27 +360,15 @@ class RestrictedHeadsUpHoldemGame:
 			)
 
 		if self._is_postflop_bet_action(action):
-			commitments[actor] = min(
-				self._stack_for(actor),
-				commitments[actor]
-				+ (
-					self.big_blind
-					* self._postflop_bet_size_bb(action)
-				),
+			commitments[actor] = self._postflop_bet_target(
+				state,
+				actor,
+				action,
 			)
 		elif action == "raise":
-			outstanding = max(commitments)
-			raise_increment = (
-				outstanding - commitments[actor]
-			)
-			commitments[actor] = min(
-				self._stack_for(actor),
-				outstanding
-				+ (
-					raise_increment
-					* self.action_abstraction
-					.postflop_raise_increment_multiplier
-				),
+			commitments[actor] = self._postflop_raise_target(
+				state,
+				actor,
 			)
 		elif action == "call":
 			commitments[actor] = min(
@@ -325,21 +383,11 @@ class RestrictedHeadsUpHoldemGame:
 			)
 		)
 		if street_closed:
-			if state.street == "river":
-				return HeadsUpHoldemNode(
-					deal=state.deal,
-					street=state.street,
-					history=history,
-					street_history=street_history,
-					commitments=tuple(commitments),
-					starting_stacks=state.starting_stacks,
-				)
-			return HeadsUpHoldemNode(
-				deal=state.deal,
-				street=self._next_street(state.street),
-				history=history,
-				commitments=tuple(commitments),
-				starting_stacks=state.starting_stacks,
+			return self._closed_betting_node(
+				state,
+				history,
+				street_history,
+				commitments,
 			)
 
 		return HeadsUpHoldemNode(
@@ -399,6 +447,38 @@ class RestrictedHeadsUpHoldemGame:
 			f"Unknown postflop bet action: {action}"
 		)
 
+	def _preflop_raise_target(self, actor):
+		return min(
+			self._stack_for(actor),
+			self.big_blind
+			* self.action_abstraction.preflop_raise_bb,
+		)
+
+	def _postflop_bet_target(self, state, actor, action):
+		return min(
+			self._stack_for(actor),
+			state.commitments[actor]
+			+ (
+				self.big_blind
+				* self._postflop_bet_size_bb(action)
+			),
+		)
+
+	def _postflop_raise_target(self, state, actor):
+		outstanding = max(state.commitments)
+		raise_increment = (
+			outstanding - state.commitments[actor]
+		)
+		return min(
+			self._stack_for(actor),
+			outstanding
+			+ (
+				raise_increment
+				* self.action_abstraction
+				.postflop_raise_increment_multiplier
+			),
+		)
+
 	def _is_postflop_open_bet(self, street_history):
 		return (
 			len(street_history) == 1
@@ -449,9 +529,52 @@ class RestrictedHeadsUpHoldemGame:
 
 	def _next_street(self, street):
 		return {
+			"preflop": "flop",
 			"flop": "turn",
 			"turn": "river",
 		}[street]
+
+	def _closed_betting_node(
+		self,
+		state,
+		history,
+		street_history,
+		commitments,
+	):
+		commitments = tuple(commitments)
+		if self._any_player_all_in(commitments):
+			return HeadsUpHoldemNode(
+				deal=state.deal,
+				street=state.street,
+				history=history,
+				street_history=street_history,
+				commitments=commitments,
+				starting_stacks=state.starting_stacks,
+				showdown_runout=True,
+			)
+		if state.street == "river":
+			return HeadsUpHoldemNode(
+				deal=state.deal,
+				street=state.street,
+				history=history,
+				street_history=street_history,
+				commitments=commitments,
+				starting_stacks=state.starting_stacks,
+			)
+		return HeadsUpHoldemNode(
+			deal=state.deal,
+			street=self._next_street(state.street),
+			history=history,
+			commitments=commitments,
+			starting_stacks=state.starting_stacks,
+		)
+
+	def _any_player_all_in(self, commitments):
+		return any(
+			commitment >= stack
+			for commitment, stack
+			in zip(commitments, self.starting_stacks)
+		)
 
 	def _stack_for(self, player):
 		return self.starting_stacks[player]

@@ -132,3 +132,15 @@ Decision:
 
 Reason:
 Asymmetric stacks change legal investment and terminal matched stake, so one shared scalar is not sufficient state. Keeping stack caps explicit and solver-local allows short calls, unequal all-ins and unmatched-chip refunds to be represented without importing the production betting engine or hidden mutable state.
+
+
+## ADR-012: Closed All-In Solver Betting Runs Directly To Showdown
+
+Date:
+2026-08-14
+
+Decision:
+When a restricted Hold'em betting sequence closes and either player's commitment has reached that player's public starting-stack cap, the solver marks the node as a terminal fixed-board showdown runout. It does not manufacture check actions on later streets. Legal-action generation removes actions that cannot increase commitment, collapses capped postflop bet sizes that reach the same target, suppresses raises or over-shoves against an already all-in opponent, and disallows raising an already all-in bettor.
+
+Reason:
+The restricted solver already knows the complete fixed board in its chance deal, while information sets reveal only cards public before a decision. Once no further betting decision is possible, artificial street actions add duplicate information sets and strategically meaningless branches. A terminal runout preserves showdown utility and card-visibility guarantees without importing production-engine all-in machinery.

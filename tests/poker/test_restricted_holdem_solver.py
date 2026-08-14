@@ -516,13 +516,13 @@ def test_restricted_holdem_short_stack_call_is_capped():
 	root = game.initial_nodes()[0].state
 	flop = game.next_node(root, "call")
 	bet = game.next_node(flop, "bet_2bb")
-	turn = game.next_node(bet, "call")
+	showdown = game.next_node(bet, "call")
 
-	assert turn.street == "turn"
-	assert turn.commitments == (5, 6)
-	assert turn.matched_stake == 5
-
-	showdown = check_down(game, turn)
+	assert game.is_terminal_node(showdown)
+	assert showdown.showdown_runout
+	assert showdown.street == "flop"
+	assert showdown.commitments == (5, 6)
+	assert showdown.matched_stake == 5
 	assert game.terminal_node_utility(showdown, 0) == 5.0
 
 
@@ -549,9 +549,91 @@ def test_restricted_holdem_postflop_raise_respects_actor_stack_cap():
 
 	assert raised.commitments == (7, 6)
 
-	turn = game.next_node(raised, "call")
-	assert turn.commitments == (7, 7)
-	assert turn.matched_stake == 7
+	showdown = game.next_node(raised, "call")
+	assert game.is_terminal_node(showdown)
+	assert showdown.showdown_runout
+	assert showdown.commitments == (7, 7)
+	assert showdown.matched_stake == 7
+
+
+def test_restricted_holdem_prunes_actions_against_all_in_big_blind():
+	game = RestrictedHeadsUpHoldemGame(
+		(
+			deal(
+				(
+					card(Rank.ACE, Suit.SPADES),
+					card(Rank.ACE, Suit.HEARTS),
+				),
+				(
+					card(Rank.KING, Suit.SPADES),
+					card(Rank.KING, Suit.HEARTS),
+				),
+			),
+		),
+		starting_stacks=(20, 2),
+	)
+	root = game.initial_nodes()[0].state
+
+	assert not game.is_terminal_node(root)
+	assert game.legal_actions(root) == ("fold", "call")
+
+	showdown = game.next_node(root, "call")
+	assert game.is_terminal_node(showdown)
+	assert showdown.showdown_runout
+	assert showdown.commitments == (2, 2)
+
+
+def test_restricted_holdem_small_blind_all_in_is_initial_runout():
+	game = RestrictedHeadsUpHoldemGame(
+		(
+			deal(
+				(
+					card(Rank.ACE, Suit.SPADES),
+					card(Rank.ACE, Suit.HEARTS),
+				),
+				(
+					card(Rank.KING, Suit.SPADES),
+					card(Rank.KING, Suit.HEARTS),
+				),
+			),
+		),
+		starting_stacks=(1, 20),
+	)
+	root = game.initial_nodes()[0].state
+
+	assert game.is_terminal_node(root)
+	assert root.showdown_runout
+	assert root.matched_stake == 1
+	assert game.terminal_node_utility(root, 0) == 1.0
+
+
+def test_restricted_holdem_all_in_postflop_bet_removes_raise():
+	game = RestrictedHeadsUpHoldemGame(
+		(
+			deal(
+				(
+					card(Rank.ACE, Suit.SPADES),
+					card(Rank.ACE, Suit.HEARTS),
+				),
+				(
+					card(Rank.KING, Suit.SPADES),
+					card(Rank.KING, Suit.HEARTS),
+				),
+			),
+		),
+		starting_stacks=(20, 4),
+	)
+	root = game.initial_nodes()[0].state
+	flop = game.next_node(root, "call")
+	bet = game.next_node(flop, "bet_1bb")
+
+	assert bet.commitments == (2, 4)
+	assert game.legal_actions(bet) == ("fold", "call")
+
+	showdown = game.next_node(bet, "call")
+	assert game.is_terminal_node(showdown)
+	assert showdown.showdown_runout
+	assert showdown.commitments == (4, 4)
 
 
 def test_restricted_holdem_rejects_invalid_asymmetric_stacks():
