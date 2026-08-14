@@ -18,6 +18,12 @@ class HeadsUpHoldemDeal:
 
 
 @dataclass(frozen=True)
+class HoldemActionAbstraction:
+	preflop_raise_bb: int = 3
+	postflop_bet_bb: int = 1
+
+
+@dataclass(frozen=True)
 class HeadsUpHoldemNode:
 	deal: HeadsUpHoldemDeal
 	street: str = "preflop"
@@ -51,11 +57,16 @@ class RestrictedHeadsUpHoldemGame:
 		starting_stack=20,
 		small_blind=1,
 		big_blind=2,
+		action_abstraction=None,
 	):
 		self.deals = tuple(deals)
 		self.starting_stack = starting_stack
 		self.small_blind = small_blind
 		self.big_blind = big_blind
+		self.action_abstraction = (
+			action_abstraction
+			or HoldemActionAbstraction()
+		)
 		self._validate()
 
 	def initial_nodes(self):
@@ -218,7 +229,8 @@ class RestrictedHeadsUpHoldemGame:
 					if street_history == ("call",)
 					else min(
 						self.starting_stack,
-						self.big_blind * 3,
+						self.big_blind
+						* self.action_abstraction.preflop_raise_bb,
 					)
 				)
 				return HeadsUpHoldemNode(
@@ -238,7 +250,11 @@ class RestrictedHeadsUpHoldemGame:
 		if action == "call":
 			matched_stake = min(
 				self.starting_stack,
-				matched_stake + self.big_blind,
+				matched_stake
+				+ (
+					self.big_blind
+					* self.action_abstraction.postflop_bet_bb
+				),
 			)
 
 		street_closed = street_history in {
@@ -288,6 +304,14 @@ class RestrictedHeadsUpHoldemGame:
 		if self.starting_stack < self.big_blind:
 			raise ValueError(
 				"starting_stack must cover the big blind"
+			)
+		if self.action_abstraction.preflop_raise_bb < 2:
+			raise ValueError(
+				"preflop_raise_bb must be at least 2"
+			)
+		if self.action_abstraction.postflop_bet_bb <= 0:
+			raise ValueError(
+				"postflop_bet_bb must be positive"
 			)
 
 		for deal in self.deals:

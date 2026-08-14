@@ -84,3 +84,15 @@ The solver information set may contain only information available to the acting 
 
 Reason:
 Full no-limit Hold'em has a state/action/chance space that is far too large for exhaustive tabular CFR. A small real-card adapter validates the solver boundary and hidden-information semantics before MCCFR/chance sampling and larger abstractions are introduced.
+
+
+## ADR-008: Hold'em Solver Bet Sizing Is an Explicit Abstraction
+
+Date:
+2026-08-14
+
+Decision:
+Restricted Hold'em solver sizing is configured through `HoldemActionAbstraction` in big-blind units. The abstraction owns the single preflop raise size and single postflop bet size; traversal logic consumes those values but does not define them.
+
+Reason:
+Bet sizing determines solver tree shape and strategy meaning. Keeping it explicit allows controlled expansion to a small discrete sizing set without coupling the solver to production no-limit betting internals or silently changing the game being solved.

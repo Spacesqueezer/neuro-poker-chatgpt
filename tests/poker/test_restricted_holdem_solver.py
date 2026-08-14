@@ -5,6 +5,7 @@ from poker.enums import Rank, Suit
 from poker.solver import (
 	CFRTrainer,
 	HeadsUpHoldemDeal,
+	HoldemActionAbstraction,
 	RestrictedHeadsUpHoldemGame,
 )
 
@@ -309,6 +310,72 @@ def test_restricted_holdem_postflop_bet_call_tracks_matched_stake():
 		showdown,
 		player=0,
 	) == 4.0
+
+
+def test_restricted_holdem_action_abstraction_configures_stakes():
+	game = RestrictedHeadsUpHoldemGame(
+		(
+			deal(
+				(
+					card(Rank.ACE, Suit.SPADES),
+					card(Rank.ACE, Suit.HEARTS),
+				),
+				(
+					card(Rank.KING, Suit.SPADES),
+					card(Rank.KING, Suit.HEARTS),
+				),
+			),
+		),
+		action_abstraction=HoldemActionAbstraction(
+			preflop_raise_bb=4,
+			postflop_bet_bb=2,
+		),
+	)
+	root = game.initial_nodes()[0].state
+	raised = game.next_node(root, "raise")
+	flop = game.next_node(raised, "call")
+
+	assert flop.matched_stake == 8
+
+	bet = game.next_node(flop, "bet")
+	turn = game.next_node(bet, "call")
+
+	assert turn.matched_stake == 12
+
+
+def test_restricted_holdem_rejects_invalid_action_abstraction():
+	base_deal = deal(
+		(
+			card(Rank.ACE, Suit.SPADES),
+			card(Rank.ACE, Suit.HEARTS),
+		),
+		(
+			card(Rank.KING, Suit.SPADES),
+			card(Rank.KING, Suit.HEARTS),
+		),
+	)
+
+	with pytest.raises(
+		ValueError,
+		match="preflop_raise_bb",
+	):
+		RestrictedHeadsUpHoldemGame(
+			(base_deal,),
+			action_abstraction=HoldemActionAbstraction(
+				preflop_raise_bb=1,
+			),
+		)
+
+	with pytest.raises(
+		ValueError,
+		match="postflop_bet_bb",
+	):
+		RestrictedHeadsUpHoldemGame(
+			(base_deal,),
+			action_abstraction=HoldemActionAbstraction(
+				postflop_bet_bb=0,
+			),
+		)
 
 
 def test_restricted_holdem_postflop_fold_awards_existing_matched_stake():
