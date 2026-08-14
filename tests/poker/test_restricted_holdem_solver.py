@@ -33,7 +33,7 @@ def deal(hero, villain, weight=1.0):
 
 def check_down(game, state):
 	while not game.is_terminal_node(state):
-		assert game.legal_actions(state) == ("check",)
+		assert "check" in game.legal_actions(state)
 		state = game.next_node(state, "check")
 	return state
 
@@ -276,6 +276,62 @@ def test_restricted_holdem_progresses_public_streets_by_checking_down():
 	river_second = game.next_node(river, "check")
 	showdown = game.next_node(river_second, "check")
 	assert game.is_terminal_node(showdown)
+
+
+def test_restricted_holdem_postflop_bet_call_tracks_matched_stake():
+	game = RestrictedHeadsUpHoldemGame((
+		deal(
+			(
+				card(Rank.ACE, Suit.SPADES),
+				card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				card(Rank.KING, Suit.SPADES),
+				card(Rank.KING, Suit.HEARTS),
+			),
+		),
+	))
+	root = game.initial_nodes()[0].state
+	flop = game.next_node(root, "call")
+
+	assert flop.matched_stake == 2
+	assert game.legal_actions(flop) == ("check", "bet")
+
+	bet = game.next_node(flop, "bet")
+	assert game.legal_actions(bet) == ("fold", "call")
+
+	turn = game.next_node(bet, "call")
+	assert turn.street == "turn"
+	assert turn.matched_stake == 4
+
+	showdown = check_down(game, turn)
+	assert game.terminal_node_utility(
+		showdown,
+		player=0,
+	) == 4.0
+
+
+def test_restricted_holdem_postflop_fold_awards_existing_matched_stake():
+	game = RestrictedHeadsUpHoldemGame((
+		deal(
+			(
+				card(Rank.ACE, Suit.SPADES),
+				card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				card(Rank.KING, Suit.SPADES),
+				card(Rank.KING, Suit.HEARTS),
+			),
+		),
+	))
+	root = game.initial_nodes()[0].state
+	flop = game.next_node(root, "call")
+	bet = game.next_node(flop, "bet")
+	fold = game.next_node(bet, "fold")
+
+	assert game.is_terminal_node(fold)
+	assert game.terminal_node_utility(fold, player=0) == -2.0
+	assert game.terminal_node_utility(fold, player=1) == 2.0
 
 
 def test_restricted_holdem_cfr_uses_generic_solver_boundary():

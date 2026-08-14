@@ -23,6 +23,7 @@ class HeadsUpHoldemNode:
 	street: str = "preflop"
 	history: tuple[str, ...] = ()
 	street_history: tuple[str, ...] = ()
+	matched_stake: int = 0
 
 	@property
 	def public_board(self):
@@ -83,6 +84,15 @@ class RestrictedHeadsUpHoldemGame:
 			return 1
 		elif state.street_history == ("check",):
 			return 0
+		elif state.street_history in {
+			("bet",),
+			("check", "bet"),
+		}:
+			return (
+				0
+				if state.street_history == ("bet",)
+				else 1
+			)
 		raise ValueError(
 			"Terminal Hold'em node has no acting player"
 		)
@@ -96,9 +106,16 @@ class RestrictedHeadsUpHoldemGame:
 				("all_in", "fold"),
 				("all_in", "call"),
 			}
-		return (
+		return state.street_history in {
+			("bet", "fold"),
+			("check", "bet", "fold"),
+		} or (
 			state.street == "river"
-			and state.street_history == ("check", "check")
+			and state.street_history in {
+				("check", "check"),
+				("bet", "call"),
+				("check", "bet", "call"),
+			}
 		)
 
 	def terminal_node_utility(self, state, player):
@@ -111,6 +128,20 @@ class RestrictedHeadsUpHoldemGame:
 			utility = float(self.big_blind)
 		elif state.history == ("all_in", "fold"):
 			utility = float(self.big_blind)
+		elif state.street_history in {
+			("bet", "fold"),
+			("check", "bet", "fold"),
+		}:
+			bettor = (
+				1
+				if state.street_history == ("bet", "fold")
+				else 0
+			)
+			utility = float(
+				state.matched_stake
+				if bettor == 0
+				else -state.matched_stake
+			)
 		else:
 			first = evaluate_seven_cards(
 				state.deal.hole_cards[0] + state.deal.board
@@ -119,15 +150,11 @@ class RestrictedHeadsUpHoldemGame:
 				state.deal.hole_cards[1] + state.deal.board
 			)
 			comparison = compare_hands(first, second)
-			if state.history[:1] == ("call",):
-				showdown_stake = self.big_blind
-			elif state.history[:2] == ("raise", "call"):
-				showdown_stake = min(
-					self.starting_stack,
-					self.big_blind * 3,
-				)
-			else:
-				showdown_stake = self.starting_stack
+			showdown_stake = (
+				state.matched_stake
+				if state.matched_stake
+				else self.starting_stack
+			)
 			utility = float(
 				comparison * showdown_stake
 			)
@@ -161,11 +188,15 @@ class RestrictedHeadsUpHoldemGame:
 			if state.street_history == ("all_in",):
 				return self.ALL_IN_RESPONSE_ACTIONS
 			return ()
+		if state.street_history == ():
+			return ("check", "bet")
+		if state.street_history == ("check",):
+			return ("check", "bet")
 		if state.street_history in {
-			(),
-			("check",),
+			("bet",),
+			("check", "bet"),
 		}:
-			return ("check",)
+			return ("fold", "call")
 		return ()
 
 	def next_node(self, state, action):
@@ -182,10 +213,19 @@ class RestrictedHeadsUpHoldemGame:
 				("call",),
 				("raise", "call"),
 			}:
+				matched_stake = (
+					self.big_blind
+					if street_history == ("call",)
+					else min(
+						self.starting_stack,
+						self.big_blind * 3,
+					)
+				)
 				return HeadsUpHoldemNode(
 					deal=state.deal,
 					street="flop",
 					history=history,
+					matched_stake=matched_stake,
 				)
 			return HeadsUpHoldemNode(
 				deal=state.deal,
@@ -194,18 +234,32 @@ class RestrictedHeadsUpHoldemGame:
 				street_history=street_history,
 			)
 
-		if street_history == ("check", "check"):
+		matched_stake = state.matched_stake
+		if action == "call":
+			matched_stake = min(
+				self.starting_stack,
+				matched_stake + self.big_blind,
+			)
+
+		street_closed = street_history in {
+			("check", "check"),
+			("bet", "call"),
+			("check", "bet", "call"),
+		}
+		if street_closed:
 			if state.street == "river":
 				return HeadsUpHoldemNode(
 					deal=state.deal,
 					street=state.street,
 					history=history,
 					street_history=street_history,
+					matched_stake=matched_stake,
 				)
 			return HeadsUpHoldemNode(
 				deal=state.deal,
 				street=self._next_street(state.street),
 				history=history,
+				matched_stake=matched_stake,
 			)
 
 		return HeadsUpHoldemNode(
@@ -213,6 +267,7 @@ class RestrictedHeadsUpHoldemGame:
 			street=state.street,
 			history=history,
 			street_history=street_history,
+			matched_stake=matched_stake,
 		)
 
 	def _next_street(self, street):
