@@ -156,3 +156,15 @@ Restricted-Hold'em MCCFR average strategies are exported through a versioned JSO
 
 Reason:
 Generic tuple/repr serialization would be brittle and could accidentally expose fields that are not part of the public information boundary. Explicit serialization makes artifacts deterministic, reviewable and safe from opponent-hole-card leakage while keeping them independent from production agent classes.
+
+
+## ADR-014: Imported Solver Strategies Require Exact Validated Lookup
+
+Date:
+2026-08-14
+
+Decision:
+Solver strategy artifacts are fully validated before lookup. `StrategyLookup` uses the canonical explicit information-set serialization as an exact key and returns a defensive copy of the stored action-probability mapping. A missing information set returns `None`. The lookup layer does not approximate, normalize malformed data, infer missing actions or fall back implicitly.
+
+Reason:
+Strategy artifacts are research inputs and must fail loudly when corrupted or incompatible. Exact lookup keeps artifact compatibility observable and prevents accidental policy behavior from being hidden inside persistence code. Fallback and legal-action reconciliation belong in a later solver-policy adapter where they can be tested as strategy semantics rather than file-format behavior.

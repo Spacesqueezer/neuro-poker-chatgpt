@@ -382,7 +382,9 @@ build_strategy_export()
 versioned JSON strategy artifact
 ```
 
-The export contains benchmark/configuration metadata plus sorted average-strategy entries. Information-set serialization is explicit rather than generic tuple serialization: only acting-player hole cards and solver-public fields are emitted. This preserves the solver's imperfect-information boundary and makes the artifact deterministic for equal inputs. The artifact is not yet a production-agent policy; import/lookup validation is the next boundary before any teacher integration.
+The export contains benchmark/configuration metadata plus sorted average-strategy entries. Information-set serialization is explicit rather than generic tuple serialization: only acting-player hole cards and solver-public fields are emitted. This preserves the solver's imperfect-information boundary and makes the artifact deterministic for equal inputs.
+
+Artifact loading validates the complete versioned boundary before use. `StrategyLookup` then indexes entries by canonical JSON serialization of the explicit information-set object and performs exact lookup from live restricted-solver information sets. Missing entries return `None`; no nearest-neighbor, card abstraction or silent strategy synthesis happens at this layer. The artifact is still not a production-agent policy. The next boundary is a solver-local policy adapter that can reconcile exact lookup results with the current restricted node's legal actions and define explicit fallback behavior without importing `poker.api`.
 
 Teacher quality is measured outside the agent:
 

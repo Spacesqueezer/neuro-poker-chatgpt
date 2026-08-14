@@ -2,8 +2,11 @@ import json
 
 from poker.solver import (
 	MCCFRResult,
+	StrategyLookup,
 	build_strategy_export,
+	load_strategy_export,
 	serialize_information_set,
+	validate_strategy_export,
 	write_strategy_export,
 )
 from tools.benchmark_mccfr import create_benchmark_game
@@ -78,3 +81,156 @@ def test_strategy_export_is_deterministic_and_carries_metadata(tmp_path):
 	loaded = json.loads(output.read_text(encoding="utf-8"))
 
 	assert loaded == first
+	assert load_strategy_export(output) == first
+
+
+def test_strategy_lookup_resolves_exact_information_set():
+	game = create_benchmark_game("asymmetric")
+	root = game.initial_nodes()[0].state
+	info_set = game.information_set_for_node(root, player=0)
+	result = MCCFRResult(
+		iterations=7,
+		average_strategy={
+			info_set: {
+				"call": 0.75,
+				"raise": 0.25,
+			},
+		},
+		cumulative_regret={},
+	)
+	payload = build_strategy_export(
+		result,
+		game,
+		seed=42,
+		scenario="asymmetric",
+		benchmark_version=2,
+	)
+	lookup = StrategyLookup(payload)
+
+	assert lookup.lookup(info_set) == {
+		"call": 0.75,
+		"raise": 0.25,
+	}
+
+
+def test_strategy_lookup_returns_none_for_missing_information_set():
+	game = create_benchmark_game("asymmetric")
+	root = game.initial_nodes()[0].state
+	info_set = game.information_set_for_node(root, player=0)
+	result = MCCFRResult(
+		iterations=7,
+		average_strategy={
+			info_set: {
+				"call": 1.0,
+			},
+		},
+		cumulative_regret={},
+	)
+	payload = build_strategy_export(
+		result,
+		game,
+		seed=42,
+		scenario="asymmetric",
+		benchmark_version=2,
+	)
+	lookup = StrategyLookup(payload)
+
+	other_info_set = game.information_set_for_node(
+		game.next_node(root, "call"),
+		player=1,
+	)
+
+	assert lookup.lookup(other_info_set) is None
+
+
+def test_strategy_export_validation_rejects_invalid_version():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	info_set = game.information_set_for_node(root, player=0)
+	payload = build_strategy_export(
+		MCCFRResult(
+			iterations=1,
+			average_strategy={
+				info_set: {
+				"call": 1.0,
+				},
+			},
+			cumulative_regret={},
+		),
+		game,
+		seed=42,
+		scenario="equal",
+		benchmark_version=2,
+	)
+	payload["format_version"] = 999
+
+	try:
+		validate_strategy_export(payload)
+	except ValueError as error:
+		assert "format_version" in str(error)
+	else:
+		raise AssertionError("invalid format version must fail validation")
+
+
+def test_strategy_export_validation_rejects_duplicate_information_sets():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	info_set = game.information_set_for_node(root, player=0)
+	payload = build_strategy_export(
+		MCCFRResult(
+			iterations=1,
+			average_strategy={
+				info_set: {
+				"call": 1.0,
+				},
+			},
+			cumulative_regret={},
+		),
+		game,
+		seed=42,
+		scenario="equal",
+		benchmark_version=2,
+	)
+	payload["average_strategy"].append(
+		payload["average_strategy"][0].copy()
+	)
+	payload["information_set_count"] = 2
+
+	try:
+		validate_strategy_export(payload)
+	except ValueError as error:
+		assert "duplicate" in str(error)
+	else:
+		raise AssertionError("duplicate information sets must fail validation")
+
+
+def test_strategy_export_validation_rejects_invalid_probabilities():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	info_set = game.information_set_for_node(root, player=0)
+	payload = build_strategy_export(
+		MCCFRResult(
+			iterations=1,
+			average_strategy={
+				info_set: {
+				"call": 1.0,
+				},
+			},
+			cumulative_regret={},
+		),
+		game,
+		seed=42,
+		scenario="equal",
+		benchmark_version=2,
+	)
+	payload["average_strategy"][0]["strategy"] = {
+		"call": 0.6,
+		"raise": 0.6,
+	}
+
+	try:
+		validate_strategy_export(payload)
+	except ValueError as error:
+		assert "sum to 1" in str(error)
+	else:
+		raise AssertionError("invalid probabilities must fail validation")
