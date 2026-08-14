@@ -120,6 +120,14 @@ class RestrictedHeadsUpHoldemGame:
 			)
 		):
 			return 1
+		elif self._is_postflop_raise(
+			state.street_history
+		):
+			return (
+				0
+				if state.street_history[0] == "check"
+				else 1
+			)
 		raise ValueError(
 			"Terminal Hold'em node has no acting player"
 		)
