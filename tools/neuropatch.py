@@ -15,12 +15,12 @@ Transaction patch engine:
 """
 
 import argparse
-import ctypes
 import datetime
 import json
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -61,44 +61,58 @@ def play_result_sound(success):
 	if not path.exists():
 		return
 
-	alias = "neuropatch_result"
-	winmm = None
-	opened = False
+	player_code = """
+import ctypes
+import sys
+
+path = sys.argv[1]
+alias = "neuropatch_result"
+winmm = ctypes.windll.winmm
+
+if winmm.mciSendStringW(
+	f'open "{path}" type mpegvideo alias {alias}',
+	None,
+	0,
+	None,
+) != 0:
+	raise SystemExit(0)
+
+try:
+	winmm.mciSendStringW(
+		f"setaudio {alias} volume to 1000",
+		None,
+		0,
+		None,
+	)
+	winmm.mciSendStringW(
+		f"play {alias} wait",
+		None,
+		0,
+		None,
+	)
+finally:
+	winmm.mciSendStringW(
+		f"close {alias}",
+		None,
+		0,
+		None,
+	)
+"""
 
 	try:
-		winmm = ctypes.windll.winmm
-		open_result = winmm.mciSendStringW(
-			f'open "{path}" type mpegvideo alias {alias}',
-			None,
-			0,
-			None,
-		)
-		if open_result != 0:
-			return
-
-		opened = True
-		winmm.mciSendStringW(
-			f"setaudio {alias} volume to 1000",
-			None,
-			0,
-			None,
-		)
-		winmm.mciSendStringW(
-			f"play {alias} wait",
-			None,
-			0,
-			None,
+		subprocess.Popen(
+			[sys.executable, "-c", player_code, str(path)],
+			stdin=subprocess.DEVNULL,
+			stdout=subprocess.DEVNULL,
+			stderr=subprocess.DEVNULL,
+			creationflags=(
+				subprocess.DETACHED_PROCESS
+				| subprocess.CREATE_NO_WINDOW
+			),
+			close_fds=True,
 		)
 	except Exception:
 		return
-	finally:
-		if opened and winmm is not None:
-			winmm.mciSendStringW(
-				f"close {alias}",
-				None,
-				0,
-				None,
-			)
 
 
 def git_status():
@@ -276,6 +290,7 @@ def main():
 		raise PatchError("Git working tree dirty. Commit changes or use --force.")
 
 	transaction = create_transaction(patch["patch_id"])
+	started_monotonic = time.perf_counter()
 
 	report = {
 		"patch": patch["patch_id"],
@@ -316,6 +331,10 @@ def main():
 		report["error"] = str(error)
 
 	finally:
+		report["duration_seconds"] = round(
+			time.perf_counter() - started_monotonic,
+			3,
+		)
 		save_json(transaction / "report.json", report)
 
 		print(json.dumps(report, indent=2, ensure_ascii=False))

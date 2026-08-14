@@ -103,6 +103,22 @@ AI generating NeuroPatches must choose the smallest sufficient profile.
 
 Use `fast` for isolated utilities, tests, documentation and internal refactoring without changed public contracts.
 
+Focused profile:
+
+```text
+focused
+```
+
+Runs only subsystem-specific tests plus cheap syntax/import checks when a patch is isolated behind an already-established internal boundary. The patch must name the exact test files or test directories in `validation.commands`.
+
+Use `focused` for isolated solver, statistics, learning or tooling work when:
+- production poker-engine behavior is untouched;
+- the affected subsystem already has direct regression coverage;
+- the patch does not change a cross-subsystem public contract;
+- a later milestone/full validation still exists as a safety net.
+
+Do not use `focused` for poker engine, hand lifecycle, pots/stacks, Arena, migrations, persistence schema, serialization compatibility or broad refactors.
+
 Use `extended` for API changes, serialization changes, database changes, migration changes, shared domain models and agent interfaces.
 
 Use `full` for poker engine changes, hand lifecycle, betting logic, stacks, pots, randomness, replay/history, Arena behavior and milestone patches.

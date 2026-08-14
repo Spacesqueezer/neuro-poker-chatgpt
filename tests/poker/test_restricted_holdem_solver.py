@@ -429,6 +429,7 @@ def test_restricted_holdem_action_abstraction_configures_stakes():
 		action_abstraction=HoldemActionAbstraction(
 			preflop_raise_bb=4,
 			postflop_bet_sizes_bb=(1, 2),
+			postflop_raise_increment_multiplier=2,
 		),
 	)
 	root = game.initial_nodes()[0].state
@@ -455,6 +456,13 @@ def test_restricted_holdem_action_abstraction_configures_stakes():
 		"call",
 	)
 	assert large_turn.matched_stake == 12
+
+	raise_source = game.next_node(flop, "bet_1bb")
+	raised = game.next_node(
+		raise_source,
+		"raise",
+	)
+	assert raised.commitments == (14, 10)
 
 
 def test_restricted_holdem_rejects_invalid_action_abstraction():
@@ -499,6 +507,17 @@ def test_restricted_holdem_rejects_invalid_action_abstraction():
 			(base_deal,),
 			action_abstraction=HoldemActionAbstraction(
 				postflop_bet_sizes_bb=(2, 1),
+			),
+		)
+
+	with pytest.raises(
+		ValueError,
+		match="postflop_raise_increment_multiplier",
+	):
+		RestrictedHeadsUpHoldemGame(
+			(base_deal,),
+			action_abstraction=HoldemActionAbstraction(
+				postflop_raise_increment_multiplier=0,
 			),
 		)
 

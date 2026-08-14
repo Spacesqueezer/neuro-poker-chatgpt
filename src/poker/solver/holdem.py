@@ -21,6 +21,7 @@ class HeadsUpHoldemDeal:
 class HoldemActionAbstraction:
 	preflop_raise_bb: int = 3
 	postflop_bet_sizes_bb: tuple[int, ...] = (1, 2)
+	postflop_raise_increment_multiplier: int = 1
 
 
 @dataclass(frozen=True)
@@ -280,10 +281,17 @@ class RestrictedHeadsUpHoldemGame:
 			)
 		elif action == "raise":
 			outstanding = max(commitments)
+			raise_increment = (
+				outstanding - commitments[actor]
+			)
 			commitments[actor] = min(
 				self.starting_stack,
 				outstanding
-				+ (outstanding - commitments[actor]),
+				+ (
+					raise_increment
+					* self.action_abstraction
+					.postflop_raise_increment_multiplier
+				),
 			)
 		elif action == "call":
 			commitments[actor] = max(commitments)
@@ -451,6 +459,14 @@ class RestrictedHeadsUpHoldemGame:
 		if tuple(sorted(set(postflop_sizes))) != postflop_sizes:
 			raise ValueError(
 				"postflop_bet_sizes_bb must be unique and increasing"
+			)
+		if (
+			self.action_abstraction
+			.postflop_raise_increment_multiplier
+			<= 0
+		):
+			raise ValueError(
+				"postflop_raise_increment_multiplier must be positive"
 			)
 
 		for deal in self.deals:

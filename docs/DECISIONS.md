@@ -116,7 +116,7 @@ Date:
 2026-08-14
 
 Decision:
-After a restricted postflop opening bet, the responder may fold, call or make exactly one raise. The raise matches the outstanding commitment and adds one equal increment. After that raise the original bettor may only fold or call; re-raises are excluded.
+After a restricted postflop opening bet, the responder may fold, call or make exactly one raise. The raise matches the outstanding commitment and adds a positive configurable number of equal raise increments through `HoldemActionAbstraction.postflop_raise_increment_multiplier`. After that raise the original bettor may only fold or call; re-raises are excluded.
 
 Reason:
 A single finite raise branch exercises the player-explicit commitment model and gives CFR/MCCFR strategically meaningful bet/raise decisions without exploding the tree or importing production no-limit betting rules.

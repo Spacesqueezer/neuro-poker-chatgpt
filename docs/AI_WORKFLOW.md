@@ -62,6 +62,8 @@ Common rules:
 
 Every patch must include validation.
 
+For isolated internal subsystem work, `DEV_RULES.md` permits a focused profile with explicitly named subsystem tests. Broader contracts still require fast/extended/full validation as defined there.
+
 Typical project checks:
 
 ```text
