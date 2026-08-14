@@ -13,7 +13,7 @@ class TinyGame:
 	def initial_nodes(self):
 		return [Node("root")]
 
-	def is_terminal(self, state):
+	def is_terminal_node(self, state):
 		return state == "terminal"
 
 	def terminal_node_utility(self, state, player):

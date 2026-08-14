@@ -36,7 +36,7 @@ class ExternalSamplingMCCFR:
 		)
 
 	def _traverse(self, state, traversing_player):
-		if self.game.is_terminal(state):
+		if self.game.is_terminal_node(state):
 			return self.game.terminal_node_utility(
 				state,
 				traversing_player,
