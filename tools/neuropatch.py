@@ -338,6 +338,13 @@ def main():
 		save_json(transaction / "report.json", report)
 
 		print(json.dumps(report, indent=2, ensure_ascii=False))
+		if report["status"] == "SUCCESS":
+			print(
+				"SUCCESS HANDOFF: push this commit, then send the "
+				"complete NeuroPatch output to the AI. The AI must "
+				"inspect the freshly pushed repository and generate "
+				"the next .npatch.json file immediately."
+			)
 		play_result_sound(
 			report["status"] == "SUCCESS"
 		)

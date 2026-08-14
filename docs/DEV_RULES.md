@@ -142,6 +142,12 @@ Every successful patch commit must:
 
 The next patch must start from a clean git working tree created by the previous successful patch.
 
+After a successful patch, NeuroPatch prints a handoff instruction. When the user pushes that commit and sends the complete NeuroPatch output back to the AI, that output means:
+- the reported successful commit has been pushed;
+- the AI must inspect the freshly pushed repository;
+- the AI must continue from `PROJECT_STATE.md`;
+- the AI must generate and attach the next `.npatch.json` file in the same response rather than merely describing what it plans to do.
+
 ## Documentation rules
 
 Any patch that changes:

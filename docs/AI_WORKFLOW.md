@@ -72,6 +72,12 @@ python tools/stress_poker.py --hands 10000 --seed 42
 python tools/verify_history.py
 ```
 
+## Successful patch handoff
+
+A successful NeuroPatch prints a handoff instruction after its JSON report.
+
+When the user pushes the successful commit and sends the complete NeuroPatch output back, treat that as an explicit continuation request. Inspect the freshly pushed repository, read the current next step from `PROJECT_STATE.md`, and generate the next `.npatch.json` file immediately. Do not answer with only a status message or a promise to generate the file later.
+
 ## Documentation synchronization
 
 Architectural changes require documentation updates.
