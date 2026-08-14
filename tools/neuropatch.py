@@ -340,10 +340,10 @@ def main():
 		print(json.dumps(report, indent=2, ensure_ascii=False))
 		if report["status"] == "SUCCESS":
 			print(
-				"SUCCESS HANDOFF: push this commit, then send the "
-				"complete NeuroPatch output to the AI. The AI must "
-				"inspect the freshly pushed repository and generate "
-				"the next .npatch.json file immediately."
+				"SUCCESS HANDOFF: commit pushed. Inspect the fresh "
+				"repository, re-read docs/DEV_RULES.md and "
+				"docs/PROJECT_STATE.md, follow the recorded next step, "
+				"and return the next .npatch.json file immediately."
 			)
 		play_result_sound(
 			report["status"] == "SUCCESS"

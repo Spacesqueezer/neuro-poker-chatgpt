@@ -120,3 +120,15 @@ After a restricted postflop opening bet, the responder may fold, call or make ex
 
 Reason:
 A single finite raise branch exercises the player-explicit commitment model and gives CFR/MCCFR strategically meaningful bet/raise decisions without exploding the tree or importing production no-limit betting rules.
+
+
+## ADR-011: Restricted Solver Stacks Are Player-Specific Public Caps
+
+Date:
+2026-08-14
+
+Decision:
+`RestrictedHeadsUpHoldemGame` keeps the existing scalar `starting_stack` as the backward-compatible equal-stack default and accepts optional `starting_stacks=(player0, player1)` for asymmetric games. The resolved two-player stack tuple is copied into each solver node and included in information sets. Every commitment-changing solver action is capped by the acting player's stack.
+
+Reason:
+Asymmetric stacks change legal investment and terminal matched stake, so one shared scalar is not sufficient state. Keeping stack caps explicit and solver-local allows short calls, unequal all-ins and unmatched-chip refunds to be represented without importing the production betting engine or hidden mutable state.

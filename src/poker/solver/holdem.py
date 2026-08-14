@@ -31,6 +31,7 @@ class HeadsUpHoldemNode:
 	history: tuple[str, ...] = ()
 	street_history: tuple[str, ...] = ()
 	commitments: tuple[int, int] = (0, 0)
+	starting_stacks: tuple[int, int] = (20, 20)
 
 	@property
 	def matched_stake(self):
@@ -60,12 +61,18 @@ class RestrictedHeadsUpHoldemGame:
 		self,
 		deals,
 		starting_stack=20,
+		starting_stacks=None,
 		small_blind=1,
 		big_blind=2,
 		action_abstraction=None,
 	):
 		self.deals = tuple(deals)
 		self.starting_stack = starting_stack
+		self.starting_stacks = (
+			tuple(starting_stacks)
+			if starting_stacks is not None
+			else (starting_stack, starting_stack)
+		)
 		self.small_blind = small_blind
 		self.big_blind = big_blind
 		self.action_abstraction = (
@@ -87,6 +94,7 @@ class RestrictedHeadsUpHoldemGame:
 						self.small_blind,
 						self.big_blind,
 					),
+					starting_stacks=self.starting_stacks,
 				),
 				probability=deal.weight / total_weight,
 			)
@@ -196,6 +204,7 @@ class RestrictedHeadsUpHoldemGame:
 			state.public_board,
 			state.history,
 			state.commitments,
+			state.starting_stacks,
 		)
 
 	def legal_actions(self, state):
@@ -238,18 +247,26 @@ class RestrictedHeadsUpHoldemGame:
 
 		if state.street == "preflop":
 			if action == "call":
-				commitments[actor] = max(commitments)
+				commitments[actor] = min(
+					self._stack_for(actor),
+					max(commitments),
+				)
 			elif action == "raise":
 				commitments[actor] = min(
-					self.starting_stack,
+					self._stack_for(actor),
 					self.big_blind
 					* self.action_abstraction.preflop_raise_bb,
 				)
 			elif action == "all_in":
-				commitments[actor] = self.starting_stack
+				commitments[actor] = self._stack_for(actor)
 				if state.street_history == ("raise",):
-					commitments[1 - actor] = (
-						self.starting_stack
+					opponent = 1 - actor
+					commitments[opponent] = max(
+						commitments[opponent],
+						min(
+							self._stack_for(opponent),
+							commitments[actor],
+						),
 					)
 
 			if street_history in {
@@ -261,6 +278,7 @@ class RestrictedHeadsUpHoldemGame:
 					street="flop",
 					history=history,
 					commitments=tuple(commitments),
+					starting_stacks=state.starting_stacks,
 				)
 			return HeadsUpHoldemNode(
 				deal=state.deal,
@@ -268,11 +286,12 @@ class RestrictedHeadsUpHoldemGame:
 				history=history,
 				street_history=street_history,
 				commitments=tuple(commitments),
+				starting_stacks=state.starting_stacks,
 			)
 
 		if self._is_postflop_bet_action(action):
 			commitments[actor] = min(
-				self.starting_stack,
+				self._stack_for(actor),
 				commitments[actor]
 				+ (
 					self.big_blind
@@ -285,7 +304,7 @@ class RestrictedHeadsUpHoldemGame:
 				outstanding - commitments[actor]
 			)
 			commitments[actor] = min(
-				self.starting_stack,
+				self._stack_for(actor),
 				outstanding
 				+ (
 					raise_increment
@@ -294,7 +313,10 @@ class RestrictedHeadsUpHoldemGame:
 				),
 			)
 		elif action == "call":
-			commitments[actor] = max(commitments)
+			commitments[actor] = min(
+				self._stack_for(actor),
+				max(commitments),
+			)
 
 		street_closed = (
 			street_history == ("check", "check")
@@ -310,12 +332,14 @@ class RestrictedHeadsUpHoldemGame:
 					history=history,
 					street_history=street_history,
 					commitments=tuple(commitments),
+					starting_stacks=state.starting_stacks,
 				)
 			return HeadsUpHoldemNode(
 				deal=state.deal,
 				street=self._next_street(state.street),
 				history=history,
 				commitments=tuple(commitments),
+				starting_stacks=state.starting_stacks,
 			)
 
 		return HeadsUpHoldemNode(
@@ -324,6 +348,7 @@ class RestrictedHeadsUpHoldemGame:
 			history=history,
 			street_history=street_history,
 			commitments=tuple(commitments),
+			starting_stacks=state.starting_stacks,
 		)
 
 	def _folded_player(self, state):
@@ -428,6 +453,9 @@ class RestrictedHeadsUpHoldemGame:
 			"turn": "river",
 		}[street]
 
+	def _stack_for(self, player):
+		return self.starting_stacks[player]
+
 	def _validate(self):
 		if not self.deals:
 			raise ValueError(
@@ -437,9 +465,17 @@ class RestrictedHeadsUpHoldemGame:
 			raise ValueError(
 				"blinds must satisfy 0 < small_blind < big_blind"
 			)
-		if self.starting_stack < self.big_blind:
+		if len(self.starting_stacks) != 2:
 			raise ValueError(
-				"starting_stack must cover the big blind"
+				"starting_stacks must contain exactly two stacks"
+			)
+		if self.starting_stacks[0] < self.small_blind:
+			raise ValueError(
+				"player 0 starting stack must cover the small blind"
+			)
+		if self.starting_stacks[1] < self.big_blind:
+			raise ValueError(
+				"player 1 starting stack must cover the big blind"
 			)
 		if self.action_abstraction.preflop_raise_bb < 2:
 			raise ValueError(

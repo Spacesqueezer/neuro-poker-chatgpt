@@ -97,3 +97,41 @@ def test_mccfr_is_deterministic_on_expanded_restricted_holdem_tree():
 	)
 	for strategy in first.average_strategy.values():
 		assert abs(sum(strategy.values()) - 1.0) < 1e-12
+
+
+def test_mccfr_runs_with_asymmetric_restricted_holdem_stacks():
+	deal = HeadsUpHoldemDeal(
+		hole_cards=(
+			(
+				Card(Rank.ACE, Suit.SPADES),
+				Card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				Card(Rank.KING, Suit.SPADES),
+				Card(Rank.KING, Suit.HEARTS),
+			),
+		),
+		board=(
+			Card(Rank.TWO, Suit.CLUBS),
+			Card(Rank.THREE, Suit.DIAMONDS),
+			Card(Rank.FOUR, Suit.HEARTS),
+			Card(Rank.FIVE, Suit.CLUBS),
+			Card(Rank.SEVEN, Suit.SPADES),
+		),
+	)
+	game = RestrictedHeadsUpHoldemGame(
+		(deal,),
+		starting_stacks=(8, 20),
+	)
+
+	result = ExternalSamplingMCCFR(
+		game,
+		seed=19,
+	).train(10)
+
+	assert result.iterations == 10
+	assert result.average_strategy
+	assert all(
+		abs(sum(strategy.values()) - 1.0) < 1e-12
+		for strategy in result.average_strategy.values()
+	)
