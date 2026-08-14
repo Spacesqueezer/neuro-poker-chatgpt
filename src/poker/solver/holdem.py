@@ -20,7 +20,7 @@ class HeadsUpHoldemDeal:
 @dataclass(frozen=True)
 class HoldemActionAbstraction:
 	preflop_raise_bb: int = 3
-	postflop_bet_bb: int = 1
+	postflop_bet_sizes_bb: tuple[int, ...] = (1, 2)
 
 
 @dataclass(frozen=True)
@@ -95,15 +95,21 @@ class RestrictedHeadsUpHoldemGame:
 			return 1
 		elif state.street_history == ("check",):
 			return 0
-		elif state.street_history in {
-			("bet",),
-			("check", "bet"),
-		}:
-			return (
-				0
-				if state.street_history == ("bet",)
-				else 1
+		elif (
+			len(state.street_history) == 1
+			and self._is_postflop_bet_action(
+				state.street_history[0]
 			)
+		):
+			return 0
+		elif (
+			len(state.street_history) == 2
+			and state.street_history[0] == "check"
+			and self._is_postflop_bet_action(
+				state.street_history[1]
+			)
+		):
+			return 1
 		raise ValueError(
 			"Terminal Hold'em node has no acting player"
 		)
@@ -117,16 +123,16 @@ class RestrictedHeadsUpHoldemGame:
 				("all_in", "fold"),
 				("all_in", "call"),
 			}
-		return state.street_history in {
-			("bet", "fold"),
-			("check", "bet", "fold"),
-		} or (
+		return self._is_postflop_fold(
+			state.street_history
+		) or (
 			state.street == "river"
-			and state.street_history in {
-				("check", "check"),
-				("bet", "call"),
-				("check", "bet", "call"),
-			}
+			and (
+				state.street_history == ("check", "check")
+				or self._is_postflop_bet_call(
+					state.street_history
+				)
+			)
 		)
 
 	def terminal_node_utility(self, state, player):
@@ -139,13 +145,14 @@ class RestrictedHeadsUpHoldemGame:
 			utility = float(self.big_blind)
 		elif state.history == ("all_in", "fold"):
 			utility = float(self.big_blind)
-		elif state.street_history in {
-			("bet", "fold"),
-			("check", "bet", "fold"),
-		}:
+		elif self._is_postflop_fold(
+			state.street_history
+		):
 			bettor = (
 				1
-				if state.street_history == ("bet", "fold")
+				if self._is_postflop_bet_action(
+					state.street_history[0]
+				)
 				else 0
 			)
 			utility = float(
@@ -199,14 +206,28 @@ class RestrictedHeadsUpHoldemGame:
 			if state.street_history == ("all_in",):
 				return self.ALL_IN_RESPONSE_ACTIONS
 			return ()
-		if state.street_history == ():
-			return ("check", "bet")
-		if state.street_history == ("check",):
-			return ("check", "bet")
 		if state.street_history in {
-			("bet",),
-			("check", "bet"),
+			(),
+			("check",),
 		}:
+			return (
+				"check",
+				*self._postflop_bet_actions(),
+			)
+		if (
+			len(state.street_history) == 1
+			and self._is_postflop_bet_action(
+				state.street_history[0]
+			)
+		):
+			return ("fold", "call")
+		if (
+			len(state.street_history) == 2
+			and state.street_history[0] == "check"
+			and self._is_postflop_bet_action(
+				state.street_history[1]
+			)
+		):
 			return ("fold", "call")
 		return ()
 
@@ -248,20 +269,24 @@ class RestrictedHeadsUpHoldemGame:
 
 		matched_stake = state.matched_stake
 		if action == "call":
+			bet_action = state.street_history[-1]
 			matched_stake = min(
 				self.starting_stack,
 				matched_stake
 				+ (
 					self.big_blind
-					* self.action_abstraction.postflop_bet_bb
+					* self._postflop_bet_size_bb(
+						bet_action
+					)
 				),
 			)
 
-		street_closed = street_history in {
-			("check", "check"),
-			("bet", "call"),
-			("check", "bet", "call"),
-		}
+		street_closed = (
+			street_history == ("check", "check")
+			or self._is_postflop_bet_call(
+				street_history
+			)
+		)
 		if street_closed:
 			if state.street == "river":
 				return HeadsUpHoldemNode(
@@ -284,6 +309,58 @@ class RestrictedHeadsUpHoldemGame:
 			history=history,
 			street_history=street_history,
 			matched_stake=matched_stake,
+		)
+
+	def _postflop_bet_actions(self):
+		return tuple(
+			f"bet_{size}bb"
+			for size
+			in self.action_abstraction.postflop_bet_sizes_bb
+		)
+
+	def _is_postflop_bet_action(self, action):
+		return action in self._postflop_bet_actions()
+
+	def _postflop_bet_size_bb(self, action):
+		for size in (
+			self.action_abstraction.postflop_bet_sizes_bb
+		):
+			if action == f"bet_{size}bb":
+				return size
+		raise ValueError(
+			f"Unknown postflop bet action: {action}"
+		)
+
+	def _is_postflop_fold(self, street_history):
+		return (
+			len(street_history) == 2
+			and self._is_postflop_bet_action(
+				street_history[0]
+			)
+			and street_history[1] == "fold"
+		) or (
+			len(street_history) == 3
+			and street_history[0] == "check"
+			and self._is_postflop_bet_action(
+				street_history[1]
+			)
+			and street_history[2] == "fold"
+		)
+
+	def _is_postflop_bet_call(self, street_history):
+		return (
+			len(street_history) == 2
+			and self._is_postflop_bet_action(
+				street_history[0]
+			)
+			and street_history[1] == "call"
+		) or (
+			len(street_history) == 3
+			and street_history[0] == "check"
+			and self._is_postflop_bet_action(
+				street_history[1]
+			)
+			and street_history[2] == "call"
 		)
 
 	def _next_street(self, street):
@@ -309,9 +386,20 @@ class RestrictedHeadsUpHoldemGame:
 			raise ValueError(
 				"preflop_raise_bb must be at least 2"
 			)
-		if self.action_abstraction.postflop_bet_bb <= 0:
+		postflop_sizes = (
+			self.action_abstraction.postflop_bet_sizes_bb
+		)
+		if not postflop_sizes:
 			raise ValueError(
-				"postflop_bet_bb must be positive"
+				"postflop_bet_sizes_bb must not be empty"
+			)
+		if any(size <= 0 for size in postflop_sizes):
+			raise ValueError(
+				"postflop_bet_sizes_bb must be positive"
+			)
+		if tuple(sorted(set(postflop_sizes))) != postflop_sizes:
+			raise ValueError(
+				"postflop_bet_sizes_bb must be unique and increasing"
 			)
 
 		for deal in self.deals:

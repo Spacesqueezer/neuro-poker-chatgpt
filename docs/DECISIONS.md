@@ -92,7 +92,7 @@ Date:
 2026-08-14
 
 Decision:
-Restricted Hold'em solver sizing is configured through `HoldemActionAbstraction` in big-blind units. The abstraction owns the single preflop raise size and single postflop bet size; traversal logic consumes those values but does not define them.
+Restricted Hold'em solver sizing is configured through `HoldemActionAbstraction` in big-blind units. The abstraction owns one preflop raise size and an ordered discrete tuple of postflop bet sizes. Each postflop size is represented by a distinct solver action such as `bet_1bb` or `bet_2bb`.
 
 Reason:
-Bet sizing determines solver tree shape and strategy meaning. Keeping it explicit allows controlled expansion to a small discrete sizing set without coupling the solver to production no-limit betting internals or silently changing the game being solved.
+Bet sizing determines solver tree shape and strategy meaning. Encoding each configured size as a distinct finite action lets CFR/MCCFR learn separate branches while keeping the abstraction independent from production no-limit betting internals. Ordering and uniqueness are validated so action identity remains deterministic across runs.

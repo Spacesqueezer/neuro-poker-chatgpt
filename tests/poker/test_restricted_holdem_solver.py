@@ -296,9 +296,13 @@ def test_restricted_holdem_postflop_bet_call_tracks_matched_stake():
 	flop = game.next_node(root, "call")
 
 	assert flop.matched_stake == 2
-	assert game.legal_actions(flop) == ("check", "bet")
+	assert game.legal_actions(flop) == (
+		"check",
+		"bet_1bb",
+		"bet_2bb",
+	)
 
-	bet = game.next_node(flop, "bet")
+	bet = game.next_node(flop, "bet_1bb")
 	assert game.legal_actions(bet) == ("fold", "call")
 
 	turn = game.next_node(bet, "call")
@@ -328,7 +332,7 @@ def test_restricted_holdem_action_abstraction_configures_stakes():
 		),
 		action_abstraction=HoldemActionAbstraction(
 			preflop_raise_bb=4,
-			postflop_bet_bb=2,
+			postflop_bet_sizes_bb=(1, 2),
 		),
 	)
 	root = game.initial_nodes()[0].state
@@ -336,11 +340,25 @@ def test_restricted_holdem_action_abstraction_configures_stakes():
 	flop = game.next_node(raised, "call")
 
 	assert flop.matched_stake == 8
+	assert game.legal_actions(flop) == (
+		"check",
+		"bet_1bb",
+		"bet_2bb",
+	)
 
-	bet = game.next_node(flop, "bet")
-	turn = game.next_node(bet, "call")
+	small_bet = game.next_node(flop, "bet_1bb")
+	small_turn = game.next_node(
+		small_bet,
+		"call",
+	)
+	assert small_turn.matched_stake == 10
 
-	assert turn.matched_stake == 12
+	large_bet = game.next_node(flop, "bet_2bb")
+	large_turn = game.next_node(
+		large_bet,
+		"call",
+	)
+	assert large_turn.matched_stake == 12
 
 
 def test_restricted_holdem_rejects_invalid_action_abstraction():
@@ -368,12 +386,23 @@ def test_restricted_holdem_rejects_invalid_action_abstraction():
 
 	with pytest.raises(
 		ValueError,
-		match="postflop_bet_bb",
+		match="postflop_bet_sizes_bb",
 	):
 		RestrictedHeadsUpHoldemGame(
 			(base_deal,),
 			action_abstraction=HoldemActionAbstraction(
-				postflop_bet_bb=0,
+				postflop_bet_sizes_bb=(),
+			),
+		)
+
+	with pytest.raises(
+		ValueError,
+		match="unique and increasing",
+	):
+		RestrictedHeadsUpHoldemGame(
+			(base_deal,),
+			action_abstraction=HoldemActionAbstraction(
+				postflop_bet_sizes_bb=(2, 1),
 			),
 		)
 
@@ -393,7 +422,7 @@ def test_restricted_holdem_postflop_fold_awards_existing_matched_stake():
 	))
 	root = game.initial_nodes()[0].state
 	flop = game.next_node(root, "call")
-	bet = game.next_node(flop, "bet")
+	bet = game.next_node(flop, "bet_1bb")
 	fold = game.next_node(bet, "fold")
 
 	assert game.is_terminal_node(fold)
