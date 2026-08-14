@@ -117,6 +117,11 @@ def test_restricted_holdem_terminal_utilities_are_zero_sum():
 	root = game.initial_nodes()[0].state
 
 	fold = game.next_node(root, "fold")
+	call = game.next_node(root, "call")
+	raise_call = game.next_node(
+		game.next_node(root, "raise"),
+		"call",
+	)
 	shove_fold = game.next_node(
 		game.next_node(root, "all_in"),
 		"fold",
@@ -126,13 +131,60 @@ def test_restricted_holdem_terminal_utilities_are_zero_sum():
 		"call",
 	)
 
-	for state in (fold, shove_fold, showdown):
+	for state in (
+		fold,
+		call,
+		raise_call,
+		shove_fold,
+		showdown,
+	):
 		assert (
 			game.terminal_node_utility(state, player=0)
 			== -game.terminal_node_utility(state, player=1)
 		)
 
+	assert game.terminal_node_utility(call, player=0) == 2.0
+	assert (
+		game.terminal_node_utility(
+			raise_call,
+			player=0,
+		)
+		== 6.0
+	)
 	assert game.terminal_node_utility(showdown, player=0) == 20.0
+
+
+def test_restricted_holdem_exposes_small_preflop_action_abstraction():
+	game = RestrictedHeadsUpHoldemGame((
+		deal(
+			(
+				card(Rank.ACE, Suit.SPADES),
+				card(Rank.ACE, Suit.HEARTS),
+			),
+			(
+				card(Rank.KING, Suit.SPADES),
+				card(Rank.KING, Suit.HEARTS),
+			),
+		),
+	))
+	root = game.initial_nodes()[0].state
+
+	assert game.legal_actions(root) == (
+		"fold",
+		"call",
+		"raise",
+		"all_in",
+	)
+	assert game.legal_actions(
+		game.next_node(root, "raise")
+	) == (
+		"fold",
+		"call",
+		"all_in",
+	)
+	assert game.is_terminal_node(
+		game.next_node(root, "call")
+	)
 
 
 def test_restricted_holdem_cfr_uses_generic_solver_boundary():

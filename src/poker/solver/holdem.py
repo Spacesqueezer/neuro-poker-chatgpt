@@ -24,8 +24,9 @@ class HeadsUpHoldemNode:
 
 
 class RestrictedHeadsUpHoldemGame:
-	ROOT_ACTIONS = ("fold", "all_in")
-	RESPONSE_ACTIONS = ("fold", "call")
+	ROOT_ACTIONS = ("fold", "call", "raise", "all_in")
+	RAISE_RESPONSE_ACTIONS = ("fold", "call", "all_in")
+	ALL_IN_RESPONSE_ACTIONS = ("fold", "call")
 
 	def __init__(
 		self,
@@ -56,7 +57,10 @@ class RestrictedHeadsUpHoldemGame:
 	def player_to_act(self, state):
 		if state.history == ():
 			return 0
-		if state.history == ("all_in",):
+		if state.history in {
+			("raise",),
+			("all_in",),
+		}:
 			return 1
 		raise ValueError(
 			"Terminal Hold'em node has no acting player"
@@ -65,6 +69,10 @@ class RestrictedHeadsUpHoldemGame:
 	def is_terminal_node(self, state):
 		return state.history in {
 			("fold",),
+			("call",),
+			("raise", "fold"),
+			("raise", "call"),
+			("raise", "all_in"),
 			("all_in", "fold"),
 			("all_in", "call"),
 		}
@@ -75,6 +83,8 @@ class RestrictedHeadsUpHoldemGame:
 
 		if state.history == ("fold",):
 			utility = -float(self.small_blind)
+		elif state.history == ("raise", "fold"):
+			utility = float(self.big_blind)
 		elif state.history == ("all_in", "fold"):
 			utility = float(self.big_blind)
 		else:
@@ -85,8 +95,17 @@ class RestrictedHeadsUpHoldemGame:
 				state.deal.hole_cards[1] + state.deal.board
 			)
 			comparison = compare_hands(first, second)
+			if state.history == ("call",):
+				showdown_stake = self.big_blind
+			elif state.history == ("raise", "call"):
+				showdown_stake = min(
+					self.starting_stack,
+					self.big_blind * 3,
+				)
+			else:
+				showdown_stake = self.starting_stack
 			utility = float(
-				comparison * self.starting_stack
+				comparison * showdown_stake
 			)
 
 		return utility if player == 0 else -utility
@@ -111,8 +130,10 @@ class RestrictedHeadsUpHoldemGame:
 	def legal_actions(self, state):
 		if state.history == ():
 			return self.ROOT_ACTIONS
+		if state.history == ("raise",):
+			return self.RAISE_RESPONSE_ACTIONS
 		if state.history == ("all_in",):
-			return self.RESPONSE_ACTIONS
+			return self.ALL_IN_RESPONSE_ACTIONS
 		return ()
 
 	def next_node(self, state, action):
