@@ -104,7 +104,7 @@ Current direction:
 - record teacher-only labels while baseline agents provide varied opposition;
 - benchmark the teacher before treating imitation learning as an improvement path;
 - a deterministic tabular CFR core now exists on a deliberately tiny Kuhn-poker game to validate regret matching, information-set accounting and average-strategy accumulation independently of the production Hold'em engine;
-- a generic two-player solver-game interface and restricted heads-up Hold'em push/fold adapter now sit above the tabular CFR core, using weighted explicit deals and the real seven-card evaluator; next add chance-sampled/external-sampling MCCFR and richer Hold'em state/action abstraction before using solver output as teacher data.
+- a generic two-player solver-game interface and restricted heads-up Hold'em push/fold adapter now sit above the tabular CFR core, using weighted explicit deals and the real seven-card evaluator; external-sampling MCCFR now updates both players through the generic solver boundary; next add chance-node sampling and richer Hold'em state/action abstraction before using solver output as teacher data.
 
 ## Phase 7 — Advanced Opponent Memory
 

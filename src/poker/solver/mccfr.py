@@ -24,7 +24,11 @@ class ExternalSamplingMCCFR:
 		for _ in range(iterations):
 			for node in self.game.initial_nodes():
 				self.chance_weight = node.probability
-				self._traverse(node.state, 0)
+				for traversing_player in (0, 1):
+					self._traverse(
+						node.state,
+						traversing_player,
+					)
 
 		return MCCFRResult(
 			iterations=iterations,

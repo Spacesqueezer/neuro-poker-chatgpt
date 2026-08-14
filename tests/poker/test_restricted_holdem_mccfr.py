@@ -37,3 +37,15 @@ def test_mccfr_runs_with_restricted_holdem_game():
 	assert result.iterations == 10
 	assert result.average_strategy
 	assert result.cumulative_regret
+
+	player_one_regrets = [
+		regrets
+		for info_set, regrets
+		in result.cumulative_regret.items()
+		if info_set[0] == 1
+	]
+	assert player_one_regrets
+	assert any(
+		any(abs(value) > 0.0 for value in regrets.values())
+		for regrets in player_one_regrets
+	)
