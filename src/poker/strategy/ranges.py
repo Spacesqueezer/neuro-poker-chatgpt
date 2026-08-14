@@ -17,6 +17,18 @@ _POSITION_EXPONENT = {
 
 
 @dataclass(frozen=True)
+class BoardInteraction:
+	pair_or_better: bool = False
+	two_pair_or_better: bool = False
+	trips_or_better: bool = False
+	overpair: bool = False
+	straight: bool = False
+	flush: bool = False
+	straight_draw: bool = False
+	flush_draw: bool = False
+
+
+@dataclass(frozen=True)
 class OpponentRangeState:
 	position: str
 	preflop_calls: int = 0
@@ -65,6 +77,7 @@ class PositionRangeModel:
 			(
 				self._weight(combo) ** exponent
 				* self._evidence_multiplier(combo, range_state)
+				* self._board_evidence_multiplier(combo, state, range_state)
 			)
 			+ 0.002
 			for combo in combos
@@ -180,6 +193,148 @@ class PositionRangeModel:
 	def _aggression_ratio(self, action):
 		pot_before = max(1, action.pot - action.contributed)
 		return action.contributed / pot_before
+
+	def combo_board_interaction(self, combo, state):
+		if state is None or not state.board:
+			return BoardInteraction()
+
+		board_ranks = [self._rank_value(value) for value in state.board]
+		board_suits = [value[-1] for value in state.board]
+		combo_ranks = [card.rank.value for card in combo]
+		combo_suits = [str(card)[-1] for card in combo]
+		all_ranks = board_ranks + combo_ranks
+		all_suits = board_suits + combo_suits
+
+		rank_counts = {
+			rank: all_ranks.count(rank)
+			for rank in set(all_ranks)
+		}
+		pair_count = sum(
+			1
+			for count in rank_counts.values()
+			if count >= 2
+		)
+		max_rank_count = max(rank_counts.values(), default=1)
+		pocket_pair = combo_ranks[0] == combo_ranks[1]
+		overpair = pocket_pair and combo_ranks[0] > max(board_ranks)
+
+		suit_counts = {
+			suit: all_suits.count(suit)
+			for suit in set(all_suits)
+		}
+		max_suit_count = max(suit_counts.values(), default=0)
+		flush = max_suit_count >= 5
+		flush_draw = (
+			len(state.board) < 5
+			and not flush
+			and max_suit_count == 4
+		)
+
+		unique_ranks = set(all_ranks)
+		if 14 in unique_ranks:
+			unique_ranks.add(1)
+
+		straight = any(
+			len(unique_ranks.intersection(range(start, start + 5))) == 5
+			for start in range(1, 11)
+		)
+		straight_draw = (
+			len(state.board) < 5
+			and not straight
+			and any(
+				len(unique_ranks.intersection(range(start, start + 5))) == 4
+				for start in range(1, 11)
+			)
+		)
+
+		return BoardInteraction(
+			pair_or_better=pair_count >= 1,
+			two_pair_or_better=pair_count >= 2,
+			trips_or_better=max_rank_count >= 3,
+			overpair=overpair,
+			straight=straight,
+			flush=flush,
+			straight_draw=straight_draw,
+			flush_draw=flush_draw,
+		)
+
+	def _rank_value(self, value):
+		symbol = value[:-1]
+		if symbol == "A":
+			return 14
+		if symbol == "K":
+			return 13
+		if symbol == "Q":
+			return 12
+		if symbol == "J":
+			return 11
+		return int(symbol)
+
+	def _board_evidence_multiplier(self, combo, state, range_state):
+		if state is None or not state.board:
+			return 1.0
+
+		street = state.street
+		if street not in {"flop", "turn", "river"}:
+			return 1.0
+
+		calls = getattr(range_state, f"{street}_calls")
+		aggression = getattr(range_state, f"{street}_aggression")
+		pressure = min(
+			2.0,
+			getattr(range_state, f"{street}_aggression_ratio"),
+		)
+
+		if calls == 0 and aggression == 0:
+			return 1.0
+
+		interaction = self.combo_board_interaction(combo, state)
+		strong_made = (
+			interaction.trips_or_better
+			or interaction.straight
+			or interaction.flush
+		)
+		medium_made = (
+			interaction.two_pair_or_better
+			or interaction.overpair
+		)
+		weak_made = interaction.pair_or_better
+		draw = interaction.straight_draw or interaction.flush_draw
+		air = not (
+			strong_made
+			or medium_made
+			or weak_made
+			or draw
+		)
+
+		multiplier = 1.0
+
+		if calls:
+			if strong_made:
+				multiplier *= 1.20
+			elif medium_made:
+				multiplier *= 1.15
+			elif weak_made or draw:
+				multiplier *= 1.10
+			elif air:
+				multiplier *= 0.82
+
+		if aggression:
+			if strong_made:
+				multiplier *= 1.0 + 0.45 * pressure
+			elif medium_made:
+				multiplier *= 1.0 + 0.30 * pressure
+			elif weak_made:
+				multiplier *= 1.0 + 0.16 * pressure
+			elif draw and street in {"flop", "turn"}:
+				multiplier *= 1.0 + 0.18 * pressure
+			elif air:
+				multiplier *= max(
+					0.35,
+					1.0 - 0.22 * pressure,
+				)
+
+		return max(0.05, multiplier)
 
 	def _evidence_multiplier(self, combo, range_state):
 		first, second = combo
