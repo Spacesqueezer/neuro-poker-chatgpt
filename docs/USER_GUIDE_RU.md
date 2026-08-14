@@ -588,6 +588,39 @@ final_iterations_per_second
 
 Большие convergence-прогоны запускаются вручную через этот tool и не должны переноситься в обычный pytest.
 
+## 8.2. Экспорт MCCFR strategy
+
+Сохранить обученную average strategy restricted Hold'em в отдельный JSON-артефакт:
+
+```text
+python tools/export_mccfr_strategy.py --scenario equal --iterations 100 --seed 42 --output artifacts/mccfr_equal_strategy.json
+```
+
+Для asymmetric-сценария:
+
+```text
+python tools/export_mccfr_strategy.py --scenario asymmetric --iterations 100 --seed 42 --output artifacts/mccfr_asymmetric_strategy.json
+```
+
+`--output` обязателен. `--scenario`, `--iterations` и `--seed` имеют тот же смысл, что и в MCCFR benchmark. По умолчанию используются `equal`, `100`, `42`.
+
+Strategy artifact содержит:
+
+```text
+format_version
+solver
+iterations
+seed
+benchmark
+action_abstraction
+information_set_count
+average_strategy
+```
+
+Каждая запись `average_strategy` содержит сериализованный information set и вероятности действий. В information set попадают только hole cards действующего игрока и публичное состояние solver'а; скрытые карты соперника туда не записываются.
+
+Команда сама выполняет MCCFR training, поэтому большие значения `--iterations` являются opt-in тяжёлой операцией и не входят в обычный pytest/NeuroPatch validation.
+
 ## 9. NeuroPatch
 
 Обычное применение скачанного патча:

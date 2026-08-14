@@ -144,3 +144,15 @@ When a restricted Hold'em betting sequence closes and either player's commitment
 
 Reason:
 The restricted solver already knows the complete fixed board in its chance deal, while information sets reveal only cards public before a decision. Once no further betting decision is possible, artificial street actions add duplicate information sets and strategically meaningless branches. A terminal runout preserves showdown utility and card-visibility guarantees without importing production-engine all-in machinery.
+
+
+## ADR-013: Solver Strategy Artifacts Serialize Information Sets Explicitly
+
+Date:
+2026-08-14
+
+Decision:
+Restricted-Hold'em MCCFR average strategies are exported through a versioned JSON boundary. Each information set is serialized field-by-field as acting player, that player's hole cards, public street/board/action history, commitments and starting stacks. Artifact metadata records solver/configuration details including seed, iterations, benchmark scenario, blinds and `HoldemActionAbstraction`.
+
+Reason:
+Generic tuple/repr serialization would be brittle and could accidentally expose fields that are not part of the public information boundary. Explicit serialization makes artifacts deterministic, reviewable and safe from opponent-hole-card leakage while keeping them independent from production agent classes.
