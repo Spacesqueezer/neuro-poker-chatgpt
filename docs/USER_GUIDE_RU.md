@@ -621,6 +621,50 @@ average_strategy
 
 Команда сама выполняет MCCFR training, поэтому большие значения `--iterations` являются opt-in тяжёлой операцией и не входят в обычный pytest/NeuroPatch validation.
 
+## 8.3. Проверка coverage экспортированной solver policy
+
+Проверить уже сохранённый strategy artifact без повторного MCCFR training:
+
+```text
+python tools/evaluate_solver_policy.py --strategy artifacts/mccfr_equal_strategy.json
+```
+
+Сохранить тот же JSON-отчёт:
+
+```text
+python tools/evaluate_solver_policy.py --strategy artifacts/mccfr_equal_strategy.json --output artifacts/mccfr_equal_policy_evaluation.json
+```
+
+`--strategy` обязателен. Сценарий и конфигурация стеков берутся из самого strategy artifact. Перед обходом harness проверяет совпадение стартовых стеков, блайндов и `HoldemActionAbstraction` с текущим benchmark-сценарием.
+
+Evaluation обходит всё конечное restricted Hold'em дерево по всем legal branches, а не только одну выбранную policy-траекторию. В отчёте есть:
+
+```text
+evaluation_version
+scenario
+starting_stacks
+stored_information_sets
+decision_nodes
+terminal_nodes
+unique_information_sets
+exact_action_set_nodes
+reconciled_action_set_nodes
+missing_information_set_fallback_nodes
+zero_overlap_fallback_nodes
+covered_nodes
+fallback_nodes
+coverage_rate
+unique_covered_information_sets
+unique_fallback_information_sets
+information_set_coverage_rate
+selected_actions
+max_depth
+```
+
+`exact_action_set_nodes` означает, что сохранённый набор действий точно совпал с текущими legal actions. `reconciled_action_set_nodes` означает, что policy смогла отфильтровать/перенормировать сохранённую стратегию без fallback. Missing information set или нулевое пересечение с legal actions учитываются как fallback.
+
+Эта команда не обучает solver и обычно является дешёвой проверкой совместимости/coverage. Она не запускает production Arena.
+
 ## 9. NeuroPatch
 
 Обычное применение скачанного патча:

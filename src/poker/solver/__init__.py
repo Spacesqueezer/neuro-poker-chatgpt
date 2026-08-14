@@ -4,6 +4,11 @@ from poker.solver.cfr import (
 	KuhnPokerGame,
 	RegretMatching,
 )
+from poker.solver.evaluation import (
+	POLICY_EVALUATION_VERSION,
+	evaluate_restricted_policy,
+	validate_policy_game_compatibility,
+)
 from poker.solver.export import (
 	STRATEGY_EXPORT_VERSION,
 	StrategyLookup,
@@ -32,6 +37,7 @@ __all__ = [
 	"HoldemActionAbstraction",
 	"InitialNode",
 	"KuhnPokerGame",
+	"POLICY_EVALUATION_VERSION",
 	"RegretMatching",
 	"RestrictedHeadsUpHoldemGame",
 	"RestrictedSolverPolicy",
@@ -41,8 +47,10 @@ __all__ = [
 	"ExternalSamplingMCCFR",
 	"MCCFRResult",
 	"build_strategy_export",
+	"evaluate_restricted_policy",
 	"load_strategy_export",
 	"serialize_information_set",
+	"validate_policy_game_compatibility",
 	"validate_strategy_export",
 	"write_strategy_export",
 ]
