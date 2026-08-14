@@ -1,6 +1,12 @@
+import json
+
 import pytest
 
-from tools.benchmark_mccfr import run_benchmark, strategy_distance
+from tools.benchmark_mccfr import (
+	run_benchmark,
+	strategy_distance,
+	write_report,
+)
 
 
 def test_strategy_distance_is_zero_for_equal_strategies():
@@ -37,3 +43,17 @@ def test_quality_harness_rejects_single_iteration():
 		match="iterations must be greater than 1",
 	):
 		run_benchmark(1, 42)
+
+
+def test_quality_harness_writes_reusable_json_report(tmp_path):
+	report = {
+		"benchmark_version": 1,
+		"iterations": 100,
+		"seed": 42,
+		"information_sets": 123,
+	}
+	output = tmp_path / "solver" / "baseline.json"
+
+	write_report(report, output)
+
+	assert json.loads(output.read_text(encoding="utf-8")) == report

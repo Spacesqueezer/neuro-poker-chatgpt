@@ -1,6 +1,7 @@
 import argparse
 import json
 import time
+from pathlib import Path
 
 from poker.cards.card import Card
 from poker.enums import Rank, Suit
@@ -87,6 +88,7 @@ def run_benchmark(iterations, seed):
 	final_seconds = time.perf_counter() - started
 
 	return {
+		"benchmark_version": 1,
 		"iterations": iterations,
 		"seed": seed,
 		"first_checkpoint_iterations": first_iterations,
@@ -97,18 +99,36 @@ def run_benchmark(iterations, seed):
 		),
 		"first_checkpoint_seconds": round(first_seconds, 6),
 		"final_seconds": round(final_seconds, 6),
+		"final_iterations_per_second": round(
+			iterations / final_seconds,
+			6,
+		) if final_seconds > 0.0 else None,
 	}
+
+
+def write_report(report, output):
+	path = Path(output)
+	path.parent.mkdir(parents=True, exist_ok=True)
+	path.write_text(
+		json.dumps(report, indent=2) + "\n",
+		encoding="utf-8",
+	)
 
 
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--iterations", type=int, default=100)
 	parser.add_argument("--seed", type=int, default=42)
+	parser.add_argument("--output")
 	args = parser.parse_args()
+
+	report = run_benchmark(args.iterations, args.seed)
+	if args.output:
+		write_report(report, args.output)
 
 	print(
 		json.dumps(
-			run_benchmark(args.iterations, args.seed),
+			report,
 			indent=2,
 		)
 	)

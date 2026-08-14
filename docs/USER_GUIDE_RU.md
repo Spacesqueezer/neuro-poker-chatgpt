@@ -519,6 +519,54 @@ manifest.json
 
 Генерация аварийно завершается, если Arena сообщает failed hands.
 
+## 8.1. MCCFR benchmark restricted Hold'em
+
+Этот benchmark — отдельная opt-in проверка качества и скорости solver'а. Он намеренно не запускается обычным `pytest`, потому что увеличение числа MCCFR-итераций быстро делает проверку тяжёлой.
+
+Канонический небольшой baseline:
+
+```text
+python tools/benchmark_mccfr.py --iterations 100 --seed 42 --output artifacts/mccfr_baseline.json
+```
+
+Аргументы:
+
+```text
+--iterations N
+```
+
+Количество MCCFR-итераций финального checkpoint. Должно быть больше 1. По умолчанию 100.
+
+```text
+--seed N
+```
+
+Seed для воспроизводимого sampling. По умолчанию 42.
+
+```text
+--output PATH
+```
+
+Необязательный путь для сохранения того же JSON-отчёта, который печатается в stdout.
+
+В отчёте есть:
+
+```text
+benchmark_version
+iterations
+seed
+first_checkpoint_iterations
+information_sets
+strategy_distance_from_first_checkpoint
+first_checkpoint_seconds
+final_seconds
+final_iterations_per_second
+```
+
+Для сравнения solver-изменений используй одинаковые `--iterations` и `--seed`. `information_sets` и `strategy_distance_from_first_checkpoint` являются основными сравнительными quality-полями. Время и throughput зависят от компьютера, поэтому их нужно сравнивать как performance baseline на одной и той же машине, а не как жёсткий тестовый порог.
+
+Большие convergence-прогоны запускаются вручную через этот tool и не должны переноситься в обычный pytest.
+
 ## 9. NeuroPatch
 
 Обычное применение скачанного патча:
