@@ -13,7 +13,13 @@ from poker.solver import (
 )
 
 
-def create_benchmark_game():
+BENCHMARK_SCENARIOS = {
+	"equal": (20, 20),
+	"asymmetric": (8, 20),
+}
+
+
+def create_benchmark_game(scenario="equal"):
 	deal = HeadsUpHoldemDeal(
 		hole_cards=(
 			(
@@ -34,8 +40,16 @@ def create_benchmark_game():
 		),
 	)
 
+	try:
+		starting_stacks = BENCHMARK_SCENARIOS[scenario]
+	except KeyError as error:
+		raise ValueError(
+			f"unknown benchmark scenario: {scenario}"
+		) from error
+
 	return RestrictedHeadsUpHoldemGame(
 		(deal,),
+		starting_stacks=starting_stacks,
 		action_abstraction=HoldemActionAbstraction(
 			postflop_bet_sizes_bb=(1, 2),
 			postflop_raise_increment_multiplier=2,
@@ -66,11 +80,11 @@ def strategy_distance(first, second):
 	return total / count if count else 0.0
 
 
-def run_benchmark(iterations, seed):
+def run_benchmark(iterations, seed, scenario="equal"):
 	if iterations <= 1:
 		raise ValueError("iterations must be greater than 1")
 
-	game = create_benchmark_game()
+	game = create_benchmark_game(scenario)
 	first_iterations = max(1, iterations // 2)
 
 	started = time.perf_counter()
@@ -88,7 +102,9 @@ def run_benchmark(iterations, seed):
 	final_seconds = time.perf_counter() - started
 
 	return {
-		"benchmark_version": 1,
+		"benchmark_version": 2,
+		"scenario": scenario,
+		"starting_stacks": list(game.starting_stacks),
 		"iterations": iterations,
 		"seed": seed,
 		"first_checkpoint_iterations": first_iterations,
@@ -119,10 +135,19 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--iterations", type=int, default=100)
 	parser.add_argument("--seed", type=int, default=42)
+	parser.add_argument(
+		"--scenario",
+		choices=tuple(BENCHMARK_SCENARIOS),
+		default="equal",
+	)
 	parser.add_argument("--output")
 	args = parser.parse_args()
 
-	report = run_benchmark(args.iterations, args.seed)
+	report = run_benchmark(
+		args.iterations,
+		args.seed,
+		args.scenario,
+	)
 	if args.output:
 		write_report(report, args.output)
 

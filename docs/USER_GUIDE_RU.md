@@ -523,13 +523,32 @@ manifest.json
 
 Этот benchmark — отдельная opt-in проверка качества и скорости solver'а. Он намеренно не запускается обычным `pytest`, потому что увеличение числа MCCFR-итераций быстро делает проверку тяжёлой.
 
-Канонический небольшой baseline:
+Канонический небольшой equal-stack baseline:
 
 ```text
-python tools/benchmark_mccfr.py --iterations 100 --seed 42 --output artifacts/mccfr_baseline.json
+python tools/benchmark_mccfr.py --scenario equal --iterations 100 --seed 42 --output artifacts/mccfr_equal_baseline.json
+```
+
+Канонический asymmetric-stack baseline:
+
+```text
+python tools/benchmark_mccfr.py --scenario asymmetric --iterations 100 --seed 42 --output artifacts/mccfr_asymmetric_baseline.json
+```
+
+Сценарии фиксированы и воспроизводимы:
+
+```text
+equal       -> starting_stacks = [20, 20]
+asymmetric  -> starting_stacks = [8, 20]
 ```
 
 Аргументы:
+
+```text
+--scenario NAME
+```
+
+Выбор конфигурации стеков. Допустимые значения: `equal` и `asymmetric`. По умолчанию `equal`.
 
 ```text
 --iterations N
@@ -553,6 +572,8 @@ Seed для воспроизводимого sampling. По умолчанию 4
 
 ```text
 benchmark_version
+scenario
+starting_stacks
 iterations
 seed
 first_checkpoint_iterations
@@ -563,7 +584,7 @@ final_seconds
 final_iterations_per_second
 ```
 
-Для сравнения solver-изменений используй одинаковые `--iterations` и `--seed`. `information_sets` и `strategy_distance_from_first_checkpoint` являются основными сравнительными quality-полями. Время и throughput зависят от компьютера, поэтому их нужно сравнивать как performance baseline на одной и той же машине, а не как жёсткий тестовый порог.
+Для сравнения solver-изменений используй одинаковые `--scenario`, `--iterations` и `--seed`. `scenario`, `starting_stacks`, `information_sets` и `strategy_distance_from_first_checkpoint` являются основными сравнительными конфигурационными/quality-полями. Время и throughput зависят от компьютера, поэтому их нужно сравнивать как performance baseline на одной и той же машине, а не как жёсткий тестовый порог.
 
 Большие convergence-прогоны запускаются вручную через этот tool и не должны переноситься в обычный pytest.
 
