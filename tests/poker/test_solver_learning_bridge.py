@@ -1,8 +1,16 @@
+import json
+
+import pytest
+
 from poker.solver import (
 	MCCFRResult,
+	build_learning_bridge_artifact,
 	build_learning_bridge_records,
 	build_strategy_export,
 	build_teacher_record_export,
+	load_learning_bridge_artifact,
+	validate_learning_bridge_artifact,
+	write_learning_bridge_artifact,
 )
 from tools.benchmark_mccfr import create_benchmark_game
 
@@ -164,3 +172,109 @@ def test_learning_bridge_derives_player_relative_stacks_for_player_one():
 	assert observation.opponent_starting_stack == 20
 	assert observation.opponent_total_contribution == 6
 	assert observation.opponent_remaining_chips == 14
+
+
+def test_learning_bridge_artifact_is_deterministic_and_round_trips(tmp_path):
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	teacher = build_teacher(
+		game,
+		root,
+		{
+			"fold": 0.1,
+			"call": 0.2,
+			"raise": 0.6,
+			"all_in": 0.1,
+		},
+	)
+
+	first = build_learning_bridge_artifact(teacher)
+	second = build_learning_bridge_artifact(teacher)
+
+	assert first == second
+	assert first["format_version"] == 1
+	assert first["observation_compatibility_version"] == 1
+	assert first["target_actions"] == [
+		"fold",
+		"check",
+		"call",
+		"bet",
+		"raise",
+		"all_in",
+	]
+	assert first["record_count"] == teacher["record_count"]
+	assert first["source_teacher"]["source_strategy"] == teacher[
+		"source_strategy"
+	]
+
+	output = tmp_path / "bridge.json"
+	write_learning_bridge_artifact(first, output)
+	assert load_learning_bridge_artifact(output) == first
+	assert json.loads(
+		output.read_text(encoding="utf-8")
+	) == first
+
+
+def test_learning_bridge_artifact_rejects_omitted_feature_drift():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	teacher = build_teacher(
+		game,
+		root,
+		{
+			"fold": 1.0,
+		},
+	)
+	payload = build_learning_bridge_artifact(teacher)
+	payload["omitted_production_features"].append(
+		"future.fake_feature"
+	)
+
+	with pytest.raises(
+		ValueError,
+		match="omitted production features mismatch",
+	):
+		validate_learning_bridge_artifact(payload)
+
+
+def test_learning_bridge_artifact_rejects_probability_corruption():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	teacher = build_teacher(
+		game,
+		root,
+		{
+			"fold": 0.1,
+			"call": 0.2,
+			"raise": 0.6,
+			"all_in": 0.1,
+		},
+	)
+	payload = build_learning_bridge_artifact(teacher)
+	payload["records"][0]["target"]["probabilities"][0] = 0.5
+
+	with pytest.raises(
+		ValueError,
+		match="probabilities must sum to 1",
+	):
+		validate_learning_bridge_artifact(payload)
+
+
+def test_learning_bridge_artifact_rejects_record_count_mismatch():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	teacher = build_teacher(
+		game,
+		root,
+		{
+			"fold": 1.0,
+		},
+	)
+	payload = build_learning_bridge_artifact(teacher)
+	payload["record_count"] += 1
+
+	with pytest.raises(
+		ValueError,
+		match="record_count mismatch",
+	):
+		validate_learning_bridge_artifact(payload)

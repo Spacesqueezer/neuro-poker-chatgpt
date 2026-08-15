@@ -192,3 +192,16 @@ Strategy export format version 2 stores versioned chance-space metadata. Its ide
 
 Reason:
 Stacks, blinds, action abstraction and scenario names do not fully define the game solved by MCCFR. Changing hidden deals, board runouts, weights or deal order can change the sampled extensive-form game while leaving those visible fields unchanged. Binding artifacts to the exact chance model prevents silent cross-game strategy reuse. Hidden cards remain compatibility metadata only and are not added to information sets or policy observations.
+
+
+## ADR-017: Learning Bridge Artifacts Preserve Missing Semantics Explicitly
+
+Date:
+2026-08-15
+
+Decision:
+The solver-to-learning bridge is persisted as its own versioned research artifact rather than as a production `LearningSample`. Artifact metadata binds records to the observation-compatibility version, stable six-category target action schema, exact omitted production feature groups and source teacher provenance. Loading validates those contracts strictly.
+
+Reason:
+The restricted solver still lacks several production observation semantics. Serializing a bridge as if it were a complete production sample would force fabricated values or hide schema loss. A separate validated artifact allows reproducible inspection and comparison while keeping unavailable features explicit until the solver state model is intentionally expanded.
+

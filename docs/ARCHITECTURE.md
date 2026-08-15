@@ -429,6 +429,8 @@ A learning-neutral target boundary now sits after validated teacher records but 
 
 `SolverLearningBridgeRecord` is the first deliberately incomplete bridge across that boundary. Its `SolverBridgeObservation` carries only compatible semantics: acting solver player index, street/cards/public board, player-relative public stack caps, total commitments/remaining chips, live heads-up opponent presence and structurally absent extra opponent slots. The record pairs that observation with `SolverLearningTarget` and carries `omitted_production_features` as explicit metadata. It does not expose a production-sized vector and has no dependency on `poker.learning`, so unavailable semantics remain impossible to mistake for real zero-valued observations.
 
+Bridge persistence is a separate versioned solver research boundary. Learning bridge artifact v1 stores the observation-compatibility version, stable target action schema, exact omitted production feature list, teacher provenance and deterministic serialized records. Loading validates the complete boundary rather than reconstructing missing semantics. This lets bridge datasets be inspected/reproduced while preserving a hard distinction between solver-compatible fields and production features that the solver state model does not yet contain.
+
 Teacher quality is measured outside the agent:
 
 ```text
