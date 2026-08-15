@@ -272,3 +272,14 @@ Solver learning-bridge records are converted into versioned `SolverSupervisedSam
 Reason:
 `LearningSample` represents one actually chosen action and optional sizing, while solver supervision is a soft policy target over all legal action categories. Reusing the hard-target schema would discard information or overload fields with different semantics. A separate boundary preserves teacher information without connecting solver policy to Arena or committing the project to a training implementation yet.
 
+## ADR-024: Solver Supervised Export Is Deterministic and Provenance-Bearing
+
+Date:
+2026-08-15
+
+Decision:
+A dedicated CLI exports solver-supervised JSONL from an existing validated teacher artifact plus explicit encoded `player_0`/`player_1` profiles. The output JSONL is rewritten from a clean path on every run, and a separate versioned manifest records the sample schema version/count, canonical profile feature names, dataset analysis and the complete teacher source-strategy metadata.
+
+Reason:
+Dataset generation must be reproducible and traceable to the exact solver artifact that produced its soft targets. Keeping profiles explicit avoids persistence coupling, while a manifest prevents standalone JSONL files from losing provenance. This remains an export boundary only; training and Arena policy integration are deliberately deferred.
+

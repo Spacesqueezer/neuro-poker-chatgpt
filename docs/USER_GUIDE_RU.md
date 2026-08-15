@@ -4,6 +4,30 @@
 
 Все команды ниже предполагают запуск из корня проекта.
 
+## Экспорт solver-supervised датасета
+
+После получения teacher artifact можно собрать отдельный JSONL с soft-target распределением solver по шести категориям действий:
+
+```text
+python tools/export_solver_supervised_dataset.py --teacher artifacts/teacher.json --profiles artifacts/solver_profiles.json --output artifacts/solver_supervised.jsonl
+```
+
+Файл `--profiles` должен быть JSON-объектом с двумя ключами `player_0` и `player_1`; значение каждого ключа — массив ровно из 22 чисел в порядке `OpponentProfileEncoder.FEATURE_NAMES`. Профили должны быть заранее закодированы вызывающей стороной; exporter не обращается к БД и не выбирает profile scope.
+
+По умолчанию manifest сохраняется рядом как `<output>.manifest.json`, например:
+
+```text
+artifacts/solver_supervised.jsonl.manifest.json
+```
+
+Другой путь можно задать явно:
+
+```text
+python tools/export_solver_supervised_dataset.py --teacher artifacts/teacher.json --profiles artifacts/solver_profiles.json --output artifacts/solver_supervised.jsonl --manifest-output artifacts/solver_supervised_manifest.json
+```
+
+Exporter перед записью удаляет существующий output, поэтому повторный запуск с теми же teacher/profile inputs не дописывает дубликаты. Manifest содержит source-strategy provenance, версию sample schema, число записей, имена profile features и анализ итогового JSONL. Этот workflow только готовит supervised data; обучение модели и подключение solver policy к Arena пока не выполняются.
+
 ## 1. Подготовка окружения
 
 Проект требует Python 3.12 или новее.
