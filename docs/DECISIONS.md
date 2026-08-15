@@ -217,3 +217,14 @@ Restricted Hold'em solver nodes store both total hand commitments and separate s
 Reason:
 Total commitments alone cannot distinguish production-style current bets, target bet and collected pot. Keeping those semantics explicit inside the finite solver state lets the learning bridge derive them honestly without importing mutable production betting-engine state or reconstructing them heuristically from action history.
 
+## ADR-019: Solver Minimum Raise Is Explicit Public Street State
+
+Date:
+2026-08-15
+
+Decision:
+Restricted Hold'em solver nodes store `minimum_raise` independently from the finite action abstraction. It starts at `big_blind`, resets to `big_blind` when a betting street closes, and after a full restricted raise becomes that raise's increment over the previous street target. The field is part of the solver information set and strategy artifact format version 4, and the learning bridge exposes it as production-style `table.minimum_raise`.
+
+Reason:
+Minimum-raise size is public betting state and affects production observation semantics even when the restricted solver deliberately offers only a finite set of actions. Storing it explicitly avoids reconstructing semantics from history or importing the production betting engine, while keeping action-tree size unchanged.
+

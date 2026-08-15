@@ -74,6 +74,7 @@ def test_learning_bridge_contains_only_proven_observation_semantics():
 	assert observation.opponent_folded is False
 	assert observation.table_pot == 0
 	assert observation.table_target_bet == 2
+	assert observation.table_minimum_raise == 2
 	assert observation.hero_current_bet == 1
 	assert observation.opponent_current_bet == 2
 	assert observation.absent_opponent_slots == (
@@ -135,16 +136,15 @@ def test_learning_bridge_lists_unavailable_production_features_explicitly():
 	record = build_learning_bridge_records(teacher)[0]
 
 	assert record.omitted_production_features == (
-		"table.minimum_raise",
 		"opponent.0.profile.*",
 		"metadata.acting_player",
 		"metadata.opponent_order",
 	)
 	assert record.observation.table_pot == 0
 	assert record.observation.table_target_bet == 2
+	assert record.observation.table_minimum_raise == 2
 	assert record.observation.hero_current_bet == 1
 	assert record.observation.opponent_current_bet == 2
-	assert not hasattr(record.observation, "minimum_raise")
 	assert not hasattr(record.observation, "opponent_profile")
 
 

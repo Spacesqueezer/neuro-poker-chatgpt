@@ -135,11 +135,12 @@ def build_observation_compatibility_report():
 		),
 		ObservationCompatibilityEntry(
 			production_features=("table.minimum_raise",),
-			status="unavailable",
-			solver_sources=("history",),
+			status="derived",
+			solver_sources=("minimum_raise",),
 			reason=(
-				"The restricted solver still models finite raise sizing "
-				"without production minimum-raise state."
+				"Restricted solver state now carries the public full-raise "
+				"increment explicitly and resets it to the big blind on "
+				"each new street."
 			),
 		),
 		ObservationCompatibilityEntry(

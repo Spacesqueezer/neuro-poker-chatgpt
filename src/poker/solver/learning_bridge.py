@@ -35,6 +35,7 @@ class SolverBridgeObservation:
 	opponent_folded: bool
 	table_pot: int
 	table_target_bet: int
+	table_minimum_raise: int
 	hero_current_bet: int
 	opponent_current_bet: int
 	absent_opponent_slots: tuple[int, ...]
@@ -241,6 +242,9 @@ def _serialize_bridge_record(record):
 			"opponent_folded": record.observation.opponent_folded,
 			"table_pot": record.observation.table_pot,
 			"table_target_bet": record.observation.table_target_bet,
+			"table_minimum_raise": (
+				record.observation.table_minimum_raise
+			),
 			"hero_current_bet": record.observation.hero_current_bet,
 			"opponent_current_bet": (
 				record.observation.opponent_current_bet
@@ -354,6 +358,7 @@ def _validate_serialized_bridge_observation(observation):
 		"opponent_folded",
 		"table_pot",
 		"table_target_bet",
+		"table_minimum_raise",
 		"hero_current_bet",
 		"opponent_current_bet",
 		"absent_opponent_slots",
@@ -431,6 +436,13 @@ def _validate_serialized_bridge_observation(observation):
 	):
 		raise ValueError(
 			"learning bridge target bet mismatch"
+		)
+	if (
+		not isinstance(observation["table_minimum_raise"], int)
+		or observation["table_minimum_raise"] <= 0
+	):
+		raise ValueError(
+			"learning bridge table_minimum_raise is invalid"
 		)
 
 	if observation["absent_opponent_slots"] != list(range(1, 8)):
@@ -577,6 +589,7 @@ def _bridge_observation(target):
 		opponent_folded=False,
 		table_pot=info["collected_pot"],
 		table_target_bet=max(info["street_commitments"]),
+		table_minimum_raise=info["minimum_raise"],
 		hero_current_bet=info["street_commitments"][player],
 		opponent_current_bet=info["street_commitments"][opponent],
 		absent_opponent_slots=tuple(range(1, 8)),

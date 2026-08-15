@@ -235,6 +235,8 @@ def test_restricted_holdem_exposes_small_preflop_action_abstraction():
 		"call",
 		"all_in",
 	)
+	shove = game.next_node(root, "all_in")
+	assert shove.minimum_raise == 18
 	flop = game.next_node(root, "call")
 	assert not game.is_terminal_node(flop)
 	assert flop.street == "flop"
@@ -298,28 +300,33 @@ def test_restricted_holdem_tracks_player_commitments_explicitly():
 	assert root.street_commitments == (1, 2)
 	assert root.collected_pot == 0
 	assert root.target_bet == 2
+	assert root.minimum_raise == 2
 
 	raised = game.next_node(root, "raise")
 	assert raised.commitments == (6, 2)
 	assert raised.street_commitments == (6, 2)
+	assert raised.minimum_raise == 4
 
 	flop = game.next_node(raised, "call")
 	assert flop.commitments == (6, 6)
 	assert flop.street_commitments == (0, 0)
 	assert flop.collected_pot == 12
 	assert flop.target_bet == 0
+	assert flop.minimum_raise == 2
 
 	bet = game.next_node(flop, "bet_2bb")
 	assert bet.commitments == (6, 10)
 	assert bet.street_commitments == (0, 4)
 	assert bet.collected_pot == 12
 	assert bet.target_bet == 4
+	assert bet.minimum_raise == 2
 
 	turn = game.next_node(bet, "call")
 	assert turn.commitments == (10, 10)
 	assert turn.street_commitments == (0, 0)
 	assert turn.collected_pot == 20
 	assert turn.matched_stake == 10
+	assert turn.minimum_raise == 2
 
 
 def test_restricted_holdem_postflop_bet_call_tracks_matched_stake():
@@ -382,6 +389,7 @@ def test_restricted_holdem_allows_one_postflop_raise():
 	raised = game.next_node(bet, "raise")
 
 	assert raised.commitments == (6, 4)
+	assert raised.minimum_raise == 2
 	assert game.legal_actions(raised) == (
 		"fold",
 		"call",

@@ -1,0 +1,283 @@
+{
+  "patch_id": "solver_minimum_raise_state_v5",
+  "goal": "Atomically add explicit solver-local minimum_raise public street state to restricted heads-up Hold'em, including full preflop all-in raises, serialize it in strategy artifact format v4, expose table.minimum_raise through the learning bridge, update observation compatibility, and synchronize all affected tests/docs. This supersedes failed v3/v4 attempts and targets the unchanged remote ai-development state.",
+  "allowed_files": [
+    "src/poker/solver/holdem.py",
+    "src/poker/solver/export.py",
+    "src/poker/solver/learning_bridge.py",
+    "src/poker/solver/observation_compatibility.py",
+    "tests/poker/test_restricted_holdem_solver.py",
+    "tests/poker/test_solver_strategy_export.py",
+    "tests/poker/test_solver_observation_compatibility.py",
+    "tests/poker/test_solver_learning_bridge.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/DECISIONS.md",
+    "docs/ROADMAP.md",
+    "tests/poker/test_solver_learning_target.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\tcollected_pot: int = 0\n\tstarting_stacks: tuple[int, int] = (20, 20)\n\tshowdown_runout: bool = False\n",
+      "new": "\tcollected_pot: int = 0\n\tminimum_raise: int = 2\n\tstarting_stacks: tuple[int, int] = (20, 20)\n\tshowdown_runout: bool = False\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\t\tcollected_pot=0,\n\t\t\t\t\tstarting_stacks=self.starting_stacks,\n",
+      "new": "\t\t\t\t\tcollected_pot=0,\n\t\t\t\t\tminimum_raise=self.big_blind,\n\t\t\t\t\tstarting_stacks=self.starting_stacks,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\tstate.street_commitments,\n\t\t\tstate.collected_pot,\n\t\t\tstate.starting_stacks,\n",
+      "new": "\t\t\tstate.street_commitments,\n\t\t\tstate.collected_pot,\n\t\t\tstate.minimum_raise,\n\t\t\tstate.starting_stacks,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\tcommitments = list(state.commitments)\n\t\tstreet_commitments = list(state.street_commitments)\n\n\t\tif state.street == \"preflop\":\n",
+      "new": "\t\tcommitments = list(state.commitments)\n\t\tstreet_commitments = list(state.street_commitments)\n\t\tminimum_raise = state.minimum_raise\n\n\t\tif state.street == \"preflop\":\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\telif action == \"raise\":\n\t\t\t\ttarget = self._preflop_raise_target(actor)\n\t\t\t\tcommitments[actor] = target\n\t\t\t\tstreet_commitments[actor] = target\n",
+      "new": "\t\t\telif action == \"raise\":\n\t\t\t\tprevious_target = max(street_commitments)\n\t\t\t\ttarget = self._preflop_raise_target(actor)\n\t\t\t\tcommitments[actor] = target\n\t\t\t\tstreet_commitments[actor] = target\n\t\t\t\tminimum_raise = target - previous_target\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\telif action == \"all_in\":\n\t\t\t\tcommitments[actor] = self._stack_for(actor)\n\t\t\t\tstreet_commitments[actor] = commitments[actor]\n\t\t\t\tif state.street_history == (\"raise\",):\n",
+      "new": "\t\t\telif action == \"all_in\":\n\t\t\t\tprevious_target = max(street_commitments)\n\t\t\t\tcommitments[actor] = self._stack_for(actor)\n\t\t\t\tstreet_commitments[actor] = commitments[actor]\n\t\t\t\traise_increment = (\n\t\t\t\t\tstreet_commitments[actor] - previous_target\n\t\t\t\t)\n\t\t\t\tif raise_increment >= minimum_raise:\n\t\t\t\t\tminimum_raise = raise_increment\n\t\t\t\tif state.street_history == (\"raise\",):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\tcollected_pot=state.collected_pot,\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\n\t\tif self._is_postflop_bet_action(action):\n",
+      "new": "\t\t\t\tcollected_pot=state.collected_pot,\n\t\t\t\tminimum_raise=minimum_raise,\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\n\t\tif self._is_postflop_bet_action(action):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\telif action == \"raise\":\n\t\t\ttarget = self._postflop_raise_target(\n\t\t\t\tstate,\n\t\t\t\tactor,\n\t\t\t)\n\t\t\tdelta = target - commitments[actor]\n\t\t\tcommitments[actor] = target\n\t\t\tstreet_commitments[actor] += delta\n",
+      "new": "\t\telif action == \"raise\":\n\t\t\tprevious_target = max(street_commitments)\n\t\t\ttarget = self._postflop_raise_target(\n\t\t\t\tstate,\n\t\t\t\tactor,\n\t\t\t)\n\t\t\tdelta = target - commitments[actor]\n\t\t\tcommitments[actor] = target\n\t\t\tstreet_commitments[actor] += delta\n\t\t\tminimum_raise = (\n\t\t\t\tstreet_commitments[actor] - previous_target\n\t\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\tcollected_pot=state.collected_pot,\n\t\t\tstarting_stacks=state.starting_stacks,\n\t\t)\n\n\tdef _folded_player(self, state):\n",
+      "new": "\t\t\tcollected_pot=state.collected_pot,\n\t\t\tminimum_raise=minimum_raise,\n\t\t\tstarting_stacks=state.starting_stacks,\n\t\t)\n\n\tdef _folded_player(self, state):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\tcollected_pot=sum(commitments),\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t\tshowdown_runout=True,\n",
+      "new": "\t\t\t\tcollected_pot=sum(commitments),\n\t\t\t\tminimum_raise=self.big_blind,\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t\tshowdown_runout=True,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\tcollected_pot=sum(commitments),\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\t\treturn HeadsUpHoldemNode(\n",
+      "new": "\t\t\t\tcollected_pot=sum(commitments),\n\t\t\t\tminimum_raise=self.big_blind,\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\t\treturn HeadsUpHoldemNode(\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\tcollected_pot=sum(commitments),\n\t\t\tstarting_stacks=state.starting_stacks,\n\t\t)\n\n\tdef _any_player_all_in(self, commitments):\n",
+      "new": "\t\t\tcollected_pot=sum(commitments),\n\t\t\tminimum_raise=self.big_blind,\n\t\t\tstarting_stacks=state.starting_stacks,\n\t\t)\n\n\tdef _any_player_all_in(self, commitments):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "STRATEGY_EXPORT_VERSION = 3\n",
+      "new": "STRATEGY_EXPORT_VERSION = 4\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "\t\tstreet_commitments,\n\t\tcollected_pot,\n\t\tstarting_stacks,\n",
+      "new": "\t\tstreet_commitments,\n\t\tcollected_pot,\n\t\tminimum_raise,\n\t\tstarting_stacks,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "\t\t\"street_commitments\": list(street_commitments),\n\t\t\"collected_pot\": collected_pot,\n\t\t\"starting_stacks\": list(starting_stacks),\n",
+      "new": "\t\t\"street_commitments\": list(street_commitments),\n\t\t\"collected_pot\": collected_pot,\n\t\t\"minimum_raise\": minimum_raise,\n\t\t\"starting_stacks\": list(starting_stacks),\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "\t\t\"street_commitments\",\n\t\t\"collected_pot\",\n\t\t\"starting_stacks\",\n",
+      "new": "\t\t\"street_commitments\",\n\t\t\"collected_pot\",\n\t\t\"minimum_raise\",\n\t\t\"starting_stacks\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "\tcollected_pot = information_set[\"collected_pot\"]\n\tif not isinstance(collected_pot, int) or collected_pot < 0:\n\t\traise ValueError(\n\t\t\t\"strategy export collected_pot must be a non-negative integer\"\n\t\t)\n",
+      "new": "\tcollected_pot = information_set[\"collected_pot\"]\n\tif not isinstance(collected_pot, int) or collected_pot < 0:\n\t\traise ValueError(\n\t\t\t\"strategy export collected_pot must be a non-negative integer\"\n\t\t)\n\n\tminimum_raise = information_set[\"minimum_raise\"]\n\tif not isinstance(minimum_raise, int) or minimum_raise <= 0:\n\t\traise ValueError(\n\t\t\t\"strategy export minimum_raise must be a positive integer\"\n\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\ttable_pot: int\n\ttable_target_bet: int\n\thero_current_bet: int\n",
+      "new": "\ttable_pot: int\n\ttable_target_bet: int\n\ttable_minimum_raise: int\n\thero_current_bet: int\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\t\"table_pot\": record.observation.table_pot,\n\t\t\t\"table_target_bet\": record.observation.table_target_bet,\n\t\t\t\"hero_current_bet\": record.observation.hero_current_bet,\n",
+      "new": "\t\t\t\"table_pot\": record.observation.table_pot,\n\t\t\t\"table_target_bet\": record.observation.table_target_bet,\n\t\t\t\"table_minimum_raise\": (\n\t\t\t\trecord.observation.table_minimum_raise\n\t\t\t),\n\t\t\t\"hero_current_bet\": record.observation.hero_current_bet,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\"table_pot\",\n\t\t\"table_target_bet\",\n\t\t\"hero_current_bet\",\n\t\t\"opponent_current_bet\",\n\t\t\"absent_opponent_slots\",\n\t}\n",
+      "new": "\t\t\"table_pot\",\n\t\t\"table_target_bet\",\n\t\t\"table_minimum_raise\",\n\t\t\"hero_current_bet\",\n\t\t\"opponent_current_bet\",\n\t\t\"absent_opponent_slots\",\n\t}\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\tif observation[\"table_target_bet\"] != max(\n\t\tobservation[\"hero_current_bet\"],\n\t\tobservation[\"opponent_current_bet\"],\n\t):\n\t\traise ValueError(\n\t\t\t\"learning bridge target bet mismatch\"\n\t\t)\n",
+      "new": "\tif observation[\"table_target_bet\"] != max(\n\t\tobservation[\"hero_current_bet\"],\n\t\tobservation[\"opponent_current_bet\"],\n\t):\n\t\traise ValueError(\n\t\t\t\"learning bridge target bet mismatch\"\n\t\t)\n\tif (\n\t\tnot isinstance(observation[\"table_minimum_raise\"], int)\n\t\tor observation[\"table_minimum_raise\"] <= 0\n\t):\n\t\traise ValueError(\n\t\t\t\"learning bridge table_minimum_raise is invalid\"\n\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\ttable_pot=info[\"collected_pot\"],\n\t\ttable_target_bet=max(info[\"street_commitments\"]),\n\t\thero_current_bet=info[\"street_commitments\"][player],\n",
+      "new": "\t\ttable_pot=info[\"collected_pot\"],\n\t\ttable_target_bet=max(info[\"street_commitments\"]),\n\t\ttable_minimum_raise=info[\"minimum_raise\"],\n\t\thero_current_bet=info[\"street_commitments\"][player],\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/observation_compatibility.py",
+      "old": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\"table.minimum_raise\",),\n\t\t\tstatus=\"unavailable\",\n\t\t\tsolver_sources=(\"history\",),\n\t\t\treason=(\n\t\t\t\t\"The restricted solver still models finite raise sizing \"\n\t\t\t\t\"without production minimum-raise state.\"\n\t\t\t),\n\t\t),\n",
+      "new": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\"table.minimum_raise\",),\n\t\t\tstatus=\"derived\",\n\t\t\tsolver_sources=(\"minimum_raise\",),\n\t\t\treason=(\n\t\t\t\t\"Restricted solver state now carries the public full-raise \"\n\t\t\t\t\"increment explicitly and resets it to the big blind on \"\n\t\t\t\t\"each new street.\"\n\t\t\t),\n\t\t),\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert root.collected_pot == 0\n\tassert root.target_bet == 2\n\n\traised = game.next_node(root, \"raise\")\n",
+      "new": "\tassert root.collected_pot == 0\n\tassert root.target_bet == 2\n\tassert root.minimum_raise == 2\n\n\traised = game.next_node(root, \"raise\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert raised.commitments == (6, 2)\n\tassert raised.street_commitments == (6, 2)\n\n\tflop = game.next_node(raised, \"call\")\n",
+      "new": "\tassert raised.commitments == (6, 2)\n\tassert raised.street_commitments == (6, 2)\n\tassert raised.minimum_raise == 4\n\n\tflop = game.next_node(raised, \"call\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert flop.collected_pot == 12\n\tassert flop.target_bet == 0\n\n\tbet = game.next_node(flop, \"bet_2bb\")\n",
+      "new": "\tassert flop.collected_pot == 12\n\tassert flop.target_bet == 0\n\tassert flop.minimum_raise == 2\n\n\tbet = game.next_node(flop, \"bet_2bb\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert bet.collected_pot == 12\n\tassert bet.target_bet == 4\n\n\tturn = game.next_node(bet, \"call\")\n",
+      "new": "\tassert bet.collected_pot == 12\n\tassert bet.target_bet == 4\n\tassert bet.minimum_raise == 2\n\n\tturn = game.next_node(bet, \"call\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert turn.collected_pot == 20\n\tassert turn.matched_stake == 10\n",
+      "new": "\tassert turn.collected_pot == 20\n\tassert turn.matched_stake == 10\n\tassert turn.minimum_raise == 2\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert raised.commitments == (6, 4)\n\tassert game.legal_actions(raised) == (\n",
+      "new": "\tassert raised.commitments == (6, 4)\n\tassert raised.minimum_raise == 2\n\tassert game.legal_actions(raised) == (\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_strategy_export.py",
+      "old": "\tassert serialized[\"street_commitments\"] == [1, 2]\n\tassert serialized[\"collected_pot\"] == 0\n\tassert serialized[\"starting_stacks\"] == [8, 20]\n",
+      "new": "\tassert serialized[\"street_commitments\"] == [1, 2]\n\tassert serialized[\"collected_pot\"] == 0\n\tassert serialized[\"minimum_raise\"] == 2\n\tassert serialized[\"starting_stacks\"] == [8, 20]\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_strategy_export.py",
+      "old": "\tassert first[\"format_version\"] == 3\n",
+      "new": "\tassert first[\"format_version\"] == 4\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_observation_compatibility.py",
+      "old": "\tassert \"table.target_bet\" not in report.unavailable_features\n\tassert \"table.minimum_raise\" in report.unavailable_features\n\tassert \"hero.current_bet\" not in report.unavailable_features\n",
+      "new": "\tassert \"table.target_bet\" not in report.unavailable_features\n\tassert \"table.minimum_raise\" not in report.unavailable_features\n\tassert \"hero.current_bet\" not in report.unavailable_features\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_observation_compatibility.py",
+      "old": "\tassert \"opponent.0.present\" in derived\n\tassert \"opponent.1-7.*\" in derived\n",
+      "new": "\tassert \"opponent.0.present\" in derived\n\tassert \"opponent.1-7.*\" in derived\n\tassert \"table.minimum_raise\" in derived\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert observation.table_pot == 0\n\tassert observation.table_target_bet == 2\n\tassert observation.hero_current_bet == 1\n",
+      "new": "\tassert observation.table_pot == 0\n\tassert observation.table_target_bet == 2\n\tassert observation.table_minimum_raise == 2\n\tassert observation.hero_current_bet == 1\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert record.omitted_production_features == (\n\t\t\"table.minimum_raise\",\n\t\t\"opponent.0.profile.*\",\n\t\t\"metadata.acting_player\",\n\t\t\"metadata.opponent_order\",\n\t)\n",
+      "new": "\tassert record.omitted_production_features == (\n\t\t\"opponent.0.profile.*\",\n\t\t\"metadata.acting_player\",\n\t\t\"metadata.opponent_order\",\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert record.observation.table_target_bet == 2\n\tassert record.observation.hero_current_bet == 1\n\tassert record.observation.opponent_current_bet == 2\n\tassert not hasattr(record.observation, \"minimum_raise\")\n\tassert not hasattr(record.observation, \"opponent_profile\")\n",
+      "new": "\tassert record.observation.table_target_bet == 2\n\tassert record.observation.table_minimum_raise == 2\n\tassert record.observation.hero_current_bet == 1\n\tassert record.observation.opponent_current_bet == 2\n\tassert not hasattr(record.observation, \"opponent_profile\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "`table.minimum_raise`, persistent opponent-profile features and production player-name/order metadata remain explicitly unavailable. The next solver step is to add solver-local minimum-raise semantics compatible with the restricted finite action abstraction so `table.minimum_raise` can move from unavailable to derived without importing production betting internals. Preserve strategy artifact v3 compatibility deliberately; changes to solver information-set or serialization semantics require extended validation.",
+      "new": "Restricted Hold'em solver nodes now also retain explicit solver-local `minimum_raise` public street state. It starts at the configured big blind, resets to the big blind on every new street, and is updated to the full raise increment after an actual raise without expanding the finite action abstraction or importing production betting internals. The information set and strategy serialization now include `minimum_raise`; strategy artifact format is version 4. `SolverBridgeObservation` exposes the corresponding production-style `table.minimum_raise`, and the observation compatibility report classifies it as derived. Persistent opponent-profile features and production player-name/order metadata remain explicitly unavailable. The next solver step should continue closing the remaining learning-observation compatibility gap while keeping those unavailable groups honest and preserving the solver/production-engine boundary. Further information-set or serialization changes require extended validation."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "Total commitments remain the hand-level contribution source used for terminal utility and stack caps. `street_commitments` model current-street investment for each solver player, while `collected_pot` records the contribution boundary from completed streets. `target_bet` is derived from the maximum street commitment. These fields are public solver information and are serialized in strategy artifact format v3.\n\nThis boundary exists specifically so the learning bridge can derive production-style `table.pot`, `table.target_bet`, `hero.current_bet` and `opponent.0.current_bet` without importing mutable production betting-engine state. Production minimum-raise semantics are still intentionally absent and must be modeled separately before they can be exposed by the bridge.",
+      "new": "Total commitments remain the hand-level contribution source used for terminal utility and stack caps. `street_commitments` model current-street investment for each solver player, while `collected_pot` records the contribution boundary from completed streets. `target_bet` is derived from the maximum street commitment. `minimum_raise` is separate solver-local public street state: it starts and resets at the big blind and changes only when the restricted tree executes a full raise, at which point it records that raise increment. These fields are serialized in strategy artifact format v4.\n\nThis boundary exists specifically so the learning bridge can derive production-style `table.pot`, `table.target_bet`, `table.minimum_raise`, `hero.current_bet` and `opponent.0.current_bet` without importing mutable production betting-engine state. The finite solver action abstraction remains unchanged; minimum-raise state describes public betting semantics rather than adding new action sizes."
+    },
+    {
+      "type": "replace",
+      "file": "docs/DECISIONS.md",
+      "old": "Reason:\nTotal commitments alone cannot distinguish production-style current bets, target bet and collected pot. Keeping those semantics explicit inside the finite solver state lets the learning bridge derive them honestly without importing mutable production betting-engine state or reconstructing them heuristically from action history.\n",
+      "new": "Reason:\nTotal commitments alone cannot distinguish production-style current bets, target bet and collected pot. Keeping those semantics explicit inside the finite solver state lets the learning bridge derive them honestly without importing mutable production betting-engine state or reconstructing them heuristically from action history.\n\n## ADR-019: Solver Minimum Raise Is Explicit Public Street State\n\nDate:\n2026-08-15\n\nDecision:\nRestricted Hold'em solver nodes store `minimum_raise` independently from the finite action abstraction. It starts at `big_blind`, resets to `big_blind` when a betting street closes, and after a full restricted raise becomes that raise's increment over the previous street target. The field is part of the solver information set and strategy artifact format version 4, and the learning bridge exposes it as production-style `table.minimum_raise`.\n\nReason:\nMinimum-raise size is public betting state and affects production observation semantics even when the restricted solver deliberately offers only a finite set of actions. Storing it explicitly avoids reconstructing semantics from history or importing the production betting engine, while keeping action-tree size unchanged.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "the solver state now carries street-local commitments and collected-pot semantics, strategy artifacts deliberately move to format v3, and the learning bridge derives production pot/target/current-bet fields without engine imports; next add explicit solver-local minimum-raise semantics while keeping profile and production player-identity gaps explicit.",
+      "new": "the solver state now carries street-local commitments, collected-pot and explicit minimum-raise semantics, strategy artifacts deliberately move to format v4, and the learning bridge derives production pot/target/minimum-raise/current-bet fields without engine imports; next continue closing the remaining learning-observation compatibility gap while keeping profile and production player-identity gaps explicit."
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert game.legal_actions(\n\t\tgame.next_node(root, \"raise\")\n\t) == (\n\t\t\"fold\",\n\t\t\"call\",\n\t\t\"all_in\",\n\t)\n\tflop = game.next_node(root, \"call\")\n",
+      "new": "\tassert game.legal_actions(\n\t\tgame.next_node(root, \"raise\")\n\t) == (\n\t\t\"fold\",\n\t\t\"call\",\n\t\t\"all_in\",\n\t)\n\tshove = game.next_node(root, \"all_in\")\n\tassert shove.minimum_raise == 18\n\tflop = game.next_node(root, \"call\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_target.py",
+      "old": "\t\t\"street_commitments\",\n\t\t\"collected_pot\",\n\t\t\"starting_stacks\",\n",
+      "new": "\t\t\"street_commitments\",\n\t\t\"collected_pot\",\n\t\t\"minimum_raise\",\n\t\t\"starting_stacks\",\n"
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

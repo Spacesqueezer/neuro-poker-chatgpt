@@ -178,6 +178,7 @@ def test_learning_target_keeps_solver_information_set_not_learning_observation()
 		"commitments",
 		"street_commitments",
 		"collected_pot",
+		"minimum_raise",
 		"starting_stacks",
 	}
 	assert "observation" not in target.information_set

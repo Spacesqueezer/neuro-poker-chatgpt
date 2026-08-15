@@ -76,7 +76,7 @@ def test_unavailable_features_are_not_silently_claimed_as_derivable():
 
 	assert "table.pot" not in report.unavailable_features
 	assert "table.target_bet" not in report.unavailable_features
-	assert "table.minimum_raise" in report.unavailable_features
+	assert "table.minimum_raise" not in report.unavailable_features
 	assert "hero.current_bet" not in report.unavailable_features
 	assert "opponent.0.current_bet" not in report.unavailable_features
 	assert "opponent.0.profile.*" in report.unavailable_features
@@ -95,3 +95,4 @@ def test_report_tracks_current_production_opponent_slot_count():
 	assert LearningObservationEncoder.MAX_OPPONENTS == 8
 	assert "opponent.0.present" in derived
 	assert "opponent.1-7.*" in derived
+	assert "table.minimum_raise" in derived

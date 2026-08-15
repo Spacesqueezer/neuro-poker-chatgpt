@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 
-STRATEGY_EXPORT_VERSION = 3
+STRATEGY_EXPORT_VERSION = 4
 CHANCE_SPACE_VERSION = 1
 SUPPORTED_SOLVER = "external_sampling_mccfr"
 
@@ -67,6 +67,7 @@ def serialize_information_set(info_set):
 		commitments,
 		street_commitments,
 		collected_pot,
+		minimum_raise,
 		starting_stacks,
 	) = info_set
 
@@ -85,6 +86,7 @@ def serialize_information_set(info_set):
 		"commitments": list(commitments),
 		"street_commitments": list(street_commitments),
 		"collected_pot": collected_pot,
+		"minimum_raise": minimum_raise,
 		"starting_stacks": list(starting_stacks),
 	}
 
@@ -333,6 +335,7 @@ def _validate_serialized_information_set(information_set):
 		"commitments",
 		"street_commitments",
 		"collected_pot",
+		"minimum_raise",
 		"starting_stacks",
 	}
 	if set(information_set) != required:
@@ -392,6 +395,12 @@ def _validate_serialized_information_set(information_set):
 	if not isinstance(collected_pot, int) or collected_pot < 0:
 		raise ValueError(
 			"strategy export collected_pot must be a non-negative integer"
+		)
+
+	minimum_raise = information_set["minimum_raise"]
+	if not isinstance(minimum_raise, int) or minimum_raise <= 0:
+		raise ValueError(
+			"strategy export minimum_raise must be a positive integer"
 		)
 
 

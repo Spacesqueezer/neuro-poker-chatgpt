@@ -33,6 +33,7 @@ class HeadsUpHoldemNode:
 	commitments: tuple[int, int] = (0, 0)
 	street_commitments: tuple[int, int] = (0, 0)
 	collected_pot: int = 0
+	minimum_raise: int = 2
 	starting_stacks: tuple[int, int] = (20, 20)
 	showdown_runout: bool = False
 
@@ -106,6 +107,7 @@ class RestrictedHeadsUpHoldemGame:
 						self.big_blind,
 					),
 					collected_pot=0,
+					minimum_raise=self.big_blind,
 					starting_stacks=self.starting_stacks,
 					showdown_runout=(
 						self.starting_stacks[0]
@@ -224,6 +226,7 @@ class RestrictedHeadsUpHoldemGame:
 			state.commitments,
 			state.street_commitments,
 			state.collected_pot,
+			state.minimum_raise,
 			state.starting_stacks,
 		)
 
@@ -331,6 +334,7 @@ class RestrictedHeadsUpHoldemGame:
 		street_history = state.street_history + (action,)
 		commitments = list(state.commitments)
 		street_commitments = list(state.street_commitments)
+		minimum_raise = state.minimum_raise
 
 		if state.street == "preflop":
 			if action == "call":
@@ -341,12 +345,20 @@ class RestrictedHeadsUpHoldemGame:
 				commitments[actor] = target
 				street_commitments[actor] = target
 			elif action == "raise":
+				previous_target = max(street_commitments)
 				target = self._preflop_raise_target(actor)
 				commitments[actor] = target
 				street_commitments[actor] = target
+				minimum_raise = target - previous_target
 			elif action == "all_in":
+				previous_target = max(street_commitments)
 				commitments[actor] = self._stack_for(actor)
 				street_commitments[actor] = commitments[actor]
+				raise_increment = (
+					street_commitments[actor] - previous_target
+				)
+				if raise_increment >= minimum_raise:
+					minimum_raise = raise_increment
 				if state.street_history == ("raise",):
 					opponent = 1 - actor
 					commitments[opponent] = max(
@@ -377,6 +389,7 @@ class RestrictedHeadsUpHoldemGame:
 				commitments=tuple(commitments),
 				street_commitments=tuple(street_commitments),
 				collected_pot=state.collected_pot,
+				minimum_raise=minimum_raise,
 				starting_stacks=state.starting_stacks,
 			)
 
@@ -390,6 +403,7 @@ class RestrictedHeadsUpHoldemGame:
 			commitments[actor] = target
 			street_commitments[actor] += delta
 		elif action == "raise":
+			previous_target = max(street_commitments)
 			target = self._postflop_raise_target(
 				state,
 				actor,
@@ -397,6 +411,9 @@ class RestrictedHeadsUpHoldemGame:
 			delta = target - commitments[actor]
 			commitments[actor] = target
 			street_commitments[actor] += delta
+			minimum_raise = (
+				street_commitments[actor] - previous_target
+			)
 		elif action == "call":
 			target = min(
 				self._stack_for(actor),
@@ -429,6 +446,7 @@ class RestrictedHeadsUpHoldemGame:
 			commitments=tuple(commitments),
 			street_commitments=tuple(street_commitments),
 			collected_pot=state.collected_pot,
+			minimum_raise=minimum_raise,
 			starting_stacks=state.starting_stacks,
 		)
 
@@ -585,6 +603,7 @@ class RestrictedHeadsUpHoldemGame:
 				commitments=commitments,
 				street_commitments=(0, 0),
 				collected_pot=sum(commitments),
+				minimum_raise=self.big_blind,
 				starting_stacks=state.starting_stacks,
 				showdown_runout=True,
 			)
@@ -597,6 +616,7 @@ class RestrictedHeadsUpHoldemGame:
 				commitments=commitments,
 				street_commitments=(0, 0),
 				collected_pot=sum(commitments),
+				minimum_raise=self.big_blind,
 				starting_stacks=state.starting_stacks,
 			)
 		return HeadsUpHoldemNode(
@@ -606,6 +626,7 @@ class RestrictedHeadsUpHoldemGame:
 			commitments=commitments,
 			street_commitments=(0, 0),
 			collected_pot=sum(commitments),
+			minimum_raise=self.big_blind,
 			starting_stacks=state.starting_stacks,
 		)
 
