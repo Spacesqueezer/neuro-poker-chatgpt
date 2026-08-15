@@ -1,0 +1,33 @@
+{
+  "patch_id": "solver_training_input_contract_v2",
+  "goal": "Extend solver training input boundary with validation helpers. Keep framework-neutral contract without model or tensor dependencies.",
+  "allowed_files": [
+    "src/poker/solver/training_input.py",
+    "tests/poker/test_solver_training_input.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_input.py",
+      "old": "class SolverTrainingInput:\n\tdef __init__(self, examples):\n",
+      "new": "class SolverTrainingInput:\n\tdef observation_sizes(self):\n\t\treturn {len(example.observation) for example in self.examples}\n\n\tdef __init__(self, examples):\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_input.py",
+      "old": "def test_solver_training_input_contract_imports():\n\tassert True\n",
+      "new": "def test_solver_training_input_contract_imports():\n\tassert True\n\n\ndef test_solver_training_input_rejects_empty_examples():\n\tfrom poker.solver.training_input import SolverTrainingInput\n\n\ttry:\n\t\tSolverTrainingInput(())\n\texcept ValueError:\n\t\treturn\n\n\tassert False\n"
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true,
+    "auto_push": true
+  }
+}

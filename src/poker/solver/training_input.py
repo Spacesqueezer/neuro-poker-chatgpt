@@ -12,6 +12,9 @@ class SolverTrainingExample:
 	source: str
 
 class SolverTrainingInput:
+	def observation_sizes(self):
+		return {len(example.observation) for example in self.examples}
+
 	def __init__(self, examples):
 		self.examples = tuple(examples)
 		if not self.examples:
