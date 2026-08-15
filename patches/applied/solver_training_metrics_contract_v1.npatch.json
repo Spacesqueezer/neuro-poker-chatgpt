@@ -1,0 +1,31 @@
+{
+  "patch_id": "solver_training_metrics_contract_v1",
+  "goal": "Add a framework-neutral training metrics contract after the objective contract. Keep evaluation semantics separate from model and optimizer implementation.",
+  "allowed_files": [
+    "src/poker/solver/training_metrics.py",
+    "tests/poker/test_solver_training_metrics.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_metrics.py",
+      "content": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass SolverTrainingMetrics:\n\tsamples: int\n\tmean_loss: float\n\taccuracy: float\n\n\tdef as_dict(self):\n\t\treturn {\n\t\t\t\"samples\": self.samples,\n\t\t\t\"mean_loss\": self.mean_loss,\n\t\t\t\"accuracy\": self.accuracy,\n\t\t}\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_metrics.py",
+      "content": "from poker.solver.training_metrics import SolverTrainingMetrics\n\n\ndef test_solver_training_metrics_contract_serializes():\n\tmetrics = SolverTrainingMetrics(samples=10, mean_loss=0.5, accuracy=0.8)\n\n\tassert metrics.as_dict() == {\n\t\t\"samples\": 10,\n\t\t\"mean_loss\": 0.5,\n\t\t\"accuracy\": 0.8,\n\t}\n"
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true,
+    "auto_push": true
+  }
+}
