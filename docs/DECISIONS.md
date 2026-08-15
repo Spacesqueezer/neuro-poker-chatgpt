@@ -261,3 +261,14 @@ Decision:
 Reason:
 This provides a machine-checkable contract between solver teacher data and the existing learning schema without constructing production `HandStateView` objects, coupling the solver to Arena, or silently replacing unavailable profile semantics with zeros. It validates data compatibility before any dataset consumer or training integration is introduced.
 
+## ADR-023: Solver Supervision Uses a Dedicated Soft-Target Dataset Contract
+
+Date:
+2026-08-15
+
+Decision:
+Solver learning-bridge records are converted into versioned `SolverSupervisedSample` records for JSONL export. Each record contains the production-shaped numeric observation, canonical six-action names, legal mask, full action-probability target, preserved solver action groups, solver-local acting/opponent metadata and exact/reconciled provenance. This dataset is separate from production `LearningSample`.
+
+Reason:
+`LearningSample` represents one actually chosen action and optional sizing, while solver supervision is a soft policy target over all legal action categories. Reusing the hard-target schema would discard information or overload fields with different semantics. A separate boundary preserves teacher information without connecting solver policy to Arena or committing the project to a training implementation yet.
+

@@ -56,6 +56,14 @@ from poker.solver.observation_compatibility import (
 	build_observation_compatibility_report,
 )
 from poker.solver.policy import RestrictedSolverPolicy
+from poker.solver.supervised_dataset import (
+	SOLVER_SUPERVISED_SAMPLE_VERSION,
+	SolverSupervisedDatasetAnalyzer,
+	SolverSupervisedDatasetWriter,
+	SolverSupervisedSample,
+	bridge_record_to_supervised_sample,
+	build_solver_supervised_samples,
+)
 from poker.solver.teacher import (
 	TEACHER_RECORD_FORMAT_VERSION,
 	build_teacher_record_export,
@@ -85,12 +93,16 @@ __all__ = [
 	"RegretMatching",
 	"RestrictedHeadsUpHoldemGame",
 	"RestrictedSolverPolicy",
+	"SOLVER_SUPERVISED_SAMPLE_VERSION",
 	"SOLVER_TARGET_ACTIONS",
 	"STRATEGY_EXPORT_VERSION",
 	"SolverBridgeObservation",
 	"SolverLearningBridgeRecord",
 	"SolverLearningTarget",
 	"SolverNumericObservation",
+	"SolverSupervisedDatasetAnalyzer",
+	"SolverSupervisedDatasetWriter",
+	"SolverSupervisedSample",
 	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
 	"TwoPlayerSolverGame",
@@ -101,8 +113,10 @@ __all__ = [
 	"build_learning_bridge_records",
 	"build_learning_targets",
 	"build_observation_compatibility_report",
+	"build_solver_supervised_samples",
 	"build_strategy_export",
 	"build_teacher_record_export",
+	"bridge_record_to_supervised_sample",
 	"chance_space_metadata",
 	"evaluate_restricted_policy",
 	"load_learning_bridge_artifact",
