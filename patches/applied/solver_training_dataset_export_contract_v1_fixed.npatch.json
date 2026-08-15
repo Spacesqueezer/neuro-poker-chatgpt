@@ -1,0 +1,23 @@
+{
+  "patch_id": "solver_training_dataset_export_contract_v1_fixed",
+  "goal": "Add a focused regression test that confirms the existing solver training input and batch contracts remain importable for the next dataset/training consumer layer. No production code or public runtime behavior changes.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_dataset_export_contract.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_dataset_export_contract.py",
+      "content": "from poker.solver.training_batch import SolverTrainingBatch\nfrom poker.solver.training_input import SolverTrainingInput\n\n\ndef test_training_contracts_remain_importable_for_consumer_layer():\n\tassert SolverTrainingBatch is not None\n\tassert SolverTrainingInput is not None\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_dataset_export_contract.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
