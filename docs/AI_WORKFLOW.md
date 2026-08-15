@@ -10,7 +10,7 @@ The repository is the source of truth.
 
 Before planning changes:
 
-1. Check current git commit.
+1. Inspect the current `ai-development` branch and its HEAD commit.
 2. Read:
    - DEV_RULES.md
    - PROJECT_STATE.md
@@ -57,6 +57,8 @@ Common rules:
 - `create_file` only for files missing in the current repository.
 - `replace` only for existing files.
 - Never use files from failed patches as a source of truth.
+- Successful applied patch files are retained under `patches/applied/` for provenance and debugging; inspect them when useful, but never reconstruct current project state from patch history instead of the current branch.
+- Normal AI development continues from `ai-development`; `main` is a safety branch and must not be treated as the latest AI state after the branch workflow is active.
 
 ## Validation
 
@@ -76,7 +78,7 @@ python tools/verify_history.py
 
 A successful NeuroPatch prints a self-contained `SUCCESS HANDOFF` command after its JSON report. The command is written for the next AI turn and assumes the successful commit is already pushed.
 
-When the user sends that final handoff line back, treat it as an explicit continuation request. Inspect the freshly pushed repository, re-read `DEV_RULES.md` and `PROJECT_STATE.md`, read the current next step from `PROJECT_STATE.md`, and generate the next `.npatch.json` file immediately. Do not answer with only a status message or a promise to generate the file later. The complete success report is optional; the handoff line is sufficient.
+When the user sends that final handoff line back, treat it as an explicit continuation request. Inspect the freshly pushed `ai-development` branch, re-read `DEV_RULES.md` and `PROJECT_STATE.md`, read the current next step from `PROJECT_STATE.md`, and generate the next `.npatch.json` file immediately. Do not answer with only a status message or a promise to generate the file later. The complete success report is optional; the handoff line is sufficient.
 
 ## Documentation synchronization
 

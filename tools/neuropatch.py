@@ -29,6 +29,8 @@ PATCH_DIR = Path.home() / "Downloads"
 NEUROPATCH_HOME = Path.home() / ".neuropatch" / PROJECT_ROOT.name
 TRANSACTION_DIR = NEUROPATCH_HOME / "transactions"
 HISTORY_FILE = NEUROPATCH_HOME / "history.json"
+APPLIED_PATCH_DIR = PROJECT_ROOT / "patches" / "applied"
+AI_WORK_BRANCH = "ai-development"
 
 
 class PatchError(Exception):
@@ -125,6 +127,76 @@ def git_status():
 	return result.stdout.strip()
 
 
+def git_current_branch():
+	result = subprocess.run(
+		["git", "branch", "--show-current"],
+		cwd=PROJECT_ROOT,
+		text=True,
+		capture_output=True,
+		check=True,
+	)
+	return result.stdout.strip()
+
+
+def git_local_branch_exists(branch):
+	result = subprocess.run(
+		[
+			"git",
+			"show-ref",
+			"--verify",
+			"--quiet",
+			f"refs/heads/{branch}",
+		],
+		cwd=PROJECT_ROOT,
+	)
+	return result.returncode == 0
+
+
+def git_branch_has_upstream(branch):
+	result = subprocess.run(
+		[
+			"git",
+			"rev-parse",
+			"--abbrev-ref",
+			f"{branch}@{{upstream}}",
+		],
+		cwd=PROJECT_ROOT,
+		text=True,
+		capture_output=True,
+	)
+	return result.returncode == 0
+
+
+def ensure_ai_work_branch():
+	current = git_current_branch()
+
+	if current != AI_WORK_BRANCH:
+		command = ["git", "switch", AI_WORK_BRANCH]
+		if not git_local_branch_exists(AI_WORK_BRANCH):
+			command = ["git", "switch", "-c", AI_WORK_BRANCH]
+
+		subprocess.run(
+			command,
+			cwd=PROJECT_ROOT,
+			check=True,
+		)
+
+	if not git_branch_has_upstream(AI_WORK_BRANCH):
+		subprocess.run(
+			[
+				"git",
+				"push",
+				"--set-upstream",
+				"origin",
+				AI_WORK_BRANCH,
+			],
+			cwd=PROJECT_ROOT,
+			check=True,
+		)
+
+	return AI_WORK_BRANCH
+
+
 def git_commit(message):
 	subprocess.run(
 		["git", "add", "."],
@@ -160,6 +232,32 @@ def load_patch():
 		raise PatchError("No patch found")
 
 	return patches[0]
+
+
+def stage_successful_patch_archive(patch_path, patch_id):
+	APPLIED_PATCH_DIR.mkdir(parents=True, exist_ok=True)
+	target = APPLIED_PATCH_DIR / f"{patch_id}.npatch.json"
+
+	if target.exists():
+		raise PatchError(
+			f"Archived patch already exists: {target.relative_to(PROJECT_ROOT)}"
+		)
+
+	shutil.copy2(patch_path, target)
+	return target
+
+
+def remove_staged_patch_archive(path):
+	if path is not None and path.exists():
+		path.unlink()
+
+
+def cleanup_downloaded_patch(patch_path):
+	try:
+		patch_path.unlink(missing_ok=True)
+		return None
+	except OSError as error:
+		return str(error)
 
 
 def load_history():
@@ -281,13 +379,18 @@ def main():
 	parser.add_argument("--force", action="store_true")
 	args = parser.parse_args()
 
-	patch = read_json(load_patch())
+	patch_path = load_patch()
+	patch = read_json(patch_path)
 
 	validate_patch(patch)
 	check_allowed_files(patch)
 
 	if git_status() and not args.force:
 		raise PatchError("Git working tree dirty. Commit changes or use --force.")
+
+	branch = git_current_branch()
+	if not args.dry_run:
+		branch = ensure_ai_work_branch()
 
 	transaction = create_transaction(patch["patch_id"])
 	started_monotonic = time.perf_counter()
@@ -296,8 +399,10 @@ def main():
 		"patch": patch["patch_id"],
 		"started": datetime.datetime.now().isoformat(),
 		"status": "FAILED",
-		"transaction": str(transaction)
+		"transaction": str(transaction),
+		"branch": branch,
 	}
+	archived_patch = None
 
 	try:
 		if not args.dry_run:
@@ -307,6 +412,11 @@ def main():
 				apply_operation(operation)
 
 			run_tests(patch)
+
+			archived_patch = stage_successful_patch_archive(
+				patch_path,
+				patch["patch_id"],
+			)
 
 			history = load_history()
 			history.append(
@@ -323,11 +433,20 @@ def main():
 			if patch.get("git", {}).get("auto_commit", True):
 				commit_hash = git_commit(f"[auto-patch] {patch['patch_id']}")
 				report["commit"] = commit_hash
+				report["archived_patch"] = str(
+					archived_patch.relative_to(PROJECT_ROOT)
+				)
+				cleanup_warning = cleanup_downloaded_patch(
+					patch_path
+				)
+				if cleanup_warning is not None:
+					report["patch_cleanup_warning"] = cleanup_warning
 
 		report["status"] = "SUCCESS"
 
 	except Exception as error:
 		rollback(transaction)
+		remove_staged_patch_archive(archived_patch)
 		report["error"] = str(error)
 
 	finally:
@@ -340,10 +459,11 @@ def main():
 		print(json.dumps(report, indent=2, ensure_ascii=False))
 		if report["status"] == "SUCCESS":
 			print(
-				"SUCCESS HANDOFF: commit pushed. Inspect the fresh "
-				"repository, re-read docs/DEV_RULES.md and "
-				"docs/PROJECT_STATE.md, follow the recorded next step, "
-				"and return the next .npatch.json file immediately."
+				"SUCCESS HANDOFF: commit pushed on ai-development. "
+				"Inspect the fresh repository branch ai-development, "
+				"re-read docs/DEV_RULES.md and docs/PROJECT_STATE.md, "
+				"follow the recorded next step, and return the next "
+				".npatch.json file immediately."
 			)
 		play_result_sound(
 			report["status"] == "SUCCESS"

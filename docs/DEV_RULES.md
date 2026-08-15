@@ -142,11 +142,15 @@ Every successful patch commit must:
 
 The next patch must start from a clean git working tree created by the previous successful patch.
 
+AI-assisted development uses the dedicated `ai-development` branch. NeuroPatch automatically switches to that branch before applying a non-dry-run patch, creates it from the current clean HEAD when it does not yet exist, and establishes `origin/ai-development` as its upstream before modifying project files. `main` remains the human-controlled safety branch until changes are deliberately merged.
+
+Every successfully committed patch file is archived in the tracked repository path `patches/applied/<patch_id>.npatch.json` and removed from Downloads only after the commit succeeds. Failed patches remain in Downloads for diagnosis or retry. Archived patches are provenance records; they do not replace the current repository state, `PROJECT_STATE.md` or source inspection as sources of truth.
+
 After a successful patch, NeuroPatch prints a self-contained `SUCCESS HANDOFF` command addressed to the AI, not instructions for the user. The handoff text assumes the successful commit has already been pushed.
 
 When the user sends that final `SUCCESS HANDOFF` line back to the AI, it means:
-- the reported successful commit has been pushed;
-- the AI must inspect the freshly pushed repository;
+- the reported successful commit has been pushed to `ai-development`;
+- the AI must inspect the freshly pushed `ai-development` branch;
 - the AI must re-read `DEV_RULES.md` and `PROJECT_STATE.md`;
 - the AI must continue from the recorded next step;
 - the AI must generate and attach the next `.npatch.json` file in the same response rather than merely describing what it plans to do.
