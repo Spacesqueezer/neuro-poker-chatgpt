@@ -1,0 +1,23 @@
+{
+  "patch_id": "solver_training_batch_factory_contract_v1",
+  "goal": "Add regression coverage for build_solver_training_batch factory behavior. Ensure valid samples are converted into a validated training batch before adding higher-level training pipeline consumers.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_batch_factory.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_batch_factory.py",
+      "content": "from dataclasses import dataclass\n\nfrom poker.solver.training_batch import build_solver_training_batch\n\n\n@dataclass(frozen=True)\nclass Sample:\n\tobservation: tuple[float, ...]\n\tprobabilities: tuple[float, ...]\n\n\ndef test_build_solver_training_batch_creates_valid_batch():\n\tbatch = build_solver_training_batch(\n\t\t(\n\t\t\tSample(\n\t\t\t\tobservation=(0.0, 1.0),\n\t\t\t\tprobabilities=(0.2, 0.2, 0.2, 0.2, 0.1, 0.1),\n\t\t\t),\n\t\t)\n\t)\n\n\tassert batch.size == 1\n\tassert batch.observations == ((0.0, 1.0),)\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_batch_factory.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
