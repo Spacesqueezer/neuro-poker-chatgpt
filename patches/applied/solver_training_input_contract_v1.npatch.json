@@ -1,0 +1,30 @@
+{
+  "patch_id": "solver_training_input_contract_v1",
+  "goal": "Add framework-neutral supervised training input boundary over solver-supervised JSONL.",
+  "allowed_files": [
+    "src/poker/solver/training_input.py",
+    "tests/poker/test_solver_training_input.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_input.py",
+      "content": "from dataclasses import dataclass\nimport json\nfrom pathlib import Path\n\n@dataclass(frozen=True)\nclass SolverTrainingExample:\n\tobservation: tuple[float, ...]\n\tlegal_mask: tuple[float, ...]\n\tprobabilities: tuple[float, ...]\n\tacting_player: str\n\topponent_order: tuple[str, ...]\n\tsource: str\n\nclass SolverTrainingInput:\n\tdef __init__(self, examples):\n\t\tself.examples = tuple(examples)\n\t\tif not self.examples:\n\t\t\traise ValueError('solver training input is empty')\n\n\t@classmethod\n\tdef load(cls, path):\n\t\texamples = []\n\t\tfor line in Path(path).read_text(encoding='utf-8').splitlines():\n\t\t\tpayload = json.loads(line)\n\t\t\texamples.append(SolverTrainingExample(\n\t\t\t\tobservation=tuple(float(x) for x in payload['observation']),\n\t\t\t\tlegal_mask=tuple(float(x) for x in payload['legal_mask']),\n\t\t\t\tprobabilities=tuple(float(x) for x in payload['probabilities']),\n\t\t\t\tacting_player=payload['acting_player'],\n\t\t\t\topponent_order=tuple(payload['opponent_order']),\n\t\t\t\tsource=payload['source'],\n\t\t\t))\n\t\treturn cls(examples)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_input.py",
+      "content": "def test_solver_training_input_contract_imports():\n\tassert True\n"
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
