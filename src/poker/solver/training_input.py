@@ -11,6 +11,21 @@ class SolverTrainingExample:
 	opponent_order: tuple[str, ...]
 	source: str
 
+class SolverTrainingObjectiveContract:
+	"""Framework-neutral semantics for solver soft-policy training."""
+
+	action_count = 6
+
+	@classmethod
+	def validate_target(cls, legal_mask, probabilities):
+		if len(legal_mask) != cls.action_count:
+			raise ValueError("legal mask must contain six actions")
+		if len(probabilities) != cls.action_count:
+			raise ValueError("probabilities must contain six actions")
+		if abs(sum(probabilities) - 1.0) > 1e-9:
+			raise ValueError("probabilities must sum to one")
+
+
 class SolverTrainingInput:
 	def observation_sizes(self):
 		return {len(example.observation) for example in self.examples}

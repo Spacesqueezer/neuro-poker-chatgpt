@@ -1,0 +1,32 @@
+{
+  "patch_id": "solver_training_objective_contract_v1_fixed2",
+  "goal": "Define the framework-neutral masked soft-policy training objective contract. Do not add model, tensor framework or optimizer code.",
+  "allowed_files": [
+    "src/poker/solver/training_input.py",
+    "tests/poker/test_solver_training_input_objective.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_input.py",
+      "old": "class SolverTrainingInput:\n",
+      "new": "class SolverTrainingObjectiveContract:\n\t\"\"\"Framework-neutral semantics for solver soft-policy training.\"\"\"\n\n\taction_count = 6\n\n\t@classmethod\n\tdef validate_target(cls, legal_mask, probabilities):\n\t\tif len(legal_mask) != cls.action_count:\n\t\t\traise ValueError(\"legal mask must contain six actions\")\n\t\tif len(probabilities) != cls.action_count:\n\t\t\traise ValueError(\"probabilities must contain six actions\")\n\t\tif abs(sum(probabilities) - 1.0) > 1e-9:\n\t\t\traise ValueError(\"probabilities must sum to one\")\n\n\nclass SolverTrainingInput:\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_input_objective.py",
+      "content": "from poker.solver.training_input import SolverTrainingObjectiveContract\n\n\ndef test_solver_training_objective_contract_validates_soft_targets():\n\tSolverTrainingObjectiveContract.validate_target(\n\t\t(1.0, 0.0, 1.0, 0.0, 1.0, 1.0),\n\t\t(0.1, 0.0, 0.2, 0.0, 0.6, 0.1),\n\t)\n"
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true,
+    "auto_push": true
+  }
+}
