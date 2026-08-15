@@ -76,7 +76,7 @@ python tools/verify_history.py
 
 ## Successful patch handoff
 
-A successful NeuroPatch prints a self-contained `SUCCESS HANDOFF` command after its JSON report. The command is written for the next AI turn and assumes the successful commit is already pushed.
+A successful NeuroPatch prints a self-contained `SUCCESS HANDOFF` command after its JSON report. The command is written for the next AI turn and is printed only after the successful commit has actually been pushed to `origin/ai-development`.
 
 When the user sends that final handoff line back, treat it as an explicit continuation request. Inspect the freshly pushed `ai-development` branch, re-read `DEV_RULES.md` and `PROJECT_STATE.md`, read the current next step from `PROJECT_STATE.md`, and generate the next `.npatch.json` file immediately. Do not answer with only a status message or a promise to generate the file later. The complete success report is optional; the handoff line is sufficient.
 

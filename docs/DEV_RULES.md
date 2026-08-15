@@ -138,7 +138,10 @@ The patch process is considered incomplete if:
 Every successful patch commit must:
 - include only changes from the current patch;
 - use an automatic commit message identifying the patch;
-- report the created commit hash in the patch result.
+- report the created commit hash in the patch result;
+- be pushed automatically to `origin/ai-development` before the patch is reported as `SUCCESS`.
+
+A local commit with a failed push is not a successful handoff. NeuroPatch must report the failure, preserve the local commit and archived patch, avoid pretending that rollback occurred after commit creation, and must not print `SUCCESS HANDOFF` until the push succeeds.
 
 The next patch must start from a clean git working tree created by the previous successful patch.
 

@@ -221,6 +221,14 @@ def git_commit(message):
 	return result.stdout.strip()
 
 
+def git_push(branch):
+	subprocess.run(
+		["git", "push", "origin", branch],
+		cwd=PROJECT_ROOT,
+		check=True,
+	)
+
+
 def load_patch():
 	patches = sorted(
 		PATCH_DIR.glob("*.npatch.json"),
@@ -403,6 +411,7 @@ def main():
 		"branch": branch,
 	}
 	archived_patch = None
+	commit_hash = None
 
 	try:
 		if not args.dry_run:
@@ -428,14 +437,14 @@ def main():
 
 			save_json(HISTORY_FILE, history)
 
-			commit_hash = None
-
 			if patch.get("git", {}).get("auto_commit", True):
 				commit_hash = git_commit(f"[auto-patch] {patch['patch_id']}")
 				report["commit"] = commit_hash
 				report["archived_patch"] = str(
 					archived_patch.relative_to(PROJECT_ROOT)
 				)
+				git_push(branch)
+				report["pushed"] = True
 				cleanup_warning = cleanup_downloaded_patch(
 					patch_path
 				)
@@ -445,8 +454,11 @@ def main():
 		report["status"] = "SUCCESS"
 
 	except Exception as error:
-		rollback(transaction)
-		remove_staged_patch_archive(archived_patch)
+		if commit_hash is None:
+			rollback(transaction)
+			remove_staged_patch_archive(archived_patch)
+		else:
+			report["pushed"] = False
 		report["error"] = str(error)
 
 	finally:

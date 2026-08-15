@@ -1,0 +1,77 @@
+{
+  "patch_id": "neuropatch_auto_push_v2",
+  "goal": "Make automatic push a real required NeuroPatch success stage. After a successful auto-commit, push ai-development to origin, report pushed=true only on success, print SUCCESS HANDOFF only after that push, and never perform file rollback after a commit already exists.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py",
+    "docs/DEV_RULES.md",
+    "docs/AI_WORKFLOW.md",
+    "docs/USER_GUIDE_RU.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "def git_commit(message):\n\tsubprocess.run(\n\t\t[\"git\", \"add\", \".\"],\n\t\tcwd=PROJECT_ROOT,\n\t\tcheck=True\n\t)\n\n\tsubprocess.run(\n\t\t[\"git\", \"commit\", \"-m\", message],\n\t\tcwd=PROJECT_ROOT,\n\t\tcheck=True\n\t)\n\n\tresult = subprocess.run(\n\t\t[\"git\", \"rev-parse\", \"HEAD\"],\n\t\tcwd=PROJECT_ROOT,\n\t\ttext=True,\n\t\tcapture_output=True,\n\t\tcheck=True\n\t)\n\n\treturn result.stdout.strip()\n\n\ndef load_patch():\n",
+      "new": "def git_commit(message):\n\tsubprocess.run(\n\t\t[\"git\", \"add\", \".\"],\n\t\tcwd=PROJECT_ROOT,\n\t\tcheck=True\n\t)\n\n\tsubprocess.run(\n\t\t[\"git\", \"commit\", \"-m\", message],\n\t\tcwd=PROJECT_ROOT,\n\t\tcheck=True\n\t)\n\n\tresult = subprocess.run(\n\t\t[\"git\", \"rev-parse\", \"HEAD\"],\n\t\tcwd=PROJECT_ROOT,\n\t\ttext=True,\n\t\tcapture_output=True,\n\t\tcheck=True\n\t)\n\n\treturn result.stdout.strip()\n\n\ndef git_push(branch):\n\tsubprocess.run(\n\t\t[\"git\", \"push\", \"origin\", branch],\n\t\tcwd=PROJECT_ROOT,\n\t\tcheck=True,\n\t)\n\n\ndef load_patch():\n"
+    },
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "\tarchived_patch = None\n\n\ttry:\n",
+      "new": "\tarchived_patch = None\n\tcommit_hash = None\n\n\ttry:\n"
+    },
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "\t\t\tcommit_hash = None\n\n\t\t\tif patch.get(\"git\", {}).get(\"auto_commit\", True):\n\t\t\t\tcommit_hash = git_commit(f\"[auto-patch] {patch['patch_id']}\")\n\t\t\t\treport[\"commit\"] = commit_hash\n\t\t\t\treport[\"archived_patch\"] = str(\n\t\t\t\t\tarchived_patch.relative_to(PROJECT_ROOT)\n\t\t\t\t)\n\t\t\t\tcleanup_warning = cleanup_downloaded_patch(\n\t\t\t\t\tpatch_path\n\t\t\t\t)\n\t\t\t\tif cleanup_warning is not None:\n\t\t\t\t\treport[\"patch_cleanup_warning\"] = cleanup_warning\n\n\t\treport[\"status\"] = \"SUCCESS\"\n\n\texcept Exception as error:\n\t\trollback(transaction)\n\t\tremove_staged_patch_archive(archived_patch)\n\t\treport[\"error\"] = str(error)\n",
+      "new": "\t\t\tif patch.get(\"git\", {}).get(\"auto_commit\", True):\n\t\t\t\tcommit_hash = git_commit(f\"[auto-patch] {patch['patch_id']}\")\n\t\t\t\treport[\"commit\"] = commit_hash\n\t\t\t\treport[\"archived_patch\"] = str(\n\t\t\t\t\tarchived_patch.relative_to(PROJECT_ROOT)\n\t\t\t\t)\n\t\t\t\tgit_push(branch)\n\t\t\t\treport[\"pushed\"] = True\n\t\t\t\tcleanup_warning = cleanup_downloaded_patch(\n\t\t\t\t\tpatch_path\n\t\t\t\t)\n\t\t\t\tif cleanup_warning is not None:\n\t\t\t\t\treport[\"patch_cleanup_warning\"] = cleanup_warning\n\n\t\treport[\"status\"] = \"SUCCESS\"\n\n\texcept Exception as error:\n\t\tif commit_hash is None:\n\t\t\trollback(transaction)\n\t\t\tremove_staged_patch_archive(archived_patch)\n\t\telse:\n\t\t\treport[\"pushed\"] = False\n\t\treport[\"error\"] = str(error)\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/test_neuropatch_workflow.py",
+      "old": "def test_ensure_ai_work_branch_reuses_existing_upstream_branch(\n\tmonkeypatch,\n):\n",
+      "new": "def test_git_push_pushes_named_branch_to_origin(monkeypatch):\n\tcommands = []\n\n\tdef fake_run(command, **kwargs):\n\t\tcommands.append((command, kwargs))\n\n\t\tclass Result:\n\t\t\treturncode = 0\n\n\t\treturn Result()\n\n\tmonkeypatch.setattr(neuropatch.subprocess, \"run\", fake_run)\n\n\tneuropatch.git_push(\"ai-development\")\n\n\tassert commands == [\n\t\t(\n\t\t\t[\"git\", \"push\", \"origin\", \"ai-development\"],\n\t\t\t{\n\t\t\t\t\"cwd\": neuropatch.PROJECT_ROOT,\n\t\t\t\t\"check\": True,\n\t\t\t},\n\t\t),\n\t]\n\n\ndef test_ensure_ai_work_branch_reuses_existing_upstream_branch(\n\tmonkeypatch,\n):\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/DEV_RULES.md",
+      "old": "Every successful patch commit must:\n- include only changes from the current patch;\n- use an automatic commit message identifying the patch;\n- report the created commit hash in the patch result.\n",
+      "new": "Every successful patch commit must:\n- include only changes from the current patch;\n- use an automatic commit message identifying the patch;\n- report the created commit hash in the patch result;\n- be pushed automatically to `origin/ai-development` before the patch is reported as `SUCCESS`.\n\nA local commit with a failed push is not a successful handoff. NeuroPatch must report the failure, preserve the local commit and archived patch, avoid pretending that rollback occurred after commit creation, and must not print `SUCCESS HANDOFF` until the push succeeds.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/AI_WORKFLOW.md",
+      "old": "A successful NeuroPatch prints a self-contained `SUCCESS HANDOFF` command after its JSON report. The command is written for the next AI turn and assumes the successful commit is already pushed.",
+      "new": "A successful NeuroPatch prints a self-contained `SUCCESS HANDOFF` command after its JSON report. The command is written for the next AI turn and is printed only after the successful commit has actually been pushed to `origin/ai-development`."
+    },
+    {
+      "type": "replace",
+      "file": "docs/USER_GUIDE_RU.md",
+      "old": "- автоматически создаёт Git commit, если `git.auto_commit` не отключён;\n- после успешного commit удаляет применённый patch-файл из Downloads.\n\n`main` остаётся страховочной веткой. NeuroPatch сам не мержит `ai-development` обратно в `main`.\n\nПри ошибке NeuroPatch выполняет rollback.\n",
+      "new": "- автоматически создаёт Git commit, если `git.auto_commit` не отключён;\n- автоматически выполняет `git push origin ai-development`;\n- только после успешного push удаляет применённый patch-файл из Downloads.\n\n`main` остаётся страховочной веткой. NeuroPatch сам не мержит `ai-development` обратно в `main`.\n\nЕсли ошибка происходит до создания commit, NeuroPatch выполняет rollback. Если commit уже создан, но push не удался, commit и архивированный patch сохраняются локально, результат остаётся ошибочным и `SUCCESS HANDOFF` не печатается. Это отдельное состояние доставки, а не повод откатывать уже созданный commit.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/USER_GUIDE_RU.md",
+      "old": "Итоговый JSON-отчёт содержит `duration_seconds` — полное время выполнения транзакции в секундах, включая применение операций, validation и создание Git commit. Для обычного запуска также выводится `branch`, а после успешного commit — `archived_patch` с репозиторным путём сохранённого `.npatch.json`.",
+      "new": "Итоговый JSON-отчёт содержит `duration_seconds` — полное время выполнения транзакции в секундах, включая применение операций, validation, Git commit и push. Для обычного запуска также выводится `branch`, после commit — `archived_patch`, а успешная доставка в remote подтверждается полем `pushed: true`."
+    },
+    {
+      "type": "replace",
+      "file": "docs/USER_GUIDE_RU.md",
+      "old": "После успешного применения:\n\n```text\ngit status\ngit log -1 --oneline\ngit push\n```\n\nПосле JSON-отчёта успешный NeuroPatch также печатает строку `SUCCESS HANDOFF`. Она сформулирована как готовая команда следующему AI-сеансу, явно указывает рабочую ветку `ai-development` и уже предполагает, что успешный commit запушен.\n\nОбычный цикл после успеха:\n\n```text\ngit push\n```\n\nПосле этого достаточно отправить нейросети последнюю строку `SUCCESS HANDOFF`. Полный успешный JSON-отчёт пересылать не обязательно, если дополнительная диагностика не нужна. Получив handoff, нейросеть должна перечитать свежую репу, заново свериться с `docs/DEV_RULES.md` и `docs/PROJECT_STATE.md`, продолжить записанный next step и сразу выдать следующий `.npatch.json` файл.\n",
+      "new": "После успешного применения ручной `git push` больше не нужен. Для проверки при желании достаточно:\n\n```text\ngit status\ngit log -1 --oneline\n```\n\nПосле JSON-отчёта NeuroPatch печатает строку `SUCCESS HANDOFF` только когда автоматический push в `origin/ai-development` действительно завершился успешно.\n\nПосле этого достаточно написать нейросети `Дальше.` или отправить строку `SUCCESS HANDOFF`. Полный успешный JSON-отчёт пересылать не обязательно, если дополнительная диагностика не нужна. Получив handoff, нейросеть должна перечитать свежую репу, заново свериться с `docs/DEV_RULES.md` и `docs/PROJECT_STATE.md`, продолжить записанный next step и сразу выдать следующий `.npatch.json` файл.\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q",
+      "python -m py_compile tools/neuropatch.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

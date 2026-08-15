@@ -84,6 +84,32 @@ def test_ensure_ai_work_branch_creates_and_publishes_new_branch(
 	]
 
 
+def test_git_push_pushes_named_branch_to_origin(monkeypatch):
+	commands = []
+
+	def fake_run(command, **kwargs):
+		commands.append((command, kwargs))
+
+		class Result:
+			returncode = 0
+
+		return Result()
+
+	monkeypatch.setattr(neuropatch.subprocess, "run", fake_run)
+
+	neuropatch.git_push("ai-development")
+
+	assert commands == [
+		(
+			["git", "push", "origin", "ai-development"],
+			{
+				"cwd": neuropatch.PROJECT_ROOT,
+				"check": True,
+			},
+		),
+	]
+
+
 def test_ensure_ai_work_branch_reuses_existing_upstream_branch(
 	monkeypatch,
 ):
