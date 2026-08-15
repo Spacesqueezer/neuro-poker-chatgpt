@@ -170,6 +170,12 @@ NeuralAgent B
 
 The same opponent may have different observed histories for different agents.
 
+## Solver learning-bridge current state
+
+Restricted Hold'em solver nodes now retain explicit street-local commitments and collected-pot state in addition to total hand commitments. Information sets and strategy serialization include `street_commitments` and `collected_pot`; strategy artifact format is intentionally version 3. Closed streets reset street-local commitments while `collected_pot` tracks the completed contribution boundary. The observation compatibility report therefore classifies production `table.pot`, `table.target_bet`, `hero.current_bet` and `opponent.0.current_bet` as derived semantics, and `SolverBridgeObservation` exposes them without importing the production betting engine.
+
+`table.minimum_raise`, persistent opponent-profile features and production player-name/order metadata remain explicitly unavailable. The next solver step is to add solver-local minimum-raise semantics compatible with the restricted finite action abstraction so `table.minimum_raise` can move from unavailable to derived without importing production betting internals. Preserve strategy artifact v3 compatibility deliberately; changes to solver information-set or serialization semantics require extended validation.
+
 ## AI bootstrap instructions
 
 Before changing the project:

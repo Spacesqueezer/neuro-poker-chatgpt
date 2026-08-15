@@ -187,6 +187,22 @@ StatisticsService / future NeuralAgent opponent model
           players / player_statistics / agent_memory
 ```
 
+## Solver Street Betting State
+
+Restricted solver state keeps two accounting layers deliberately separate:
+
+```text
+total commitments
+    +
+street-local commitments
+    +
+collected pot
+```
+
+Total commitments remain the hand-level contribution source used for terminal utility and stack caps. `street_commitments` model current-street investment for each solver player, while `collected_pot` records the contribution boundary from completed streets. `target_bet` is derived from the maximum street commitment. These fields are public solver information and are serialized in strategy artifact format v3.
+
+This boundary exists specifically so the learning bridge can derive production-style `table.pot`, `table.target_bet`, `hero.current_bet` and `opponent.0.current_bet` without importing mutable production betting-engine state. Production minimum-raise semantics are still intentionally absent and must be modeled separately before they can be exposed by the bridge.
+
 `PlayerRecord`, `PlayerStatisticsRecord` and `AgentMemoryRecord` remain transport/domain records at the repository boundary. SQLAlchemy models are persistence-only objects. `PlayerStatisticsRecord` persists both derived tracker rates and their raw numerators/denominators; the counters are the durable aggregation source of truth and prevent mathematically invalid averaging of percentages across sessions. Positional VPIP/PFR/3-bet data is stored separately in `player_position_statistics` with `(player_id, position)` as the key, avoiding a wide column-per-position schema. `AgentMemoryModel` uses `(agent_id, player_id)` as a composite primary key so each neural agent can maintain an independent view of the same opponent.
 
 Completed engine histories feed statistics through a separate read-only mapping path:
