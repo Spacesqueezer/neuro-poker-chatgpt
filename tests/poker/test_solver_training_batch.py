@@ -8,10 +8,14 @@ from poker.solver.training_batch import (
 )
 
 
+LEGAL_MASK = (1.0, 0.0, 1.0, 0.0, 1.0, 1.0)
+
+
 @dataclass(frozen=True)
 class Sample:
 	observation: tuple[float, ...]
 	probabilities: tuple[float, ...]
+	legal_mask: tuple[float, ...] = LEGAL_MASK
 
 
 def test_solver_training_batch_contract_preserves_arrays():
@@ -29,6 +33,7 @@ def test_solver_training_batch_contract_preserves_arrays():
 	assert batch.probabilities == (
 		(0.1, 0.0, 0.2, 0.0, 0.6, 0.1),
 	)
+	assert batch.legal_masks == (LEGAL_MASK,)
 
 
 def test_solver_training_batch_rejects_empty_batch():
@@ -70,6 +75,22 @@ def test_solver_training_batch_rejects_invalid_probability_shape():
 		)
 
 
+def test_solver_training_batch_rejects_invalid_legal_mask_shape():
+	with pytest.raises(
+		ValueError,
+		match="training legal masks must contain six actions",
+	):
+		build_solver_training_batch(
+			[
+				Sample(
+					(1.0, 2.0),
+					(1.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+					(1.0, 0.0),
+				),
+			]
+		)
+
+
 def test_solver_training_batch_rejects_negative_probabilities():
 	with pytest.raises(
 		ValueError,
@@ -79,7 +100,22 @@ def test_solver_training_batch_rejects_negative_probabilities():
 			[
 				Sample(
 					(1.0, 2.0),
-					(0.2, -0.1, 0.2, 0.1, 0.5, 0.1),
+					(0.2, 0.0, -0.1, 0.0, 0.8, 0.1),
+				),
+			]
+		)
+
+
+def test_solver_training_batch_rejects_probability_on_illegal_action():
+	with pytest.raises(
+		ValueError,
+		match="training probability assigned to illegal action",
+	):
+		build_solver_training_batch(
+			[
+				Sample(
+					(1.0, 2.0),
+					(0.1, 0.1, 0.2, 0.0, 0.5, 0.1),
 				),
 			]
 		)
@@ -89,6 +125,7 @@ def test_solver_training_batch_rejects_non_normalized_probabilities():
 	batch = SolverTrainingBatch(
 		observations=((1.0, 2.0),),
 		probabilities=((0.2, 0.0, 0.2, 0.0, 0.2, 0.0),),
+		legal_masks=(LEGAL_MASK,),
 	)
 
 	with pytest.raises(
