@@ -1,0 +1,58 @@
+{
+  "patch_id": "neuropatch_replace_diagnostics_v3",
+  "goal": "Improve NeuroPatch replace mismatch diagnostics so failures identify the exact operation index, target file, match count, and a short escaped preview of the expected old text.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py",
+    "docs/DEV_RULES.md",
+    "docs/USER_GUIDE_RU.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "def apply_operation(operation):\n",
+      "new": "def apply_operation(operation, operation_index=None):\n"
+    },
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "\t\tif old.count(operation[\"old\"]) != 1:\n\t\t\traise PatchError(f\"Replace mismatch: {operation['file']}\")\n",
+      "new": "\t\tmatch_count = old.count(operation[\"old\"])\n\t\tif match_count != 1:\n\t\t\tpreview = operation[\"old\"][:160].replace(\"\\n\", \"\\\\n\")\n\t\t\tindex_text = (\n\t\t\t\tf\" operation={operation_index}\"\n\t\t\t\tif operation_index is not None\n\t\t\t\telse \"\"\n\t\t\t)\n\t\t\traise PatchError(\n\t\t\t\tf\"Replace mismatch:{index_text} file={operation['file']} \"\n\t\t\t\tf\"matches={match_count} old_preview={preview!r}\"\n\t\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "\t\t\tfor operation in patch[\"operations\"]:\n\t\t\t\tapply_operation(operation)\n",
+      "new": "\t\t\tfor operation_index, operation in enumerate(\n\t\t\t\tpatch[\"operations\"]\n\t\t\t):\n\t\t\t\tapply_operation(operation, operation_index)\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/test_neuropatch_workflow.py",
+      "old": "def test_git_push_pushes_named_branch_to_origin(monkeypatch):\n",
+      "new": "def test_replace_mismatch_reports_operation_index_and_preview(\n\ttmp_path,\n\tmonkeypatch,\n):\n\tproject_root = tmp_path / \"repo\"\n\tproject_root.mkdir()\n\ttarget = project_root / \"sample.txt\"\n\ttarget.write_text(\"actual text\\n\", encoding=\"utf-8\")\n\tmonkeypatch.setattr(neuropatch, \"PROJECT_ROOT\", project_root)\n\n\toperation = {\n\t\t\"type\": \"replace\",\n\t\t\"file\": \"sample.txt\",\n\t\t\"old\": \"expected\\ntext\",\n\t\t\"new\": \"replacement\",\n\t}\n\n\ttry:\n\t\tneuropatch.apply_operation(operation, operation_index=7)\n\texcept neuropatch.PatchError as error:\n\t\tmessage = str(error)\n\t\tassert \"operation=7\" in message\n\t\tassert \"file=sample.txt\" in message\n\t\tassert \"matches=0\" in message\n\t\tassert \"old_preview=\" in message\n\t\tassert \"expected\" in message\n\t\tassert \"text\" in message\n\telse:\n\t\traise AssertionError(\"replace mismatch must raise PatchError\")\n\n\ndef test_git_push_pushes_named_branch_to_origin(monkeypatch):\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/DEV_RULES.md",
+      "old": "Every patch must:\n- target existing project state;\n- avoid speculative rewrites;\n- include validation commands;\n- update documentation when required.\n",
+      "new": "Every patch must:\n- target existing project state;\n- avoid speculative rewrites;\n- include validation commands;\n- update documentation when required.\n\nFor `replace` operations, a mismatch report must identify the operation index, target file, match count and a short preview of the expected `old` text. Failed patches must be repaired from exact current repository state instead of guessing which replacement failed.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/USER_GUIDE_RU.md",
+      "old": "Если ошибка происходит до создания commit, NeuroPatch выполняет rollback. Если commit уже создан, но push не удался, commit и архивированный patch сохраняются локально, результат остаётся ошибочным и `SUCCESS HANDOFF` не печатается. Это отдельное состояние доставки, а не повод откатывать уже созданный commit.\n",
+      "new": "Если ошибка происходит до создания commit, NeuroPatch выполняет rollback. Если commit уже создан, но push не удался, commit и архивированный patch сохраняются локально, результат остаётся ошибочным и `SUCCESS HANDOFF` не печатается. Это отдельное состояние доставки, а не повод откатывать уже созданный commit.\n\nПри `Replace mismatch` ошибка дополнительно показывает индекс операции, файл, количество найденных совпадений и короткий escaped-preview ожидаемого `old`. Это позволяет сразу понять, какой именно `replace` не совпал с текущей веткой.\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q",
+      "python -m py_compile tools/neuropatch.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

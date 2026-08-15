@@ -335,7 +335,7 @@ def check_allowed_files(patch):
 			raise PatchError(f"File not allowed: {operation['file']}")
 
 
-def apply_operation(operation):
+def apply_operation(operation, operation_index=None):
 	target = PROJECT_ROOT / operation["file"]
 
 	if operation["type"] == "create_file":
@@ -354,8 +354,18 @@ def apply_operation(operation):
 
 		old = target.read_text(encoding="utf-8")
 
-		if old.count(operation["old"]) != 1:
-			raise PatchError(f"Replace mismatch: {operation['file']}")
+		match_count = old.count(operation["old"])
+		if match_count != 1:
+			preview = operation["old"][:160].replace("\n", "\\n")
+			index_text = (
+				f" operation={operation_index}"
+				if operation_index is not None
+				else ""
+			)
+			raise PatchError(
+				f"Replace mismatch:{index_text} file={operation['file']} "
+				f"matches={match_count} old_preview={preview!r}"
+			)
 
 		target.write_text(
 			old.replace(operation["old"], operation["new"], 1),
@@ -417,8 +427,10 @@ def main():
 		if not args.dry_run:
 			backup_files(transaction, patch["operations"])
 
-			for operation in patch["operations"]:
-				apply_operation(operation)
+			for operation_index, operation in enumerate(
+				patch["operations"]
+			):
+				apply_operation(operation, operation_index)
 
 			run_tests(patch)
 

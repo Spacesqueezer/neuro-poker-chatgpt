@@ -84,6 +84,37 @@ def test_ensure_ai_work_branch_creates_and_publishes_new_branch(
 	]
 
 
+def test_replace_mismatch_reports_operation_index_and_preview(
+	tmp_path,
+	monkeypatch,
+):
+	project_root = tmp_path / "repo"
+	project_root.mkdir()
+	target = project_root / "sample.txt"
+	target.write_text("actual text\n", encoding="utf-8")
+	monkeypatch.setattr(neuropatch, "PROJECT_ROOT", project_root)
+
+	operation = {
+		"type": "replace",
+		"file": "sample.txt",
+		"old": "expected\ntext",
+		"new": "replacement",
+	}
+
+	try:
+		neuropatch.apply_operation(operation, operation_index=7)
+	except neuropatch.PatchError as error:
+		message = str(error)
+		assert "operation=7" in message
+		assert "file=sample.txt" in message
+		assert "matches=0" in message
+		assert "old_preview=" in message
+		assert "expected" in message
+		assert "text" in message
+	else:
+		raise AssertionError("replace mismatch must raise PatchError")
+
+
 def test_git_push_pushes_named_branch_to_origin(monkeypatch):
 	commands = []
 

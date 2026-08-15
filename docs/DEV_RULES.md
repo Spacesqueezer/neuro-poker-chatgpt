@@ -56,6 +56,8 @@ Every patch must:
 - include validation commands;
 - update documentation when required.
 
+For `replace` operations, a mismatch report must identify the operation index, target file, match count and a short preview of the expected `old` text. Failed patches must be repaired from exact current repository state instead of guessing which replacement failed.
+
 ## Validation profiles
 
 Validation commands are selected according to patch impact.
