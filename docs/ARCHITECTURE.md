@@ -423,6 +423,8 @@ Solver teacher records are a separate research boundary derived from validated s
 
 Teacher artifacts have their own strict read boundary. Structural validation rejects malformed records before use, while compatibility validation takes the original strategy artifact plus reconstructed benchmark game and requires exact source metadata equality after the strategy itself passes chance-space/game validation. Persistence validation therefore cannot manufacture solver semantics: a teacher artifact is accepted only when both its internal record contract and its provenance back to the exact source strategy remain intact.
 
+A learning-neutral target boundary now sits after validated teacher records but remains inside `poker.solver`. `SolverLearningTarget` exposes a stable six-category generic action order `(fold, check, call, bet, raise, all_in)`, a legal-category mask and normalized categorical probabilities. Restricted solver bet-size identities are deliberately collapsed into the generic `bet` category, but aligned `solver_action_groups` preserve which exact solver actions contributed probability mass to each generic category. The target deliberately retains the serialized restricted solver information set rather than a production feature vector. This makes action-space compatibility explicit while keeping the still-unresolved observation-space mismatch visible.
+
 Teacher quality is measured outside the agent:
 
 ```text

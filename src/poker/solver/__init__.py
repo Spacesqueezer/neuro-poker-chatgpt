@@ -27,6 +27,13 @@ from poker.solver.holdem import (
 	HoldemActionAbstraction,
 	RestrictedHeadsUpHoldemGame,
 )
+from poker.solver.learning_target import (
+	SOLVER_TARGET_ACTIONS,
+	SolverLearningTarget,
+	build_learning_targets,
+	solver_action_category,
+	teacher_record_to_learning_target,
+)
 from poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult
 from poker.solver.policy import RestrictedSolverPolicy
 from poker.solver.teacher import (
@@ -52,12 +59,15 @@ __all__ = [
 	"RegretMatching",
 	"RestrictedHeadsUpHoldemGame",
 	"RestrictedSolverPolicy",
+	"SOLVER_TARGET_ACTIONS",
 	"STRATEGY_EXPORT_VERSION",
+	"SolverLearningTarget",
 	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
 	"TwoPlayerSolverGame",
 	"ExternalSamplingMCCFR",
 	"MCCFRResult",
+	"build_learning_targets",
 	"build_strategy_export",
 	"build_teacher_record_export",
 	"chance_space_metadata",
@@ -65,6 +75,8 @@ __all__ = [
 	"load_strategy_export",
 	"load_teacher_record_export",
 	"serialize_information_set",
+	"solver_action_category",
+	"teacher_record_to_learning_target",
 	"validate_policy_game_compatibility",
 	"validate_strategy_export",
 	"validate_teacher_record_compatibility",

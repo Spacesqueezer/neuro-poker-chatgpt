@@ -1,0 +1,76 @@
+{
+  "patch_id": "solver_learning_neutral_targets_v2",
+  "goal": "Add a solver-local learning-neutral intermediate target shape for validated teacher records. Map restricted solver action names into stable generic poker action categories without importing poker.learning or production observation encoders, and preserve explicit evidence when multiple solver sizing actions collapse into one generic category.",
+  "allowed_files": [
+    "src/poker/solver/learning_target.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_learning_target.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/ROADMAP.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/learning_target.py",
+      "content": "from dataclasses import dataclass\n\nfrom poker.solver.teacher import validate_teacher_record_export\n\n\nSOLVER_TARGET_ACTIONS = (\n\t\"fold\",\n\t\"check\",\n\t\"call\",\n\t\"bet\",\n\t\"raise\",\n\t\"all_in\",\n)\n\n\n@dataclass(frozen=True)\nclass SolverLearningTarget:\n\tinformation_set: dict\n\taction_names: tuple[str, ...]\n\tlegal_mask: tuple[float, ...]\n\tprobabilities: tuple[float, ...]\n\tsolver_action_groups: tuple[tuple[str, ...], ...]\n\tsource: str\n\n\t@property\n\tdef size(self):\n\t\treturn len(self.action_names)\n\n\ndef solver_action_category(action):\n\tif action in {\n\t\t\"fold\",\n\t\t\"check\",\n\t\t\"call\",\n\t\t\"raise\",\n\t\t\"all_in\",\n\t}:\n\t\treturn action\n\n\tif action.startswith(\"bet_\") and action.endswith(\"bb\"):\n\t\tsize = action[len(\"bet_\"):-len(\"bb\")]\n\t\ttry:\n\t\t\tvalue = int(size)\n\t\texcept ValueError as error:\n\t\t\traise ValueError(\n\t\t\t\tf\"unsupported solver action: {action}\"\n\t\t\t) from error\n\t\tif value <= 0:\n\t\t\traise ValueError(\n\t\t\t\tf\"unsupported solver action: {action}\"\n\t\t\t)\n\t\treturn \"bet\"\n\n\traise ValueError(f\"unsupported solver action: {action}\")\n\n\ndef build_learning_targets(teacher_payload):\n\tvalidate_teacher_record_export(teacher_payload)\n\treturn tuple(\n\t\tteacher_record_to_learning_target(record)\n\t\tfor record in teacher_payload[\"records\"]\n\t)\n\n\ndef teacher_record_to_learning_target(record):\n\tgroups = {\n\t\taction: []\n\t\tfor action in SOLVER_TARGET_ACTIONS\n\t}\n\tprobabilities = {\n\t\taction: 0.0\n\t\tfor action in SOLVER_TARGET_ACTIONS\n\t}\n\n\tfor solver_action in record[\"legal_actions\"]:\n\t\tcategory = solver_action_category(solver_action)\n\t\tgroups[category].append(solver_action)\n\t\tprobabilities[category] += record[\n\t\t\t\"action_probabilities\"\n\t\t][solver_action]\n\n\tlegal_mask = tuple(\n\t\t1.0 if groups[action] else 0.0\n\t\tfor action in SOLVER_TARGET_ACTIONS\n\t)\n\ttarget_probabilities = tuple(\n\t\tprobabilities[action]\n\t\tfor action in SOLVER_TARGET_ACTIONS\n\t)\n\n\tif abs(sum(target_probabilities) - 1.0) > 1e-9:\n\t\traise ValueError(\n\t\t\t\"solver learning target probabilities must sum to 1\"\n\t\t)\n\n\treturn SolverLearningTarget(\n\t\tinformation_set=dict(record[\"information_set\"]),\n\t\taction_names=SOLVER_TARGET_ACTIONS,\n\t\tlegal_mask=legal_mask,\n\t\tprobabilities=target_probabilities,\n\t\tsolver_action_groups=tuple(\n\t\t\ttuple(groups[action])\n\t\t\tfor action in SOLVER_TARGET_ACTIONS\n\t\t),\n\t\tsource=record[\"source\"],\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult\nfrom poker.solver.policy import RestrictedSolverPolicy\n",
+      "new": "from poker.solver.learning_target import (\n\tSOLVER_TARGET_ACTIONS,\n\tSolverLearningTarget,\n\tbuild_learning_targets,\n\tsolver_action_category,\n\tteacher_record_to_learning_target,\n)\nfrom poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult\nfrom poker.solver.policy import RestrictedSolverPolicy\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"RestrictedSolverPolicy\",\n\t\"STRATEGY_EXPORT_VERSION\",\n",
+      "new": "\t\"RestrictedSolverPolicy\",\n\t\"SOLVER_TARGET_ACTIONS\",\n\t\"STRATEGY_EXPORT_VERSION\",\n\t\"SolverLearningTarget\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"build_strategy_export\",\n\t\"build_teacher_record_export\",\n",
+      "new": "\t\"build_learning_targets\",\n\t\"build_strategy_export\",\n\t\"build_teacher_record_export\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"serialize_information_set\",\n",
+      "new": "\t\"serialize_information_set\",\n\t\"solver_action_category\",\n\t\"teacher_record_to_learning_target\",\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_learning_target.py",
+      "content": "import pytest\n\nfrom poker.solver import (\n\tMCCFRResult,\n\tSOLVER_TARGET_ACTIONS,\n\tbuild_learning_targets,\n\tbuild_strategy_export,\n\tbuild_teacher_record_export,\n\tsolver_action_category,\n)\nfrom tools.benchmark_mccfr import create_benchmark_game\n\n\ndef build_teacher(game, state, strategy, scenario=\"equal\"):\n\tplayer = game.player_to_act(state)\n\tinformation_set = game.information_set_for_node(\n\t\tstate,\n\t\tplayer,\n\t)\n\tstrategy_payload = build_strategy_export(\n\t\tMCCFRResult(\n\t\t\titerations=1,\n\t\t\taverage_strategy={\n\t\t\t\tinformation_set: strategy,\n\t\t\t},\n\t\t\tcumulative_regret={},\n\t\t),\n\t\tgame,\n\t\tseed=42,\n\t\tscenario=scenario,\n\t\tbenchmark_version=2,\n\t)\n\treturn build_teacher_record_export(\n\t\tstrategy_payload,\n\t\tgame,\n\t)\n\n\ndef test_solver_action_category_is_stable_and_explicit():\n\tassert SOLVER_TARGET_ACTIONS == (\n\t\t\"fold\",\n\t\t\"check\",\n\t\t\"call\",\n\t\t\"bet\",\n\t\t\"raise\",\n\t\t\"all_in\",\n\t)\n\tassert solver_action_category(\"fold\") == \"fold\"\n\tassert solver_action_category(\"bet_1bb\") == \"bet\"\n\tassert solver_action_category(\"bet_2bb\") == \"bet\"\n\tassert solver_action_category(\"raise\") == \"raise\"\n\tassert solver_action_category(\"all_in\") == \"all_in\"\n\n\twith pytest.raises(\n\t\tValueError,\n\t\tmatch=\"unsupported solver action\",\n\t):\n\t\tsolver_action_category(\"bet_half_pot\")\n\n\ndef test_learning_target_maps_root_actions_without_production_imports():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(\n\t\tgame,\n\t\troot,\n\t\t{\n\t\t\t\"fold\": 0.1,\n\t\t\t\"call\": 0.2,\n\t\t\t\"raise\": 0.6,\n\t\t\t\"all_in\": 0.1,\n\t\t},\n\t)\n\n\ttargets = build_learning_targets(teacher)\n\troot_target = next(\n\t\ttarget\n\t\tfor target in targets\n\t\tif target.information_set[\"street\"] == \"preflop\"\n\t\tand target.information_set[\"history\"] == []\n\t)\n\n\tassert root_target.action_names == SOLVER_TARGET_ACTIONS\n\tassert root_target.legal_mask == (\n\t\t1.0,\n\t\t0.0,\n\t\t1.0,\n\t\t0.0,\n\t\t1.0,\n\t\t1.0,\n\t)\n\tassert root_target.probabilities == (\n\t\t0.1,\n\t\t0.0,\n\t\t0.2,\n\t\t0.0,\n\t\t0.6,\n\t\t0.1,\n\t)\n\tassert root_target.solver_action_groups == (\n\t\t(\"fold\",),\n\t\t(),\n\t\t(\"call\",),\n\t\t(),\n\t\t(\"raise\",),\n\t\t(\"all_in\",),\n\t)\n\n\ndef test_learning_target_collapses_bet_sizes_but_preserves_groups():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tflop = game.next_node(root, \"call\")\n\tteacher = build_teacher(\n\t\tgame,\n\t\tflop,\n\t\t{\n\t\t\t\"check\": 0.25,\n\t\t\t\"bet_1bb\": 0.25,\n\t\t\t\"bet_2bb\": 0.5,\n\t\t},\n\t)\n\n\ttargets = build_learning_targets(teacher)\n\tflop_target = next(\n\t\ttarget\n\t\tfor target in targets\n\t\tif target.information_set[\"street\"] == \"flop\"\n\t\tand target.information_set[\"history\"] == [\"call\"]\n\t)\n\n\tassert flop_target.legal_mask == (\n\t\t0.0,\n\t\t1.0,\n\t\t0.0,\n\t\t1.0,\n\t\t0.0,\n\t\t0.0,\n\t)\n\tassert flop_target.probabilities == (\n\t\t0.0,\n\t\t0.25,\n\t\t0.0,\n\t\t0.75,\n\t\t0.0,\n\t\t0.0,\n\t)\n\tassert flop_target.solver_action_groups[3] == (\n\t\t\"bet_1bb\",\n\t\t\"bet_2bb\",\n\t)\n\tassert sum(flop_target.probabilities) == 1.0\n\n\ndef test_learning_target_keeps_solver_information_set_not_learning_observation():\n\tgame = create_benchmark_game(\"weighted_multi\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(\n\t\tgame,\n\t\troot,\n\t\t{\n\t\t\t\"fold\": 0.25,\n\t\t\t\"call\": 0.25,\n\t\t\t\"raise\": 0.25,\n\t\t\t\"all_in\": 0.25,\n\t\t},\n\t\tscenario=\"weighted_multi\",\n\t)\n\n\ttarget = build_learning_targets(teacher)[0]\n\n\tassert set(target.information_set) == {\n\t\t\"player\",\n\t\t\"hole_cards\",\n\t\t\"street\",\n\t\t\"public_board\",\n\t\t\"history\",\n\t\t\"commitments\",\n\t\t\"starting_stacks\",\n\t}\n\tassert \"observation\" not in target.information_set\n\tassert \"features\" not in target.information_set\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The next solver step is to add a deliberately narrow conversion prototype from validated solver teacher records into a learning-neutral intermediate sample shape, still inside `poker.solver`, that maps solver action names to stable categorical targets without importing `LearningSample` or the production observation encoder. This should make the eventual semantic mismatch between restricted solver information sets and production learning observations explicit rather than silently pretending they are interchangeable. Use focused validation and do not connect to dataset generation yet.",
+      "new": "Validated solver teacher records can now be converted into a learning-neutral `SolverLearningTarget` shape entirely inside `poker.solver`. The target uses a stable six-category action order `(fold, check, call, bet, raise, all_in)` without importing `poker.learning`, `PlayerAction`, `LearningSample` or the production observation encoder. Restricted solver sizing actions such as `bet_1bb` and `bet_2bb` intentionally collapse into the generic `bet` category by summing probability mass, while `solver_action_groups` preserves the exact source actions behind every category so this lossy mapping remains explicit and inspectable. Each target still carries the serialized restricted solver information set rather than pretending it is a production `LearningObservation`; no feature-vector conversion or dataset generation exists at this boundary. The next solver step is to define and test an explicit observation-compatibility report between serialized restricted solver information sets and the production learning observation schema. The report should identify which semantics can be mapped directly, which require derived values, and which production features are unavailable from solver records. Do not yet create `LearningSample` objects or silently fill unavailable features with zeros. Use focused validation."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "Teacher artifacts have their own strict read boundary. Structural validation rejects malformed records before use, while compatibility validation takes the original strategy artifact plus reconstructed benchmark game and requires exact source metadata equality after the strategy itself passes chance-space/game validation. Persistence validation therefore cannot manufacture solver semantics: a teacher artifact is accepted only when both its internal record contract and its provenance back to the exact source strategy remain intact.\n",
+      "new": "Teacher artifacts have their own strict read boundary. Structural validation rejects malformed records before use, while compatibility validation takes the original strategy artifact plus reconstructed benchmark game and requires exact source metadata equality after the strategy itself passes chance-space/game validation. Persistence validation therefore cannot manufacture solver semantics: a teacher artifact is accepted only when both its internal record contract and its provenance back to the exact source strategy remain intact.\n\nA learning-neutral target boundary now sits after validated teacher records but remains inside `poker.solver`. `SolverLearningTarget` exposes a stable six-category generic action order `(fold, check, call, bet, raise, all_in)`, a legal-category mask and normalized categorical probabilities. Restricted solver bet-size identities are deliberately collapsed into the generic `bet` category, but aligned `solver_action_groups` preserve which exact solver actions contributed probability mass to each generic category. The target deliberately retains the serialized restricted solver information set rather than a production feature vector. This makes action-space compatibility explicit while keeping the still-unresolved observation-space mismatch visible.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "next add a solver-local learning-neutral intermediate target shape that makes action mapping explicit without pretending restricted solver information sets are production learning observations.",
+      "new": "solver teacher records now map into a learning-neutral six-category target with explicit preservation of collapsed solver action groups, while the restricted solver information set remains distinct from production observations; next add an explicit observation-schema compatibility report before any `LearningSample` or dataset bridge."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_learning_target.py tests/poker/test_solver_teacher_export.py -q",
+      "python -m py_compile src/poker/solver/learning_target.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
