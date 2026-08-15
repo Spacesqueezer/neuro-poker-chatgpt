@@ -4,7 +4,9 @@ import pytest
 
 from tools.benchmark_mccfr import (
 	BENCHMARK_SCENARIOS,
+	BenchmarkScenario,
 	create_benchmark_game,
+	get_benchmark_scenario,
 	run_benchmark,
 	strategy_distance,
 	write_report,
@@ -47,20 +49,36 @@ def test_quality_harness_rejects_single_iteration():
 		run_benchmark(1, 42)
 
 
-def test_quality_harness_exposes_explicit_stack_scenarios():
-	assert BENCHMARK_SCENARIOS == {
-		"equal": (20, 20),
-		"asymmetric": (8, 20),
-		"weighted_multi": (20, 20),
-	}
+def test_quality_harness_exposes_immutable_scenario_descriptors():
+	assert tuple(BENCHMARK_SCENARIOS) == (
+		"equal",
+		"asymmetric",
+		"weighted_multi",
+	)
 
-	equal = create_benchmark_game("equal")
-	asymmetric = create_benchmark_game("asymmetric")
-	weighted = create_benchmark_game("weighted_multi")
+	equal = get_benchmark_scenario("equal")
+	asymmetric = get_benchmark_scenario("asymmetric")
+	weighted = get_benchmark_scenario("weighted_multi")
 
+	assert isinstance(equal, BenchmarkScenario)
+	assert equal.name == "equal"
 	assert equal.starting_stacks == (20, 20)
+	assert asymmetric.name == "asymmetric"
 	assert asymmetric.starting_stacks == (8, 20)
+	assert weighted.name == "weighted_multi"
 	assert weighted.starting_stacks == (20, 20)
+
+	with pytest.raises(Exception):
+		equal.starting_stacks = (1, 1)
+
+
+def test_quality_harness_descriptor_builds_compatible_games():
+	for name, descriptor in BENCHMARK_SCENARIOS.items():
+		game = create_benchmark_game(name)
+
+		assert game.starting_stacks == descriptor.starting_stacks
+		assert descriptor.create_game().deals == game.deals
+		assert descriptor.chance_space_identity.startswith("sha256:")
 
 
 def test_quality_harness_weighted_multi_uses_explicit_chance_probabilities():
@@ -95,6 +113,12 @@ def test_quality_harness_weighted_multi_uses_explicit_chance_probabilities():
 
 
 def test_quality_harness_rejects_unknown_scenario():
+	with pytest.raises(
+		ValueError,
+		match="unknown benchmark scenario",
+	):
+		get_benchmark_scenario("missing")
+
 	with pytest.raises(
 		ValueError,
 		match="unknown benchmark scenario",

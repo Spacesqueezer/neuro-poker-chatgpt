@@ -9,7 +9,10 @@ from poker.solver import (
 	validate_strategy_export,
 	write_strategy_export,
 )
-from tools.benchmark_mccfr import create_benchmark_game
+from tools.benchmark_mccfr import (
+	create_benchmark_game,
+	get_benchmark_scenario,
+)
 
 
 def test_information_set_export_contains_only_acting_player_cards():
@@ -115,6 +118,9 @@ def test_strategy_export_chance_space_identity_tracks_weighted_deals():
 	assert chance_space["probabilities"] == [0.5, 0.3, 0.2]
 	assert chance_space["identity"].startswith("sha256:")
 	assert len(chance_space["identity"]) == 71
+	assert chance_space["identity"] == get_benchmark_scenario(
+		"weighted_multi"
+	).chance_space_identity
 
 
 def test_strategy_lookup_resolves_exact_information_set():

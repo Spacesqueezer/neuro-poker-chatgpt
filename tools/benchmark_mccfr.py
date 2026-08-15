@@ -1,6 +1,8 @@
 import argparse
 import json
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from poker.cards.card import Card
@@ -10,14 +12,31 @@ from poker.solver import (
 	HeadsUpHoldemDeal,
 	HoldemActionAbstraction,
 	RestrictedHeadsUpHoldemGame,
+	chance_space_metadata,
 )
 
 
-BENCHMARK_SCENARIOS = {
-	"equal": (20, 20),
-	"asymmetric": (8, 20),
-	"weighted_multi": (20, 20),
-}
+@dataclass(frozen=True)
+class BenchmarkScenario:
+	name: str
+	starting_stacks: tuple[int, int]
+	deal_factory: Callable[[], tuple[HeadsUpHoldemDeal, ...]]
+
+	def create_game(self):
+		return RestrictedHeadsUpHoldemGame(
+			self.deal_factory(),
+			starting_stacks=self.starting_stacks,
+			action_abstraction=HoldemActionAbstraction(
+				postflop_bet_sizes_bb=(1, 2),
+				postflop_raise_increment_multiplier=2,
+			),
+		)
+
+	@property
+	def chance_space_identity(self):
+		return chance_space_metadata(
+			self.create_game()
+		)["identity"]
 
 
 def _single_benchmark_deal():
@@ -107,28 +126,36 @@ def _weighted_benchmark_deals():
 	)
 
 
-def create_benchmark_game(scenario="equal"):
+BENCHMARK_SCENARIOS = {
+	"equal": BenchmarkScenario(
+		name="equal",
+		starting_stacks=(20, 20),
+		deal_factory=lambda: (_single_benchmark_deal(),),
+	),
+	"asymmetric": BenchmarkScenario(
+		name="asymmetric",
+		starting_stacks=(8, 20),
+		deal_factory=lambda: (_single_benchmark_deal(),),
+	),
+	"weighted_multi": BenchmarkScenario(
+		name="weighted_multi",
+		starting_stacks=(20, 20),
+		deal_factory=_weighted_benchmark_deals,
+	),
+}
+
+
+def get_benchmark_scenario(scenario="equal"):
 	try:
-		starting_stacks = BENCHMARK_SCENARIOS[scenario]
+		return BENCHMARK_SCENARIOS[scenario]
 	except KeyError as error:
 		raise ValueError(
 			f"unknown benchmark scenario: {scenario}"
 		) from error
 
-	deals = (
-		_weighted_benchmark_deals()
-		if scenario == "weighted_multi"
-		else (_single_benchmark_deal(),)
-	)
 
-	return RestrictedHeadsUpHoldemGame(
-		deals,
-		starting_stacks=starting_stacks,
-		action_abstraction=HoldemActionAbstraction(
-			postflop_bet_sizes_bb=(1, 2),
-			postflop_raise_increment_multiplier=2,
-		),
-	)
+def create_benchmark_game(scenario="equal"):
+	return get_benchmark_scenario(scenario).create_game()
 
 
 def strategy_distance(first, second):

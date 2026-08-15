@@ -417,6 +417,8 @@ Benchmark chance space is also explicit. `equal` and `asymmetric` retain the ori
 
 Strategy artifact format version 2 binds persistence to that hidden chance model. `chance_space_metadata()` canonicalizes the ordered deal list including both players' private cards, complete fixed board and raw weights, hashes the canonical JSON with SHA-256, and stores the identity together with deal count and normalized initial probabilities. These hidden cards are artifact metadata, not information-set data: they are used only to identify the training game and are never exposed through policy lookup. Loading validates the metadata shape, and policy evaluation requires the artifact identity to exactly match the live restricted game before strategy traversal.
 
+Benchmark configuration is centralized in frozen `BenchmarkScenario` descriptors. A descriptor owns its stable name, public starting stacks and deal factory, constructs the restricted game with the canonical action abstraction, and exposes the resulting chance-space identity. The ordered `BENCHMARK_SCENARIOS` registry is therefore the single configuration boundary shared indirectly by benchmark, export, evaluation and smoke tooling while the CLI continues to pass plain scenario names.
+
 Teacher quality is measured outside the agent:
 
 ```text
