@@ -58,6 +58,8 @@ def test_learning_bridge_contains_only_proven_observation_semantics():
 	observation = record.observation
 
 	assert observation.player_index == 0
+	assert observation.acting_player == "player_0"
+	assert observation.opponent_order == ("player_1",)
 	assert observation.street == "preflop"
 	assert observation.hole_cards == (
 		(14, "H"),
@@ -137,8 +139,6 @@ def test_learning_bridge_lists_unavailable_production_features_explicitly():
 
 	assert record.omitted_production_features == (
 		"opponent.0.profile.*",
-		"metadata.acting_player",
-		"metadata.opponent_order",
 	)
 	assert record.observation.table_pot == 0
 	assert record.observation.table_target_bet == 2
@@ -167,6 +167,8 @@ def test_learning_bridge_derives_player_relative_stacks_for_player_one():
 	)[0].observation
 
 	assert observation.player_index == 1
+	assert observation.acting_player == "player_1"
+	assert observation.opponent_order == ("player_0",)
 	assert observation.hero_starting_stack == 20
 	assert observation.hero_total_contribution == 2
 	assert observation.hero_remaining_chips == 18
@@ -193,7 +195,7 @@ def test_learning_bridge_artifact_is_deterministic_and_round_trips(tmp_path):
 	second = build_learning_bridge_artifact(teacher)
 
 	assert first == second
-	assert first["format_version"] == 1
+	assert first["format_version"] == 2
 	assert first["observation_compatibility_version"] == 1
 	assert first["target_actions"] == [
 		"fold",

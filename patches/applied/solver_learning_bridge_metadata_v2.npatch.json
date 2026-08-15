@@ -1,0 +1,128 @@
+{
+  "patch_id": "solver_learning_bridge_metadata_v2",
+  "goal": "Close the production observation metadata compatibility gap without importing the production engine or persistence: expose deterministic solver-local acting-player and opponent-order identity metadata through the learning bridge, classify those metadata semantics as derived, leave opponent profile features as the only unavailable production observation group, bump the bridge artifact format, and reconcile PROJECT_STATE with the already-landed strategy artifact v4/minimum-raise state.",
+  "allowed_files": [
+    "src/poker/solver/learning_bridge.py",
+    "src/poker/solver/observation_compatibility.py",
+    "tests/poker/test_solver_learning_bridge.py",
+    "tests/poker/test_solver_observation_compatibility.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/DECISIONS.md",
+    "docs/ROADMAP.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "LEARNING_BRIDGE_FORMAT_VERSION = 1\n",
+      "new": "LEARNING_BRIDGE_FORMAT_VERSION = 2\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "class SolverBridgeObservation:\n\tplayer_index: int\n\tstreet: str\n",
+      "new": "class SolverBridgeObservation:\n\tplayer_index: int\n\tacting_player: str\n\topponent_order: tuple[str, ...]\n\tstreet: str\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\t\"player_index\": record.observation.player_index,\n\t\t\t\"street\": record.observation.street,\n",
+      "new": "\t\t\t\"player_index\": record.observation.player_index,\n\t\t\t\"acting_player\": record.observation.acting_player,\n\t\t\t\"opponent_order\": list(record.observation.opponent_order),\n\t\t\t\"street\": record.observation.street,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\"player_index\",\n\t\t\"street\",\n",
+      "new": "\t\t\"player_index\",\n\t\t\"acting_player\",\n\t\t\"opponent_order\",\n\t\t\"street\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\tif observation[\"player_index\"] not in {0, 1}:\n\t\traise ValueError(\n\t\t\t\"learning bridge player_index is invalid\"\n\t\t)\n\tif observation[\"street\"] not in {\n",
+      "new": "\tif observation[\"player_index\"] not in {0, 1}:\n\t\traise ValueError(\n\t\t\t\"learning bridge player_index is invalid\"\n\t\t)\n\texpected_acting_player = f\"player_{observation['player_index']}\"\n\texpected_opponent_order = [\n\t\tf\"player_{1 - observation['player_index']}\"\n\t]\n\tif observation[\"acting_player\"] != expected_acting_player:\n\t\traise ValueError(\n\t\t\t\"learning bridge acting_player metadata mismatch\"\n\t\t)\n\tif observation[\"opponent_order\"] != expected_opponent_order:\n\t\traise ValueError(\n\t\t\t\"learning bridge opponent_order metadata mismatch\"\n\t\t)\n\tif observation[\"street\"] not in {\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\treturn SolverBridgeObservation(\n\t\tplayer_index=player,\n\t\tstreet=info[\"street\"],\n",
+      "new": "\treturn SolverBridgeObservation(\n\t\tplayer_index=player,\n\t\tacting_player=f\"player_{player}\",\n\t\topponent_order=(f\"player_{opponent}\",),\n\t\tstreet=info[\"street\"],\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/observation_compatibility.py",
+      "old": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\n\t\t\t\t\"metadata.acting_player\",\n\t\t\t\t\"metadata.opponent_order\",\n\t\t\t),\n\t\t\tstatus=\"unavailable\",\n\t\t\tsolver_sources=(\"player\",),\n\t\t\treason=(\n\t\t\t\t\"The solver stores player indices, not production player \"\n\t\t\t\t\"names or table-order identity metadata.\"\n\t\t\t),\n\t\t),\n",
+      "new": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\n\t\t\t\t\"metadata.acting_player\",\n\t\t\t\t\"metadata.opponent_order\",\n\t\t\t),\n\t\t\tstatus=\"derived\",\n\t\t\tsolver_sources=(\"player\",),\n\t\t\treason=(\n\t\t\t\t\"Restricted Hold'em has stable solver-local player indices. \"\n\t\t\t\t\"The bridge maps them deterministically to player_0/player_1 \"\n\t\t\t\t\"identity metadata and relative opponent order without claiming \"\n\t\t\t\t\"production table names.\"\n\t\t\t),\n\t\t),\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert observation.player_index == 0\n\tassert observation.street == \"preflop\"\n",
+      "new": "\tassert observation.player_index == 0\n\tassert observation.acting_player == \"player_0\"\n\tassert observation.opponent_order == (\"player_1\",)\n\tassert observation.street == \"preflop\"\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert record.omitted_production_features == (\n\t\t\"opponent.0.profile.*\",\n\t\t\"metadata.acting_player\",\n\t\t\"metadata.opponent_order\",\n\t)\n",
+      "new": "\tassert record.omitted_production_features == (\n\t\t\"opponent.0.profile.*\",\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert observation.player_index == 1\n\tassert observation.hero_starting_stack == 20\n",
+      "new": "\tassert observation.player_index == 1\n\tassert observation.acting_player == \"player_1\"\n\tassert observation.opponent_order == (\"player_0\",)\n\tassert observation.hero_starting_stack == 20\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert first[\"format_version\"] == 1\n\tassert first[\"observation_compatibility_version\"] == 1\n",
+      "new": "\tassert first[\"format_version\"] == 2\n\tassert first[\"observation_compatibility_version\"] == 1\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_observation_compatibility.py",
+      "old": "\tassert \"opponent.0.profile.*\" in report.unavailable_features\n\tassert \"metadata.acting_player\" in report.unavailable_features\n\tassert \"metadata.opponent_order\" in report.unavailable_features\n",
+      "new": "\tassert \"opponent.0.profile.*\" in report.unavailable_features\n\tassert \"metadata.acting_player\" not in report.unavailable_features\n\tassert \"metadata.opponent_order\" not in report.unavailable_features\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_observation_compatibility.py",
+      "old": "\tassert \"opponent.1-7.*\" in derived\n\tassert \"table.minimum_raise\" in derived\n",
+      "new": "\tassert \"opponent.1-7.*\" in derived\n\tassert \"table.minimum_raise\" in derived\n\tassert \"metadata.acting_player\" in derived\n\tassert \"metadata.opponent_order\" in derived\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "Restricted Hold'em solver nodes now retain explicit street-local commitments and collected-pot state in addition to total hand commitments. Information sets and strategy serialization include `street_commitments` and `collected_pot`; strategy artifact format is intentionally version 3. Closed streets reset street-local commitments while `collected_pot` tracks the completed contribution boundary. The observation compatibility report therefore classifies production `table.pot`, `table.target_bet`, `hero.current_bet` and `opponent.0.current_bet` as derived semantics, and `SolverBridgeObservation` exposes them without importing the production betting engine.\n\nRestricted Hold'em solver nodes now also retain explicit solver-local `minimum_raise` public street state. It starts at the configured big blind, resets to the big blind on every new street, and is updated to the full raise increment after an actual raise without expanding the finite action abstraction or importing production betting internals. The information set and strategy serialization now include `minimum_raise`; strategy artifact format is version 4. `SolverBridgeObservation` exposes the corresponding production-style `table.minimum_raise`, and the observation compatibility report classifies it as derived. Persistent opponent-profile features and production player-name/order metadata remain explicitly unavailable. The next solver step should continue closing the remaining learning-observation compatibility gap while keeping those unavailable groups honest and preserving the solver/production-engine boundary. Further information-set or serialization changes require extended validation.",
+      "new": "Restricted Hold'em solver nodes retain total commitments, street-local commitments, collected-pot state and explicit solver-local `minimum_raise` public street state. Information sets and strategy serialization include all of those public betting fields; strategy artifact format is version 4. Closed streets reset street-local commitments and `minimum_raise` to the configured big blind while `collected_pot` tracks the completed contribution boundary. The learning bridge derives production `table.pot`, `table.target_bet`, `table.minimum_raise`, `hero.current_bet` and `opponent.0.current_bet` without importing the production betting engine.\n\nSolver-local player identity metadata is now derived deterministically from the existing player index: the learning bridge exposes `player_0`/`player_1` as `acting_player` plus relative `opponent_order` without claiming production table names or importing the production engine. Learning bridge artifact format is version 2. Persistent opponent-profile features remain explicitly unavailable. The remaining compatibility gap is therefore the persistent `opponent.0.profile.*` feature group; close it only through an explicit solver-side profile input/boundary rather than persistence imports or fabricated zero semantics. Further bridge serialization changes require extended validation."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "This boundary exists specifically so the learning bridge can derive production-style `table.pot`, `table.target_bet`, `table.minimum_raise`, `hero.current_bet` and `opponent.0.current_bet` without importing mutable production betting-engine state. The finite solver action abstraction remains unchanged; minimum-raise state describes public betting semantics rather than adding new action sizes.",
+      "new": "This boundary exists specifically so the learning bridge can derive production-style `table.pot`, `table.target_bet`, `table.minimum_raise`, `hero.current_bet` and `opponent.0.current_bet` without importing mutable production betting-engine state. The finite solver action abstraction remains unchanged; minimum-raise state describes public betting semantics rather than adding new action sizes. Solver player indices also provide a deterministic solver-local identity layer for bridge metadata: index 0/1 maps to `player_0`/`player_1`, allowing acting-player and relative opponent-order metadata to be represented honestly without pretending those labels are production table names."
+    },
+    {
+      "type": "replace",
+      "file": "docs/DECISIONS.md",
+      "old": "Minimum-raise size is public betting state and affects production observation semantics even when the restricted solver deliberately offers only a finite set of actions. Storing it explicitly avoids reconstructing semantics from history or importing the production betting engine, while keeping action-tree size unchanged.\n",
+      "new": "Minimum-raise size is public betting state and affects production observation semantics even when the restricted solver deliberately offers only a finite set of actions. Storing it explicitly avoids reconstructing semantics from history or importing the production betting engine, while keeping action-tree size unchanged.\n\n## ADR-020: Solver Learning Bridge Uses Solver-Local Identity Metadata\n\nDate:\n2026-08-15\n\nDecision:\nRestricted Hold'em player indices are mapped deterministically to `player_0` and `player_1` when the learning bridge needs production-style `acting_player` and `opponent_order` metadata. These labels are solver-local identities, not production table names. Learning bridge artifact format moves to version 2.\n\nReason:\nThe metadata contract needs stable acting/opponent identity, but importing production player objects or persistence would violate the solver boundary. Deterministic local labels preserve relative identity and ordering semantics while making the provenance explicit. Persistent opponent-profile features remain unavailable until supplied through a dedicated boundary.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "the solver state now carries street-local commitments, collected-pot and explicit minimum-raise semantics, strategy artifacts deliberately move to format v4, and the learning bridge derives production pot/target/minimum-raise/current-bet fields without engine imports; next continue closing the remaining learning-observation compatibility gap while keeping profile and production player-identity gaps explicit.",
+      "new": "the solver state now carries street-local commitments, collected-pot and explicit minimum-raise semantics, strategy artifacts deliberately move to format v4, and the learning bridge derives production pot/target/minimum-raise/current-bet fields without engine imports; solver-local player indices now also map deterministically to acting-player/opponent-order metadata in learning bridge format v2 without claiming production names; the remaining observation compatibility gap is persistent opponent-profile features, which require an explicit solver-side profile input boundary rather than persistence coupling or fabricated defaults."
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

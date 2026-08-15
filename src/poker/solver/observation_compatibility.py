@@ -157,11 +157,13 @@ def build_observation_compatibility_report():
 				"metadata.acting_player",
 				"metadata.opponent_order",
 			),
-			status="unavailable",
+			status="derived",
 			solver_sources=("player",),
 			reason=(
-				"The solver stores player indices, not production player "
-				"names or table-order identity metadata."
+				"Restricted Hold'em has stable solver-local player indices. "
+				"The bridge maps them deterministically to player_0/player_1 "
+				"identity metadata and relative opponent order without claiming "
+				"production table names."
 			),
 		),
 	)

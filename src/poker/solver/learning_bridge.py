@@ -16,12 +16,14 @@ from poker.solver.teacher import (
 )
 
 
-LEARNING_BRIDGE_FORMAT_VERSION = 1
+LEARNING_BRIDGE_FORMAT_VERSION = 2
 
 
 @dataclass(frozen=True)
 class SolverBridgeObservation:
 	player_index: int
+	acting_player: str
+	opponent_order: tuple[str, ...]
 	street: str
 	hole_cards: tuple[tuple[int, str], ...]
 	public_board: tuple[tuple[int, str], ...]
@@ -211,6 +213,8 @@ def _serialize_bridge_record(record):
 	return {
 		"observation": {
 			"player_index": record.observation.player_index,
+			"acting_player": record.observation.acting_player,
+			"opponent_order": list(record.observation.opponent_order),
 			"street": record.observation.street,
 			"hole_cards": [
 				list(card)
@@ -345,6 +349,8 @@ def _validate_serialized_bridge_record(
 def _validate_serialized_bridge_observation(observation):
 	required = {
 		"player_index",
+		"acting_player",
+		"opponent_order",
 		"street",
 		"hole_cards",
 		"public_board",
@@ -371,6 +377,18 @@ def _validate_serialized_bridge_observation(observation):
 	if observation["player_index"] not in {0, 1}:
 		raise ValueError(
 			"learning bridge player_index is invalid"
+		)
+	expected_acting_player = f"player_{observation['player_index']}"
+	expected_opponent_order = [
+		f"player_{1 - observation['player_index']}"
+	]
+	if observation["acting_player"] != expected_acting_player:
+		raise ValueError(
+			"learning bridge acting_player metadata mismatch"
+		)
+	if observation["opponent_order"] != expected_opponent_order:
+		raise ValueError(
+			"learning bridge opponent_order metadata mismatch"
 		)
 	if observation["street"] not in {
 		"preflop",
@@ -566,6 +584,8 @@ def _bridge_observation(target):
 
 	return SolverBridgeObservation(
 		player_index=player,
+		acting_player=f"player_{player}",
+		opponent_order=(f"player_{opponent}",),
 		street=info["street"],
 		hole_cards=tuple(
 			(card["rank"], card["suit"])

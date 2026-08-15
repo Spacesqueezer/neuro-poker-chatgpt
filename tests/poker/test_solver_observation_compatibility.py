@@ -80,8 +80,8 @@ def test_unavailable_features_are_not_silently_claimed_as_derivable():
 	assert "hero.current_bet" not in report.unavailable_features
 	assert "opponent.0.current_bet" not in report.unavailable_features
 	assert "opponent.0.profile.*" in report.unavailable_features
-	assert "metadata.acting_player" in report.unavailable_features
-	assert "metadata.opponent_order" in report.unavailable_features
+	assert "metadata.acting_player" not in report.unavailable_features
+	assert "metadata.opponent_order" not in report.unavailable_features
 
 
 def test_report_tracks_current_production_opponent_slot_count():
@@ -96,3 +96,5 @@ def test_report_tracks_current_production_opponent_slot_count():
 	assert "opponent.0.present" in derived
 	assert "opponent.1-7.*" in derived
 	assert "table.minimum_raise" in derived
+	assert "metadata.acting_player" in derived
+	assert "metadata.opponent_order" in derived

@@ -228,3 +228,14 @@ Restricted Hold'em solver nodes store `minimum_raise` independently from the fin
 Reason:
 Minimum-raise size is public betting state and affects production observation semantics even when the restricted solver deliberately offers only a finite set of actions. Storing it explicitly avoids reconstructing semantics from history or importing the production betting engine, while keeping action-tree size unchanged.
 
+## ADR-020: Solver Learning Bridge Uses Solver-Local Identity Metadata
+
+Date:
+2026-08-15
+
+Decision:
+Restricted Hold'em player indices are mapped deterministically to `player_0` and `player_1` when the learning bridge needs production-style `acting_player` and `opponent_order` metadata. These labels are solver-local identities, not production table names. Learning bridge artifact format moves to version 2.
+
+Reason:
+The metadata contract needs stable acting/opponent identity, but importing production player objects or persistence would violate the solver boundary. Deterministic local labels preserve relative identity and ordering semantics while making the provenance explicit. Persistent opponent-profile features remain unavailable until supplied through a dedicated boundary.
+
