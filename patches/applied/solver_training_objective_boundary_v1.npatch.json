@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_training_objective_boundary_v1",
+  "goal": "Add a framework-neutral masked soft-policy objective boundary for solver training without introducing a model, optimizer or Arena integration.",
+  "allowed_files": [
+    "src/poker/solver/training_objective.py",
+    "tests/poker/test_solver_training_objective.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_objective.py",
+      "content": "from math import log\n\n\nclass SolverTrainingObjective:\n\t\"\"\"Framework-neutral masked soft-policy loss semantics.\"\"\"\n\n\t@staticmethod\n\tdef cross_entropy(predicted_probabilities, target_probabilities, legal_mask):\n\t\tif len(predicted_probabilities) != len(target_probabilities):\n\t\t\traise ValueError(\"prediction and target sizes must match\")\n\t\tif len(predicted_probabilities) != len(legal_mask):\n\t\t\traise ValueError(\"prediction and mask sizes must match\")\n\n\t\tloss = 0.0\n\t\tweight = 0.0\n\n\t\tfor predicted, target, allowed in zip(\n\t\t\tpredicted_probabilities,\n\t\t\ttarget_probabilities,\n\t\t\tlegal_mask,\n\t\t):\n\t\t\tif allowed <= 0.0:\n\t\t\t\tcontinue\n\t\t\tif predicted <= 0.0:\n\t\t\t\traise ValueError(\"predicted probability must be positive\")\n\t\t\tloss -= target * log(predicted)\n\t\t\tweight += target\n\n\t\tif weight == 0.0:\n\t\t\traise ValueError(\"target distribution has no legal probability mass\")\n\n\t\treturn loss / weight\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_objective.py",
+      "content": "import pytest\n\nfrom poker.solver.training_objective import SolverTrainingObjective\n\n\ndef test_solver_training_objective_ignores_masked_actions():\n\tloss = SolverTrainingObjective.cross_entropy(\n\t\t(0.5, 0.5, 0.0),\n\t\t(1.0, 0.0, 0.0),\n\t\t(1.0, 0.0, 0.0),\n\t)\n\n\tassert loss == pytest.approx(0.6931471805599453)\n\n\ndef test_solver_training_objective_rejects_invalid_shapes():\n\twith pytest.raises(ValueError, match=\"prediction and target sizes must match\"):\n\t\tSolverTrainingObjective.cross_entropy(\n\t\t\t(0.5, 0.5),\n\t\t\t(1.0,),\n\t\t\t(1.0, 0.0),\n\t\t)\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_objective.py tests/poker/test_solver_training_batch.py tests/poker/test_solver_training_input.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
