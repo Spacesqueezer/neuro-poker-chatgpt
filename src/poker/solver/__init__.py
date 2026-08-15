@@ -35,6 +35,13 @@ from poker.solver.learning_target import (
 	teacher_record_to_learning_target,
 )
 from poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult
+from poker.solver.observation_compatibility import (
+	COMPATIBILITY_STATUSES,
+	OBSERVATION_COMPATIBILITY_VERSION,
+	ObservationCompatibilityEntry,
+	ObservationCompatibilityReport,
+	build_observation_compatibility_report,
+)
 from poker.solver.policy import RestrictedSolverPolicy
 from poker.solver.teacher import (
 	TEACHER_RECORD_FORMAT_VERSION,
@@ -50,11 +57,15 @@ __all__ = [
 	"CFRResult",
 	"CFRTrainer",
 	"CHANCE_SPACE_VERSION",
+	"COMPATIBILITY_STATUSES",
 	"HeadsUpHoldemDeal",
 	"HeadsUpHoldemNode",
 	"HoldemActionAbstraction",
 	"InitialNode",
 	"KuhnPokerGame",
+	"OBSERVATION_COMPATIBILITY_VERSION",
+	"ObservationCompatibilityEntry",
+	"ObservationCompatibilityReport",
 	"POLICY_EVALUATION_VERSION",
 	"RegretMatching",
 	"RestrictedHeadsUpHoldemGame",
@@ -68,6 +79,7 @@ __all__ = [
 	"ExternalSamplingMCCFR",
 	"MCCFRResult",
 	"build_learning_targets",
+	"build_observation_compatibility_report",
 	"build_strategy_export",
 	"build_teacher_record_export",
 	"chance_space_metadata",
