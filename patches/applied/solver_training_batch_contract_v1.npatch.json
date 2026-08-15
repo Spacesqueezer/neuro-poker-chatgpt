@@ -1,0 +1,31 @@
+{
+  "patch_id": "solver_training_batch_contract_v1",
+  "goal": "Define a minimal supervised-training input batch contract over exported solver dataset samples without selecting a model architecture or optimizer.",
+  "allowed_files": [
+    "src/poker/solver/training_batch.py",
+    "tests/poker/test_solver_training_batch.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_batch.py",
+      "content": "from dataclasses import dataclass\nfrom typing import Sequence\n\n\n@dataclass(frozen=True)\nclass SolverTrainingBatch:\n\tobservations: tuple[tuple[float, ...], ...]\n\tprobabilities: tuple[tuple[float, ...], ...]\n\n\t@property\n\tdef size(self) -> int:\n\t\treturn len(self.observations)\n\n\ndef build_solver_training_batch(samples: Sequence[object]) -> SolverTrainingBatch:\n\treturn SolverTrainingBatch(\n\t\tobservations=tuple(sample.observation for sample in samples),\n\t\tprobabilities=tuple(sample.probabilities for sample in samples),\n\t)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_batch.py",
+      "content": "from dataclasses import dataclass\n\nfrom poker.solver.training_batch import build_solver_training_batch\n\n\n@dataclass(frozen=True)\nclass Sample:\n\tobservation: tuple[float, ...]\n\tprobabilities: tuple[float, ...]\n\n\ndef test_solver_training_batch_contract_preserves_arrays():\n\tbatch = build_solver_training_batch(\n\t\t[\n\t\t\tSample((1.0, 2.0), (0.5, 0.5)),\n\t\t]\n\t)\n\n\tassert batch.size == 1\n\tassert batch.observations == ((1.0, 2.0),)\n\tassert batch.probabilities == ((0.5, 0.5),)\n"
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true,
+    "auto_push": true
+  }
+}
