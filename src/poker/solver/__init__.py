@@ -29,6 +29,11 @@ from poker.solver.holdem import (
 )
 from poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult
 from poker.solver.policy import RestrictedSolverPolicy
+from poker.solver.teacher import (
+	TEACHER_RECORD_FORMAT_VERSION,
+	build_teacher_record_export,
+	write_teacher_record_export,
+)
 
 
 __all__ = [
@@ -45,11 +50,13 @@ __all__ = [
 	"RestrictedHeadsUpHoldemGame",
 	"RestrictedSolverPolicy",
 	"STRATEGY_EXPORT_VERSION",
+	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
 	"TwoPlayerSolverGame",
 	"ExternalSamplingMCCFR",
 	"MCCFRResult",
 	"build_strategy_export",
+	"build_teacher_record_export",
 	"chance_space_metadata",
 	"evaluate_restricted_policy",
 	"load_strategy_export",
@@ -57,4 +64,5 @@ __all__ = [
 	"validate_policy_game_compatibility",
 	"validate_strategy_export",
 	"write_strategy_export",
+	"write_teacher_record_export",
 ]

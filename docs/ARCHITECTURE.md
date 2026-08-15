@@ -419,6 +419,8 @@ Strategy artifact format version 2 binds persistence to that hidden chance model
 
 Benchmark configuration is centralized in frozen `BenchmarkScenario` descriptors. A descriptor owns its stable name, public starting stacks and deal factory, constructs the restricted game with the canonical action abstraction, and exposes the resulting chance-space identity. The ordered `BENCHMARK_SCENARIOS` registry is therefore the single configuration boundary shared indirectly by benchmark, export, evaluation and smoke tooling while the CLI continues to pass plain scenario names.
 
+Solver teacher records are a separate research boundary derived from validated strategy artifacts rather than production observations. The exporter reconstructs the exact benchmark game, traverses live restricted nodes and emits only information sets with stored legal probability mass. Each record contains the explicit serialized information set, the current legal solver actions, normalized probabilities restricted to those actions, and an exact/reconciled source marker. Missing lookup entries and zero legal overlap are diagnostics only and never become teacher labels. The export carries the complete source strategy benchmark/chance-space/action-abstraction metadata and remains independent from `poker.learning` and `poker.api`.
+
 Teacher quality is measured outside the agent:
 
 ```text

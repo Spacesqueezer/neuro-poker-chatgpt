@@ -1,0 +1,89 @@
+{
+  "patch_id": "solver_teacher_record_export_v1",
+  "goal": "Add a solver-local deterministic teacher-record export boundary from validated restricted-Hold'em strategy artifacts. Emit only live information sets with non-fallback legal action probability mass, preserve artifact compatibility metadata, and keep the boundary independent from poker.learning and poker.api.",
+  "allowed_files": [
+    "src/poker/solver/teacher.py",
+    "src/poker/solver/__init__.py",
+    "tools/export_solver_teacher_records.py",
+    "tests/poker/test_solver_teacher_export.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/ROADMAP.md",
+    "docs/USER_GUIDE_RU.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/teacher.py",
+      "content": "import json\nfrom pathlib import Path\n\nfrom poker.solver.evaluation import validate_policy_game_compatibility\nfrom poker.solver.export import (\n\tStrategyLookup,\n\tinformation_set_key,\n\tserialize_information_set,\n\tvalidate_strategy_export,\n)\n\n\nTEACHER_RECORD_FORMAT_VERSION = 1\n\n\ndef build_teacher_record_export(payload, game):\n\tvalidate_strategy_export(payload)\n\tvalidate_policy_game_compatibility(payload, game)\n\n\tlookup = StrategyLookup(payload)\n\trecords = {}\n\tmissing_information_sets = set()\n\tzero_overlap_information_sets = set()\n\n\tdef traverse(state):\n\t\tif game.is_terminal_node(state):\n\t\t\treturn\n\n\t\tplayer = game.player_to_act(state)\n\t\tlegal_actions = tuple(game.legal_actions(state))\n\t\tinformation_set = game.information_set_for_node(\n\t\t\tstate,\n\t\t\tplayer,\n\t\t)\n\t\tserialized = serialize_information_set(information_set)\n\t\tkey = information_set_key(serialized)\n\n\t\tif key not in records:\n\t\t\tstored = lookup.lookup(information_set)\n\t\t\tif stored is None:\n\t\t\t\tmissing_information_sets.add(key)\n\t\t\telse:\n\t\t\t\toverlap = sum(\n\t\t\t\t\tstored.get(action, 0.0)\n\t\t\t\t\tfor action in legal_actions\n\t\t\t\t)\n\t\t\t\tif overlap <= 0.0:\n\t\t\t\t\tzero_overlap_information_sets.add(key)\n\t\t\t\telse:\n\t\t\t\t\taction_probabilities = {\n\t\t\t\t\t\taction: stored.get(action, 0.0) / overlap\n\t\t\t\t\t\tfor action in legal_actions\n\t\t\t\t\t}\n\t\t\t\t\trecords[key] = {\n\t\t\t\t\t\t\"information_set\": serialized,\n\t\t\t\t\t\t\"legal_actions\": list(legal_actions),\n\t\t\t\t\t\t\"action_probabilities\": action_probabilities,\n\t\t\t\t\t\t\"source\": (\n\t\t\t\t\t\t\t\"exact\"\n\t\t\t\t\t\t\tif set(stored) == set(legal_actions)\n\t\t\t\t\t\t\telse \"reconciled\"\n\t\t\t\t\t\t),\n\t\t\t\t\t}\n\n\t\tfor action in legal_actions:\n\t\t\ttraverse(game.next_node(state, action))\n\n\tfor initial in game.initial_nodes():\n\t\ttraverse(initial.state)\n\n\tordered_records = [\n\t\trecords[key]\n\t\tfor key in sorted(records)\n\t]\n\n\treturn {\n\t\t\"format_version\": TEACHER_RECORD_FORMAT_VERSION,\n\t\t\"source_strategy\": {\n\t\t\t\"format_version\": payload[\"format_version\"],\n\t\t\t\"solver\": payload[\"solver\"],\n\t\t\t\"iterations\": payload[\"iterations\"],\n\t\t\t\"seed\": payload[\"seed\"],\n\t\t\t\"benchmark\": payload[\"benchmark\"],\n\t\t\t\"action_abstraction\": payload[\"action_abstraction\"],\n\t\t},\n\t\t\"record_count\": len(ordered_records),\n\t\t\"skipped_missing_information_sets\": len(\n\t\t\tmissing_information_sets\n\t\t),\n\t\t\"skipped_zero_overlap_information_sets\": len(\n\t\t\tzero_overlap_information_sets\n\t\t),\n\t\t\"records\": ordered_records,\n\t}\n\n\ndef write_teacher_record_export(payload, output):\n\tpath = Path(output)\n\tpath.parent.mkdir(parents=True, exist_ok=True)\n\tpath.write_text(\n\t\tjson.dumps(\n\t\t\tpayload,\n\t\t\tindent=2,\n\t\t\tsort_keys=True,\n\t\t) + \"\\n\",\n\t\tencoding=\"utf-8\",\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.policy import RestrictedSolverPolicy\n",
+      "new": "from poker.solver.policy import RestrictedSolverPolicy\nfrom poker.solver.teacher import (\n\tTEACHER_RECORD_FORMAT_VERSION,\n\tbuild_teacher_record_export,\n\twrite_teacher_record_export,\n)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"STRATEGY_EXPORT_VERSION\",\n",
+      "new": "\t\"STRATEGY_EXPORT_VERSION\",\n\t\"TEACHER_RECORD_FORMAT_VERSION\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"build_strategy_export\",\n",
+      "new": "\t\"build_strategy_export\",\n\t\"build_teacher_record_export\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"write_strategy_export\",\n",
+      "new": "\t\"write_strategy_export\",\n\t\"write_teacher_record_export\",\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tools/export_solver_teacher_records.py",
+      "content": "import argparse\nimport json\n\nfrom poker.solver import (\n\tbuild_teacher_record_export,\n\tload_strategy_export,\n\twrite_teacher_record_export,\n)\nfrom tools.benchmark_mccfr import create_benchmark_game\n\n\ndef export_teacher_records(strategy_path, output):\n\tpayload = load_strategy_export(strategy_path)\n\tscenario = payload[\"benchmark\"].get(\"scenario\")\n\tif not isinstance(scenario, str) or not scenario:\n\t\traise ValueError(\n\t\t\t\"strategy artifact benchmark scenario is required\"\n\t\t)\n\n\tgame = create_benchmark_game(scenario)\n\trecords = build_teacher_record_export(payload, game)\n\twrite_teacher_record_export(records, output)\n\treturn records\n\n\ndef main():\n\tparser = argparse.ArgumentParser()\n\tparser.add_argument(\"--strategy\", required=True)\n\tparser.add_argument(\"--output\", required=True)\n\targs = parser.parse_args()\n\n\treport = export_teacher_records(\n\t\targs.strategy,\n\t\targs.output,\n\t)\n\n\tprint(\n\t\tjson.dumps(\n\t\t\t{\n\t\t\t\t\"output\": args.output,\n\t\t\t\t\"format_version\": report[\"format_version\"],\n\t\t\t\t\"scenario\": report[\"source_strategy\"][\n\t\t\t\t\t\"benchmark\"\n\t\t\t\t][\"scenario\"],\n\t\t\t\t\"record_count\": report[\"record_count\"],\n\t\t\t\t\"skipped_missing_information_sets\": report[\n\t\t\t\t\t\"skipped_missing_information_sets\"\n\t\t\t\t],\n\t\t\t\t\"skipped_zero_overlap_information_sets\": report[\n\t\t\t\t\t\"skipped_zero_overlap_information_sets\"\n\t\t\t\t],\n\t\t\t},\n\t\t\tindent=2,\n\t\t\tsort_keys=True,\n\t\t)\n\t)\n\n\nif __name__ == \"__main__\":\n\tmain()\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_teacher_export.py",
+      "content": "import json\n\nfrom poker.solver import (\n\tMCCFRResult,\n\tbuild_strategy_export,\n\tbuild_teacher_record_export,\n\twrite_teacher_record_export,\n)\nfrom tools.benchmark_mccfr import create_benchmark_game\n\n\ndef build_payload(game, strategies, scenario=\"equal\"):\n\treturn build_strategy_export(\n\t\tMCCFRResult(\n\t\t\titerations=1,\n\t\t\taverage_strategy=strategies,\n\t\t\tcumulative_regret={},\n\t\t),\n\t\tgame,\n\t\tseed=42,\n\t\tscenario=scenario,\n\t\tbenchmark_version=2,\n\t)\n\n\ndef test_teacher_export_emits_only_stored_live_information_sets():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\troot_info = game.information_set_for_node(root, 0)\n\tpayload = build_payload(\n\t\tgame,\n\t\t{\n\t\t\troot_info: {\n\t\t\t\t\"fold\": 0.1,\n\t\t\t\t\"call\": 0.2,\n\t\t\t\t\"raise\": 0.6,\n\t\t\t\t\"all_in\": 0.1,\n\t\t\t},\n\t\t},\n\t)\n\n\treport = build_teacher_record_export(payload, game)\n\n\tassert report[\"format_version\"] == 1\n\tassert report[\"record_count\"] == 1\n\tassert report[\"skipped_missing_information_sets\"] > 0\n\tassert report[\"skipped_zero_overlap_information_sets\"] == 0\n\tassert report[\"records\"][0][\"source\"] == \"exact\"\n\tassert report[\"records\"][0][\"legal_actions\"] == [\n\t\t\"fold\",\n\t\t\"call\",\n\t\t\"raise\",\n\t\t\"all_in\",\n\t]\n\tassert report[\"records\"][0][\"action_probabilities\"] == {\n\t\t\"fold\": 0.1,\n\t\t\"call\": 0.2,\n\t\t\"raise\": 0.6,\n\t\t\"all_in\": 0.1,\n\t}\n\n\ndef test_teacher_export_reconciles_stored_actions_without_fallback_labels():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\troot_info = game.information_set_for_node(root, 0)\n\tpayload = build_payload(\n\t\tgame,\n\t\t{\n\t\t\troot_info: {\n\t\t\t\t\"fold\": 0.25,\n\t\t\t\t\"call\": 0.25,\n\t\t\t\t\"raise\": 0.25,\n\t\t\t\t\"all_in\": 0.0,\n\t\t\t\t\"obsolete\": 0.25,\n\t\t\t},\n\t\t},\n\t)\n\n\treport = build_teacher_record_export(payload, game)\n\trecord = report[\"records\"][0]\n\n\tassert report[\"record_count\"] == 1\n\tassert record[\"source\"] == \"reconciled\"\n\tassert \"obsolete\" not in record[\"action_probabilities\"]\n\tassert abs(\n\t\tsum(record[\"action_probabilities\"].values()) - 1.0\n\t) < 1e-12\n\n\ndef test_teacher_export_skips_zero_legal_overlap():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\troot_info = game.information_set_for_node(root, 0)\n\tpayload = build_payload(\n\t\tgame,\n\t\t{\n\t\t\troot_info: {\n\t\t\t\t\"obsolete\": 1.0,\n\t\t\t},\n\t\t},\n\t)\n\n\treport = build_teacher_record_export(payload, game)\n\n\tassert report[\"record_count\"] == 0\n\tassert report[\"skipped_zero_overlap_information_sets\"] == 1\n\tassert report[\"records\"] == []\n\n\ndef test_teacher_export_is_deterministic_and_writable(tmp_path):\n\tgame = create_benchmark_game(\"weighted_multi\")\n\troot = game.initial_nodes()[0].state\n\troot_info = game.information_set_for_node(root, 0)\n\tpayload = build_payload(\n\t\tgame,\n\t\t{\n\t\t\troot_info: {\n\t\t\t\t\"fold\": 0.25,\n\t\t\t\t\"call\": 0.25,\n\t\t\t\t\"raise\": 0.25,\n\t\t\t\t\"all_in\": 0.25,\n\t\t\t},\n\t\t},\n\t\tscenario=\"weighted_multi\",\n\t)\n\n\tfirst = build_teacher_record_export(payload, game)\n\tsecond = build_teacher_record_export(payload, game)\n\n\tassert first == second\n\tassert first[\"source_strategy\"][\"benchmark\"][\n\t\t\"chance_space\"\n\t][\"identity\"].startswith(\"sha256:\")\n\n\toutput = tmp_path / \"teacher_records.json\"\n\twrite_teacher_record_export(first, output)\n\tassert json.loads(output.read_text(encoding=\"utf-8\")) == first\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The next solver step is to add a solver-local teacher-record export boundary from validated strategy artifacts. It should emit versioned records containing the serialized restricted information set, legal solver action probabilities and artifact compatibility metadata, without importing `poker.learning`, `LearningSample` or production `poker.api` agents. Missing/fallback information sets must not be emitted as solved teacher labels. Keep the first implementation artifact-driven and deterministic; use focused validation while the production learning serialization contract remains untouched.",
+      "new": "A solver-local teacher-record export boundary now converts validated restricted-Hold'em strategy artifacts into deterministic versioned research records without importing `poker.learning`, `LearningSample` or production `poker.api` agents. The exporter reconstructs the artifact's benchmark game, traverses live restricted solver nodes, preserves the serialized public information set, records the current legal solver action set and renormalized stored action probabilities, and carries the complete source strategy compatibility metadata. Missing information sets and zero-overlap strategies are counted but never emitted as solved teacher labels; stored obsolete actions may only be dropped through explicit reconciled records with remaining legal probability mass. `tools/export_solver_teacher_records.py` exposes artifact-to-record conversion without running MCCFR training. The next solver step is to add strict read/validation for teacher-record artifacts and verify that records remain compatible with their source strategy/chance-space/action-abstraction metadata before any bridge to `poker.learning` is introduced. Keep this boundary solver-local and use focused validation while the production learning serialization contract remains untouched."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "Benchmark configuration is centralized in frozen `BenchmarkScenario` descriptors. A descriptor owns its stable name, public starting stacks and deal factory, constructs the restricted game with the canonical action abstraction, and exposes the resulting chance-space identity. The ordered `BENCHMARK_SCENARIOS` registry is therefore the single configuration boundary shared indirectly by benchmark, export, evaluation and smoke tooling while the CLI continues to pass plain scenario names.\n",
+      "new": "Benchmark configuration is centralized in frozen `BenchmarkScenario` descriptors. A descriptor owns its stable name, public starting stacks and deal factory, constructs the restricted game with the canonical action abstraction, and exposes the resulting chance-space identity. The ordered `BENCHMARK_SCENARIOS` registry is therefore the single configuration boundary shared indirectly by benchmark, export, evaluation and smoke tooling while the CLI continues to pass plain scenario names.\n\nSolver teacher records are a separate research boundary derived from validated strategy artifacts rather than production observations. The exporter reconstructs the exact benchmark game, traverses live restricted nodes and emits only information sets with stored legal probability mass. Each record contains the explicit serialized information set, the current legal solver actions, normalized probabilities restricted to those actions, and an exact/reconciled source marker. Missing lookup entries and zero legal overlap are diagnostics only and never become teacher labels. The export carries the complete source strategy benchmark/chance-space/action-abstraction metadata and remains independent from `poker.learning` and `poker.api`.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "benchmark scenario configuration is now consolidated into immutable descriptors that own names, stacks, deal factories and chance-space identity while preserving CLI/artifact compatibility; next add a solver-local versioned teacher-record export from validated strategy artifacts before any connection to `poker.learning` or production agents.",
+      "new": "benchmark scenario configuration is consolidated into immutable descriptors that own names, stacks, deal factories and chance-space identity while preserving CLI/artifact compatibility; validated strategy artifacts can now be transformed into deterministic solver-local teacher records containing only live legal action probability mass, with missing/fallback information sets excluded from solved labels; next add strict teacher-record import/compatibility validation before any connection to `poker.learning` or production agents."
+    },
+    {
+      "type": "replace",
+      "file": "docs/USER_GUIDE_RU.md",
+      "old": "Smoke намеренно не содержит wall-clock метрик и имеет маленький default workload. Это проверка целостности artifact pipeline, а не convergence/solver-quality benchmark. Для больших прогонов используй `tools/benchmark_mccfr.py` и `tools/export_mccfr_strategy.py` отдельно.\n\n## 9. NeuroPatch\n",
+      "new": "Smoke намеренно не содержит wall-clock метрик и имеет маленький default workload. Это проверка целостности artifact pipeline, а не convergence/solver-quality benchmark. Для больших прогонов используй `tools/benchmark_mccfr.py` и `tools/export_mccfr_strategy.py` отдельно.\n\n## 8.5. Экспорт solver teacher records\n\nПреобразовать уже сохранённый strategy artifact в solver-local teacher records без нового MCCFR training:\n\n```text\npython tools/export_solver_teacher_records.py --strategy artifacts/mccfr_equal_strategy.json --output artifacts/mccfr_equal_teacher_records.json\n```\n\nОба аргумента обязательны:\n\n```text\n--strategy PATH\n--output PATH\n```\n\nExporter читает и валидирует strategy artifact, восстанавливает его benchmark-сценарий и обходит текущее restricted solver tree. В teacher artifact попадают только information sets, для которых в исходной strategy реально есть ненулевая probability mass на текущих legal actions. Missing information sets и zero-overlap entries учитываются в счётчиках, но не становятся teacher labels.\n\nФормат teacher artifact v1 содержит:\n\n```text\nformat_version\nsource_strategy\nrecord_count\nskipped_missing_information_sets\nskipped_zero_overlap_information_sets\nrecords\n```\n\nКаждый record содержит:\n\n```text\ninformation_set\nlegal_actions\naction_probabilities\nsource\n```\n\n`source = exact` означает полное совпадение сохранённого и текущего action set. `source = reconciled` означает, что устаревшие действия были отброшены, а оставшаяся legal probability mass перенормирована. Uniform fallback из `RestrictedSolverPolicy` сюда никогда не записывается.\n\nЭто пока research artifact внутри `poker.solver`; он не является `LearningSample` и не подключён к production dataset generation.\n\n## 9. NeuroPatch\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_teacher_export.py tests/poker/test_solver_strategy_export.py tests/poker/test_solver_policy_evaluation.py -q",
+      "python -m py_compile src/poker/solver/teacher.py tools/export_solver_teacher_records.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

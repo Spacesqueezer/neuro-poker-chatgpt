@@ -727,6 +727,47 @@ python tools/smoke_solver_artifacts.py --iterations 5 --seed 123 --scenarios asy
 
 Smoke намеренно не содержит wall-clock метрик и имеет маленький default workload. Это проверка целостности artifact pipeline, а не convergence/solver-quality benchmark. Для больших прогонов используй `tools/benchmark_mccfr.py` и `tools/export_mccfr_strategy.py` отдельно.
 
+## 8.5. Экспорт solver teacher records
+
+Преобразовать уже сохранённый strategy artifact в solver-local teacher records без нового MCCFR training:
+
+```text
+python tools/export_solver_teacher_records.py --strategy artifacts/mccfr_equal_strategy.json --output artifacts/mccfr_equal_teacher_records.json
+```
+
+Оба аргумента обязательны:
+
+```text
+--strategy PATH
+--output PATH
+```
+
+Exporter читает и валидирует strategy artifact, восстанавливает его benchmark-сценарий и обходит текущее restricted solver tree. В teacher artifact попадают только information sets, для которых в исходной strategy реально есть ненулевая probability mass на текущих legal actions. Missing information sets и zero-overlap entries учитываются в счётчиках, но не становятся teacher labels.
+
+Формат teacher artifact v1 содержит:
+
+```text
+format_version
+source_strategy
+record_count
+skipped_missing_information_sets
+skipped_zero_overlap_information_sets
+records
+```
+
+Каждый record содержит:
+
+```text
+information_set
+legal_actions
+action_probabilities
+source
+```
+
+`source = exact` означает полное совпадение сохранённого и текущего action set. `source = reconciled` означает, что устаревшие действия были отброшены, а оставшаяся legal probability mass перенормирована. Uniform fallback из `RestrictedSolverPolicy` сюда никогда не записывается.
+
+Это пока research artifact внутри `poker.solver`; он не является `LearningSample` и не подключён к production dataset generation.
+
 ## 9. NeuroPatch
 
 Обычное применение скачанного патча:
