@@ -4,6 +4,9 @@ from poker.solver import (
 	MCCFRResult,
 	build_strategy_export,
 	build_teacher_record_export,
+	load_teacher_record_export,
+	validate_teacher_record_compatibility,
+	validate_teacher_record_export,
 	write_teacher_record_export,
 )
 from tools.benchmark_mccfr import create_benchmark_game
@@ -136,3 +139,136 @@ def test_teacher_export_is_deterministic_and_writable(tmp_path):
 	output = tmp_path / "teacher_records.json"
 	write_teacher_record_export(first, output)
 	assert json.loads(output.read_text(encoding="utf-8")) == first
+	assert load_teacher_record_export(output) == first
+	validate_teacher_record_compatibility(
+		first,
+		payload,
+		game,
+	)
+
+
+def test_teacher_export_validation_rejects_bad_probability_sum():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	root_info = game.information_set_for_node(root, 0)
+	payload = build_payload(
+		game,
+		{
+			root_info: {
+				"fold": 0.25,
+				"call": 0.25,
+				"raise": 0.25,
+				"all_in": 0.25,
+			},
+		},
+	)
+	teacher = build_teacher_record_export(payload, game)
+	teacher["records"][0]["action_probabilities"]["fold"] = 0.5
+
+	try:
+		validate_teacher_record_export(teacher)
+	except ValueError as error:
+		assert "sum to 1" in str(error)
+	else:
+		raise AssertionError(
+			"invalid teacher probability sum must fail validation"
+		)
+
+
+def test_teacher_export_validation_rejects_duplicate_information_sets():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	root_info = game.information_set_for_node(root, 0)
+	payload = build_payload(
+		game,
+		{
+			root_info: {
+				"fold": 0.25,
+				"call": 0.25,
+				"raise": 0.25,
+				"all_in": 0.25,
+			},
+		},
+	)
+	teacher = build_teacher_record_export(payload, game)
+	teacher["records"].append(
+		json.loads(json.dumps(teacher["records"][0]))
+	)
+	teacher["record_count"] = 2
+
+	try:
+		validate_teacher_record_export(teacher)
+	except ValueError as error:
+		assert "duplicate" in str(error)
+	else:
+		raise AssertionError(
+			"duplicate teacher information sets must fail validation"
+		)
+
+
+def test_teacher_export_compatibility_rejects_different_strategy():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	root_info = game.information_set_for_node(root, 0)
+	payload = build_payload(
+		game,
+		{
+			root_info: {
+				"fold": 0.25,
+				"call": 0.25,
+				"raise": 0.25,
+				"all_in": 0.25,
+			},
+		},
+	)
+	teacher = build_teacher_record_export(payload, game)
+	other = json.loads(json.dumps(payload))
+	other["seed"] = 99
+
+	try:
+		validate_teacher_record_compatibility(
+			teacher,
+			other,
+			game,
+		)
+	except ValueError as error:
+		assert "source_strategy" in str(error)
+	else:
+		raise AssertionError(
+			"teacher/source strategy mismatch must fail validation"
+		)
+
+
+def test_teacher_export_compatibility_rejects_wrong_chance_space():
+	game = create_benchmark_game("weighted_multi")
+	root = game.initial_nodes()[0].state
+	root_info = game.information_set_for_node(root, 0)
+	payload = build_payload(
+		game,
+		{
+			root_info: {
+				"fold": 0.25,
+				"call": 0.25,
+				"raise": 0.25,
+				"all_in": 0.25,
+			},
+		},
+		scenario="weighted_multi",
+	)
+	teacher = build_teacher_record_export(payload, game)
+	payload["benchmark"]["chance_space"]["identity"] = (
+		"sha256:" + ("0" * 64)
+	)
+
+	try:
+		validate_teacher_record_compatibility(
+			teacher,
+			payload,
+			game,
+		)
+	except ValueError as error:
+		assert "chance_space" in str(error)
+	else:
+		raise AssertionError(
+			"teacher chance-space mismatch must fail validation"
+		)

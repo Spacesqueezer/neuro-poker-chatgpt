@@ -32,6 +32,9 @@ from poker.solver.policy import RestrictedSolverPolicy
 from poker.solver.teacher import (
 	TEACHER_RECORD_FORMAT_VERSION,
 	build_teacher_record_export,
+	load_teacher_record_export,
+	validate_teacher_record_compatibility,
+	validate_teacher_record_export,
 	write_teacher_record_export,
 )
 
@@ -60,9 +63,12 @@ __all__ = [
 	"chance_space_metadata",
 	"evaluate_restricted_policy",
 	"load_strategy_export",
+	"load_teacher_record_export",
 	"serialize_information_set",
 	"validate_policy_game_compatibility",
 	"validate_strategy_export",
+	"validate_teacher_record_compatibility",
+	"validate_teacher_record_export",
 	"write_strategy_export",
 	"write_teacher_record_export",
 ]

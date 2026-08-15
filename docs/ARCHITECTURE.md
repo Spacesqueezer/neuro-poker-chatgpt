@@ -421,6 +421,8 @@ Benchmark configuration is centralized in frozen `BenchmarkScenario` descriptors
 
 Solver teacher records are a separate research boundary derived from validated strategy artifacts rather than production observations. The exporter reconstructs the exact benchmark game, traverses live restricted nodes and emits only information sets with stored legal probability mass. Each record contains the explicit serialized information set, the current legal solver actions, normalized probabilities restricted to those actions, and an exact/reconciled source marker. Missing lookup entries and zero legal overlap are diagnostics only and never become teacher labels. The export carries the complete source strategy benchmark/chance-space/action-abstraction metadata and remains independent from `poker.learning` and `poker.api`.
 
+Teacher artifacts have their own strict read boundary. Structural validation rejects malformed records before use, while compatibility validation takes the original strategy artifact plus reconstructed benchmark game and requires exact source metadata equality after the strategy itself passes chance-space/game validation. Persistence validation therefore cannot manufacture solver semantics: a teacher artifact is accepted only when both its internal record contract and its provenance back to the exact source strategy remain intact.
+
 Teacher quality is measured outside the agent:
 
 ```text

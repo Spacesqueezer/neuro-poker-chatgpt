@@ -768,6 +768,23 @@ source
 
 Это пока research artifact внутри `poker.solver`; он не является `LearningSample` и не подключён к production dataset generation.
 
+Проверить уже сохранённый teacher artifact вместе с исходной strategy:
+
+```text
+python tools/validate_solver_teacher_records.py --teacher artifacts/mccfr_equal_teacher_records.json --strategy artifacts/mccfr_equal_strategy.json
+```
+
+Оба аргумента обязательны. Validator сначала строго читает оба формата, затем сверяет solver, iterations, seed, benchmark metadata, полный `chance_space`, blinds/stacks и `HoldemActionAbstraction`. При несовпадении provenance файл отклоняется до любого будущего learning bridge.
+
+Успешный вывод содержит:
+
+```text
+status = VALID
+scenario
+record_count
+chance_space_identity
+```
+
 ## 9. NeuroPatch
 
 Обычное применение скачанного патча:
