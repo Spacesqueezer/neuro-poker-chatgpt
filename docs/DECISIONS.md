@@ -250,3 +250,14 @@ The solver learning bridge may receive optional opponent profiles only as caller
 Reason:
 The production 22-feature profile encoding already includes positional and agent-memory semantics. Passing the final encoded vector keeps those choices at the statistics/learning boundary where they belong, avoids a persistence dependency inside `poker.solver`, and prevents absent profile data from being misrepresented as real all-zero observations.
 
+## ADR-022: Solver Bridge Numeric Projection Mirrors Production Observation Contract
+
+Date:
+2026-08-15
+
+Decision:
+`SolverBridgeObservation` may be projected into a numeric learning vector only through a solver-local adapter that mirrors `LearningObservationEncoder` feature ordering and scaling. The adapter reuses production card/street schema constants and the canonical 22-feature opponent-profile order, emits the same eight opponent slots, and requires explicit opponent-profile input.
+
+Reason:
+This provides a machine-checkable contract between solver teacher data and the existing learning schema without constructing production `HandStateView` objects, coupling the solver to Arena, or silently replacing unavailable profile semantics with zeros. It validates data compatibility before any dataset consumer or training integration is introduced.
+

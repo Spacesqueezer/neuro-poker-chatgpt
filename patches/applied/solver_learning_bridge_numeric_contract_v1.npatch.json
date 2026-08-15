@@ -1,0 +1,109 @@
+{
+  "patch_id": "solver_learning_bridge_numeric_contract_v1",
+  "goal": "Validate the completed solver learning bridge against the production LearningObservationEncoder numeric feature ordering and scaling without integrating solver policy into Arena or training. Add a solver-local numeric projection that uses the production CARD_INDEX/STREETS constants and OpponentProfileEncoder feature ordering, preserving explicit profile absence by rejecting numeric projection when opponent_profile is missing. Cover exact feature ordering, scaling, card one-hot encoding, opponent zero-padding, metadata, and asymmetric player-relative state.",
+  "allowed_files": [
+    "src/poker/solver/learning_bridge.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_learning_bridge.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/DECISIONS.md",
+    "docs/ROADMAP.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "from poker.statistics.opponent_profile import OpponentProfileEncoder\nfrom poker.solver.learning_target import (\n",
+      "new": "from poker.learning.observation import CARD_INDEX, STREETS\nfrom poker.statistics.opponent_profile import OpponentProfileEncoder\nfrom poker.solver.learning_target import (\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "@dataclass(frozen=True)\nclass SolverLearningBridgeRecord:\n\tobservation: SolverBridgeObservation\n\ttarget: SolverLearningTarget\n\tomitted_production_features: tuple[str, ...]\n\n\ndef build_learning_bridge_records(teacher_payload, opponent_profiles=None):\n",
+      "new": "@dataclass(frozen=True)\nclass SolverLearningBridgeRecord:\n\tobservation: SolverBridgeObservation\n\ttarget: SolverLearningTarget\n\tomitted_production_features: tuple[str, ...]\n\n\n@dataclass(frozen=True)\nclass SolverNumericObservation:\n\tvalues: tuple[float, ...]\n\tfeature_names: tuple[str, ...]\n\tacting_player: str\n\topponent_order: tuple[str, ...]\n\n\t@property\n\tdef size(self):\n\t\treturn len(self.values)\n\n\tdef as_dict(self):\n\t\treturn dict(zip(self.feature_names, self.values))\n\n\ndef build_learning_bridge_records(teacher_payload, opponent_profiles=None):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "def _validate_opponent_profiles(opponent_profiles):\n",
+      "new": "def bridge_observation_to_numeric(observation):\n\tif observation.opponent_profile is None:\n\t\traise ValueError(\n\t\t\t\"numeric bridge observation requires opponent_profile\"\n\t\t)\n\n\ttotal_chips = (\n\t\tobservation.hero_starting_stack\n\t\t+ observation.opponent_starting_stack\n\t)\n\tscale = float(total_chips or 1)\n\tvalues = []\n\tnames = []\n\n\t_extend_numeric(\n\t\tvalues,\n\t\tnames,\n\t\t(1.0 if observation.street == street else 0.0 for street in STREETS),\n\t\t(f\"street.{street}\" for street in STREETS),\n\t)\n\t_extend_numeric(\n\t\tvalues,\n\t\tnames,\n\t\t_encode_bridge_cards(observation.hole_cards),\n\t\t(f\"hole.{card}\" for card in CARD_INDEX),\n\t)\n\t_extend_numeric(\n\t\tvalues,\n\t\tnames,\n\t\t_encode_bridge_cards(observation.public_board),\n\t\t(f\"board.{card}\" for card in CARD_INDEX),\n\t)\n\t_extend_numeric(\n\t\tvalues,\n\t\tnames,\n\t\t(\n\t\t\tobservation.table_pot / scale,\n\t\t\tobservation.table_target_bet / scale,\n\t\t\tobservation.table_minimum_raise / scale,\n\t\t\tobservation.hero_remaining_chips / scale,\n\t\t\tobservation.hero_current_bet / scale,\n\t\t\tobservation.hero_total_contribution / scale,\n\t\t),\n\t\t(\n\t\t\t\"table.pot\",\n\t\t\t\"table.target_bet\",\n\t\t\t\"table.minimum_raise\",\n\t\t\t\"hero.chips\",\n\t\t\t\"hero.current_bet\",\n\t\t\t\"hero.total_contribution\",\n\t\t),\n\t)\n\n\tfor slot in range(8):\n\t\tprefix = f\"opponent.{slot}\"\n\t\tif slot == 0:\n\t\t\tslot_values = (\n\t\t\t\t1.0,\n\t\t\t\t0.0,\n\t\t\t\tobservation.opponent_remaining_chips / scale,\n\t\t\t\tobservation.opponent_current_bet / scale,\n\t\t\t\tobservation.opponent_total_contribution / scale,\n\t\t\t\t*observation.opponent_profile,\n\t\t\t)\n\t\telse:\n\t\t\tslot_values = (0.0,) * (5 + len(OPPONENT_PROFILE_FEATURE_NAMES))\n\t\tslot_names = (\n\t\t\tf\"{prefix}.present\",\n\t\t\tf\"{prefix}.folded\",\n\t\t\tf\"{prefix}.chips\",\n\t\t\tf\"{prefix}.current_bet\",\n\t\t\tf\"{prefix}.total_contribution\",\n\t\t\t*(\n\t\t\t\tf\"{prefix}.profile.{name}\"\n\t\t\t\tfor name in OPPONENT_PROFILE_FEATURE_NAMES\n\t\t\t),\n\t\t)\n\t\t_extend_numeric(values, names, slot_values, slot_names)\n\n\treturn SolverNumericObservation(\n\t\tvalues=tuple(values),\n\t\tfeature_names=tuple(names),\n\t\tacting_player=observation.acting_player,\n\t\topponent_order=observation.opponent_order,\n\t)\n\n\ndef _encode_bridge_cards(cards):\n\tvalues = [0.0] * len(CARD_INDEX)\n\tsuit_symbols = {\n\t\t\"C\": \"♣\",\n\t\t\"D\": \"♦\",\n\t\t\"H\": \"♥\",\n\t\t\"S\": \"♠\",\n\t}\n\trank_symbols = {\n\t\t11: \"J\",\n\t\t12: \"Q\",\n\t\t13: \"K\",\n\t\t14: \"A\",\n\t}\n\tfor rank, suit in cards:\n\t\trank_symbol = rank_symbols.get(rank, str(rank))\n\t\tcard = f\"{rank_symbol}{suit_symbols[suit]}\"\n\t\tvalues[CARD_INDEX[card]] = 1.0\n\treturn tuple(values)\n\n\ndef _extend_numeric(values, names, new_values, new_names):\n\tnew_values = tuple(float(value) for value in new_values)\n\tnew_names = tuple(new_names)\n\tif len(new_values) != len(new_names):\n\t\traise ValueError(\"numeric bridge values and feature names are out of sync\")\n\tvalues.extend(new_values)\n\tnames.extend(new_names)\n\n\ndef _validate_opponent_profiles(opponent_profiles):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\tSolverBridgeObservation,\n\tSolverLearningBridgeRecord,\n",
+      "new": "\tSolverBridgeObservation,\n\tSolverLearningBridgeRecord,\n\tSolverNumericObservation,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\tbuild_learning_bridge_artifact,\n\tbuild_learning_bridge_records,\n",
+      "new": "\tbridge_observation_to_numeric,\n\tbuild_learning_bridge_artifact,\n\tbuild_learning_bridge_records,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"SolverLearningBridgeRecord\",\n\t\"SolverLearningTarget\",\n",
+      "new": "\t\"SolverLearningBridgeRecord\",\n\t\"SolverLearningTarget\",\n\t\"SolverNumericObservation\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"build_learning_bridge_artifact\",\n\t\"build_learning_bridge_records\",\n",
+      "new": "\t\"bridge_observation_to_numeric\",\n\t\"build_learning_bridge_artifact\",\n\t\"build_learning_bridge_records\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "from poker.statistics.opponent_profile import OpponentProfileEncoder\nfrom poker.solver import (\n",
+      "new": "from poker.learning.observation import CARD_INDEX, LearningObservationEncoder, STREETS\nfrom poker.statistics.opponent_profile import OpponentProfileEncoder\nfrom poker.solver import (\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tMCCFRResult,\n\tbuild_learning_bridge_artifact,\n",
+      "new": "\tMCCFRResult,\n\tbridge_observation_to_numeric,\n\tbuild_learning_bridge_artifact,\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\ndef test_learning_bridge_artifact_rejects_omitted_feature_drift():\n",
+      "new": "\ndef test_learning_bridge_numeric_projection_matches_production_schema_and_scaling():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(game, root, {\"fold\": 1.0})\n\tplayer_0 = tuple(float(index) for index in range(22))\n\tplayer_1 = tuple(float(index + 100) for index in range(22))\n\tobservation = build_learning_bridge_records(\n\t\tteacher,\n\t\topponent_profiles={\"player_0\": player_0, \"player_1\": player_1},\n\t)[0].observation\n\n\tnumeric = bridge_observation_to_numeric(observation)\n\tvalues = numeric.as_dict()\n\n\tassert numeric.size == LearningObservationEncoder().size\n\tassert numeric.feature_names[:len(STREETS)] == tuple(\n\t\tf\"street.{street}\" for street in STREETS\n\t)\n\tassert len(CARD_INDEX) == 52\n\tassert values[\"street.preflop\"] == 1.0\n\tassert values[\"street.flop\"] == 0.0\n\tassert values[\"hole.A♥\"] == 1.0\n\tassert values[\"hole.A♠\"] == 1.0\n\tassert values[\"table.pot\"] == 0.0\n\tassert values[\"table.target_bet\"] == 2 / 40\n\tassert values[\"table.minimum_raise\"] == 2 / 40\n\tassert values[\"hero.chips\"] == 19 / 40\n\tassert values[\"hero.current_bet\"] == 1 / 40\n\tassert values[\"hero.total_contribution\"] == 1 / 40\n\tassert values[\"opponent.0.present\"] == 1.0\n\tassert values[\"opponent.0.folded\"] == 0.0\n\tassert values[\"opponent.0.chips\"] == 18 / 40\n\tassert values[\"opponent.0.current_bet\"] == 2 / 40\n\tassert values[\"opponent.0.total_contribution\"] == 2 / 40\n\tassert values[\"opponent.0.profile.hands\"] == 100.0\n\tassert values[\"opponent.0.profile.memory_confidence\"] == 121.0\n\tassert values[\"opponent.1.present\"] == 0.0\n\tassert values[\"opponent.7.profile.memory_confidence\"] == 0.0\n\tassert numeric.acting_player == \"player_0\"\n\tassert numeric.opponent_order == (\"player_1\",)\n\n\ndef test_learning_bridge_numeric_projection_requires_explicit_profile():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(game, root, {\"fold\": 1.0})\n\tobservation = build_learning_bridge_records(teacher)[0].observation\n\n\twith pytest.raises(\n\t\tValueError,\n\t\tmatch=\"numeric bridge observation requires opponent_profile\",\n\t):\n\t\tbridge_observation_to_numeric(observation)\n\n\ndef test_learning_bridge_numeric_projection_is_player_relative_after_raise():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\traised = game.next_node(root, \"raise\")\n\tteacher = build_teacher(game, raised, {\"fold\": 1.0})\n\tprofiles = {\n\t\t\"player_0\": (1.0,) * 22,\n\t\t\"player_1\": (2.0,) * 22,\n\t}\n\tobservation = build_learning_bridge_records(\n\t\tteacher,\n\t\topponent_profiles=profiles,\n\t)[0].observation\n\tnumeric = bridge_observation_to_numeric(observation).as_dict()\n\n\tassert observation.player_index == 1\n\tassert numeric[\"hero.chips\"] == 18 / 40\n\tassert numeric[\"hero.current_bet\"] == 2 / 40\n\tassert numeric[\"opponent.0.chips\"] == 14 / 40\n\tassert numeric[\"opponent.0.current_bet\"] == 6 / 40\n\tassert numeric[\"opponent.0.profile.hands\"] == 1.0\n\n\ndef test_learning_bridge_artifact_rejects_omitted_feature_drift():\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "Observation compatibility is complete when profile input is supplied; without it, `opponent.0.profile.*` remains explicitly unavailable. The next solver step should validate end-to-end bridge compatibility against the production `LearningObservationEncoder` numeric feature ordering/scaling without wiring solver policy into Arena or training yet.",
+      "new": "Observation compatibility is complete when profile input is supplied; without it, `opponent.0.profile.*` remains explicitly unavailable. The bridge now also exposes a solver-local numeric projection whose feature names, card one-hot layout, heads-up opponent-slot zero padding and chip/bet scaling follow the production `LearningObservationEncoder` contract. Numeric projection deliberately requires an explicit encoded opponent profile rather than fabricating zeros for unavailable profile semantics. Contract tests cover root and player-relative post-raise state. The next solver step should define the first dataset/export consumer for these validated bridge records while still keeping solver policy out of production Arena decisions and avoiding premature training integration."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "Opponent profiles cross this boundary only as an optional already-encoded 22-value tuple whose ordering is defined by `OpponentProfileEncoder.FEATURE_NAMES`. Persistence lookup, profile scope and position-aware encoding remain outside `poker.solver`; absent input stays absent rather than being silently replaced by a fabricated zero profile.",
+      "new": "Opponent profiles cross this boundary only as an optional already-encoded 22-value tuple whose ordering is defined by `OpponentProfileEncoder.FEATURE_NAMES`. Persistence lookup, profile scope and position-aware encoding remain outside `poker.solver`; absent input stays absent rather than being silently replaced by a fabricated zero profile. `bridge_observation_to_numeric()` is the contract adapter from `SolverBridgeObservation` to the production learning-observation vector shape: it reuses production `CARD_INDEX`/`STREETS`, scales chip and betting values by total starting chips, emits the same eight opponent slots, and preserves solver-local identity metadata separately from numeric features."
+    },
+    {
+      "type": "replace",
+      "file": "docs/DECISIONS.md",
+      "old": "profile data from being misrepresented as real all-zero observations.\n",
+      "new": "profile data from being misrepresented as real all-zero observations.\n\n## ADR-022: Solver Bridge Numeric Projection Mirrors Production Observation Contract\n\nDate:\n2026-08-15\n\nDecision:\n`SolverBridgeObservation` may be projected into a numeric learning vector only through a solver-local adapter that mirrors `LearningObservationEncoder` feature ordering and scaling. The adapter reuses production card/street schema constants and the canonical 22-feature opponent-profile order, emits the same eight opponent slots, and requires explicit opponent-profile input.\n\nReason:\nThis provides a machine-checkable contract between solver teacher data and the existing learning schema without constructing production `HandStateView` objects, coupling the solver to Arena, or silently replacing unavailable profile semantics with zeros. It validates data compatibility before any dataset consumer or training integration is introduced.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "next validate the completed bridge semantics against the production `LearningObservationEncoder` numeric ordering/scaling before any Arena or training integration.",
+      "new": "the completed bridge now has a numeric projection contract matching production `LearningObservationEncoder` feature ordering, card layout, chip/bet scaling and eight-slot heads-up zero padding when explicit profile input is present; next define the first dataset/export consumer for validated bridge records while keeping solver policy out of Arena decisions and postponing training integration."
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

@@ -2,9 +2,11 @@ import json
 
 import pytest
 
+from poker.learning.observation import CARD_INDEX, LearningObservationEncoder, STREETS
 from poker.statistics.opponent_profile import OpponentProfileEncoder
 from poker.solver import (
 	MCCFRResult,
+	bridge_observation_to_numeric,
 	build_learning_bridge_artifact,
 	build_learning_bridge_records,
 	build_strategy_export,
@@ -264,6 +266,84 @@ def test_learning_bridge_rejects_invalid_explicit_opponent_profile_shape():
 				"player_1": (0.0,) * 22,
 			},
 		)
+
+
+def test_learning_bridge_numeric_projection_matches_production_schema_and_scaling():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	teacher = build_teacher(game, root, {"fold": 1.0})
+	player_0 = tuple(float(index) for index in range(22))
+	player_1 = tuple(float(index + 100) for index in range(22))
+	observation = build_learning_bridge_records(
+		teacher,
+		opponent_profiles={"player_0": player_0, "player_1": player_1},
+	)[0].observation
+
+	numeric = bridge_observation_to_numeric(observation)
+	values = numeric.as_dict()
+
+	assert numeric.size == LearningObservationEncoder().size
+	assert numeric.feature_names[:len(STREETS)] == tuple(
+		f"street.{street}" for street in STREETS
+	)
+	assert len(CARD_INDEX) == 52
+	assert values["street.preflop"] == 1.0
+	assert values["street.flop"] == 0.0
+	assert values["hole.A♥"] == 1.0
+	assert values["hole.A♠"] == 1.0
+	assert values["table.pot"] == 0.0
+	assert values["table.target_bet"] == 2 / 40
+	assert values["table.minimum_raise"] == 2 / 40
+	assert values["hero.chips"] == 19 / 40
+	assert values["hero.current_bet"] == 1 / 40
+	assert values["hero.total_contribution"] == 1 / 40
+	assert values["opponent.0.present"] == 1.0
+	assert values["opponent.0.folded"] == 0.0
+	assert values["opponent.0.chips"] == 18 / 40
+	assert values["opponent.0.current_bet"] == 2 / 40
+	assert values["opponent.0.total_contribution"] == 2 / 40
+	assert values["opponent.0.profile.hands"] == 100.0
+	assert values["opponent.0.profile.memory_confidence"] == 121.0
+	assert values["opponent.1.present"] == 0.0
+	assert values["opponent.7.profile.memory_confidence"] == 0.0
+	assert numeric.acting_player == "player_0"
+	assert numeric.opponent_order == ("player_1",)
+
+
+def test_learning_bridge_numeric_projection_requires_explicit_profile():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	teacher = build_teacher(game, root, {"fold": 1.0})
+	observation = build_learning_bridge_records(teacher)[0].observation
+
+	with pytest.raises(
+		ValueError,
+		match="numeric bridge observation requires opponent_profile",
+	):
+		bridge_observation_to_numeric(observation)
+
+
+def test_learning_bridge_numeric_projection_is_player_relative_after_raise():
+	game = create_benchmark_game("equal")
+	root = game.initial_nodes()[0].state
+	raised = game.next_node(root, "raise")
+	teacher = build_teacher(game, raised, {"fold": 1.0})
+	profiles = {
+		"player_0": (1.0,) * 22,
+		"player_1": (2.0,) * 22,
+	}
+	observation = build_learning_bridge_records(
+		teacher,
+		opponent_profiles=profiles,
+	)[0].observation
+	numeric = bridge_observation_to_numeric(observation).as_dict()
+
+	assert observation.player_index == 1
+	assert numeric["hero.chips"] == 18 / 40
+	assert numeric["hero.current_bet"] == 2 / 40
+	assert numeric["opponent.0.chips"] == 14 / 40
+	assert numeric["opponent.0.current_bet"] == 6 / 40
+	assert numeric["opponent.0.profile.hands"] == 1.0
 
 
 def test_learning_bridge_artifact_rejects_omitted_feature_drift():

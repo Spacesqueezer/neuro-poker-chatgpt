@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from poker.learning.observation import CARD_INDEX, STREETS
 from poker.statistics.opponent_profile import OpponentProfileEncoder
 from poker.solver.learning_target import (
 	SolverLearningTarget,
@@ -51,6 +52,21 @@ class SolverLearningBridgeRecord:
 	observation: SolverBridgeObservation
 	target: SolverLearningTarget
 	omitted_production_features: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SolverNumericObservation:
+	values: tuple[float, ...]
+	feature_names: tuple[str, ...]
+	acting_player: str
+	opponent_order: tuple[str, ...]
+
+	@property
+	def size(self):
+		return len(self.values)
+
+	def as_dict(self):
+		return dict(zip(self.feature_names, self.values))
 
 
 def build_learning_bridge_records(teacher_payload, opponent_profiles=None):
@@ -621,6 +637,123 @@ def _validate_serialized_bridge_target(target, expected_actions):
 		raise ValueError(
 			"learning bridge target source is invalid"
 		)
+
+
+def bridge_observation_to_numeric(observation):
+	if observation.opponent_profile is None:
+		raise ValueError(
+			"numeric bridge observation requires opponent_profile"
+		)
+
+	total_chips = (
+		observation.hero_starting_stack
+		+ observation.opponent_starting_stack
+	)
+	scale = float(total_chips or 1)
+	values = []
+	names = []
+
+	_extend_numeric(
+		values,
+		names,
+		(1.0 if observation.street == street else 0.0 for street in STREETS),
+		(f"street.{street}" for street in STREETS),
+	)
+	_extend_numeric(
+		values,
+		names,
+		_encode_bridge_cards(observation.hole_cards),
+		(f"hole.{card}" for card in CARD_INDEX),
+	)
+	_extend_numeric(
+		values,
+		names,
+		_encode_bridge_cards(observation.public_board),
+		(f"board.{card}" for card in CARD_INDEX),
+	)
+	_extend_numeric(
+		values,
+		names,
+		(
+			observation.table_pot / scale,
+			observation.table_target_bet / scale,
+			observation.table_minimum_raise / scale,
+			observation.hero_remaining_chips / scale,
+			observation.hero_current_bet / scale,
+			observation.hero_total_contribution / scale,
+		),
+		(
+			"table.pot",
+			"table.target_bet",
+			"table.minimum_raise",
+			"hero.chips",
+			"hero.current_bet",
+			"hero.total_contribution",
+		),
+	)
+
+	for slot in range(8):
+		prefix = f"opponent.{slot}"
+		if slot == 0:
+			slot_values = (
+				1.0,
+				0.0,
+				observation.opponent_remaining_chips / scale,
+				observation.opponent_current_bet / scale,
+				observation.opponent_total_contribution / scale,
+				*observation.opponent_profile,
+			)
+		else:
+			slot_values = (0.0,) * (5 + len(OPPONENT_PROFILE_FEATURE_NAMES))
+		slot_names = (
+			f"{prefix}.present",
+			f"{prefix}.folded",
+			f"{prefix}.chips",
+			f"{prefix}.current_bet",
+			f"{prefix}.total_contribution",
+			*(
+				f"{prefix}.profile.{name}"
+				for name in OPPONENT_PROFILE_FEATURE_NAMES
+			),
+		)
+		_extend_numeric(values, names, slot_values, slot_names)
+
+	return SolverNumericObservation(
+		values=tuple(values),
+		feature_names=tuple(names),
+		acting_player=observation.acting_player,
+		opponent_order=observation.opponent_order,
+	)
+
+
+def _encode_bridge_cards(cards):
+	values = [0.0] * len(CARD_INDEX)
+	suit_symbols = {
+		"C": "♣",
+		"D": "♦",
+		"H": "♥",
+		"S": "♠",
+	}
+	rank_symbols = {
+		11: "J",
+		12: "Q",
+		13: "K",
+		14: "A",
+	}
+	for rank, suit in cards:
+		rank_symbol = rank_symbols.get(rank, str(rank))
+		card = f"{rank_symbol}{suit_symbols[suit]}"
+		values[CARD_INDEX[card]] = 1.0
+	return tuple(values)
+
+
+def _extend_numeric(values, names, new_values, new_names):
+	new_values = tuple(float(value) for value in new_values)
+	new_names = tuple(new_names)
+	if len(new_values) != len(new_names):
+		raise ValueError("numeric bridge values and feature names are out of sync")
+	values.extend(new_values)
+	names.extend(new_names)
 
 
 def _validate_opponent_profiles(opponent_profiles):
