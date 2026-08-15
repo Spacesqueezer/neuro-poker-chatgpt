@@ -1,0 +1,70 @@
+{
+  "patch_id": "solver_minimal_learning_bridge_contract_v1",
+  "goal": "Add a minimal solver-local learning bridge contract containing only observation semantics proven direct or derived by the compatibility report plus the existing six-category SolverLearningTarget. Carry unavailable production feature groups explicitly without zero-filling them or creating LearningSample.",
+  "allowed_files": [
+    "src/poker/solver/learning_bridge.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_learning_bridge.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/ROADMAP.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/learning_bridge.py",
+      "content": "from dataclasses import dataclass\n\nfrom poker.solver.learning_target import (\n\tSolverLearningTarget,\n\tbuild_learning_targets,\n)\nfrom poker.solver.observation_compatibility import (\n\tbuild_observation_compatibility_report,\n)\n\n\n@dataclass(frozen=True)\nclass SolverBridgeObservation:\n\tplayer_index: int\n\tstreet: str\n\thole_cards: tuple[tuple[int, str], ...]\n\tpublic_board: tuple[tuple[int, str], ...]\n\thero_starting_stack: int\n\thero_total_contribution: int\n\thero_remaining_chips: int\n\topponent_starting_stack: int\n\topponent_total_contribution: int\n\topponent_remaining_chips: int\n\topponent_present: bool\n\topponent_folded: bool\n\tabsent_opponent_slots: tuple[int, ...]\n\n\n@dataclass(frozen=True)\nclass SolverLearningBridgeRecord:\n\tobservation: SolverBridgeObservation\n\ttarget: SolverLearningTarget\n\tomitted_production_features: tuple[str, ...]\n\n\ndef build_learning_bridge_records(teacher_payload):\n\ttargets = build_learning_targets(teacher_payload)\n\tcompatibility = build_observation_compatibility_report()\n\tomitted = compatibility.unavailable_features\n\n\treturn tuple(\n\t\tSolverLearningBridgeRecord(\n\t\t\tobservation=_bridge_observation(target),\n\t\t\ttarget=target,\n\t\t\tomitted_production_features=omitted,\n\t\t)\n\t\tfor target in targets\n\t)\n\n\ndef _bridge_observation(target):\n\tinfo = target.information_set\n\tplayer = info[\"player\"]\n\topponent = 1 - player\n\tstarting_stacks = tuple(info[\"starting_stacks\"])\n\tcommitments = tuple(info[\"commitments\"])\n\n\treturn SolverBridgeObservation(\n\t\tplayer_index=player,\n\t\tstreet=info[\"street\"],\n\t\thole_cards=tuple(\n\t\t\t(card[\"rank\"], card[\"suit\"])\n\t\t\tfor card in info[\"hole_cards\"]\n\t\t),\n\t\tpublic_board=tuple(\n\t\t\t(card[\"rank\"], card[\"suit\"])\n\t\t\tfor card in info[\"public_board\"]\n\t\t),\n\t\thero_starting_stack=starting_stacks[player],\n\t\thero_total_contribution=commitments[player],\n\t\thero_remaining_chips=(\n\t\t\tstarting_stacks[player] - commitments[player]\n\t\t),\n\t\topponent_starting_stack=starting_stacks[opponent],\n\t\topponent_total_contribution=commitments[opponent],\n\t\topponent_remaining_chips=(\n\t\t\tstarting_stacks[opponent] - commitments[opponent]\n\t\t),\n\t\topponent_present=True,\n\t\topponent_folded=False,\n\t\tabsent_opponent_slots=tuple(range(1, 8)),\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.learning_target import (\n\tSOLVER_TARGET_ACTIONS,\n\tSolverLearningTarget,\n\tbuild_learning_targets,\n\tsolver_action_category,\n\tteacher_record_to_learning_target,\n)\n",
+      "new": "from poker.solver.learning_bridge import (\n\tSolverBridgeObservation,\n\tSolverLearningBridgeRecord,\n\tbuild_learning_bridge_records,\n)\nfrom poker.solver.learning_target import (\n\tSOLVER_TARGET_ACTIONS,\n\tSolverLearningTarget,\n\tbuild_learning_targets,\n\tsolver_action_category,\n\tteacher_record_to_learning_target,\n)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"SOLVER_TARGET_ACTIONS\",\n\t\"STRATEGY_EXPORT_VERSION\",\n\t\"SolverLearningTarget\",\n",
+      "new": "\t\"SOLVER_TARGET_ACTIONS\",\n\t\"STRATEGY_EXPORT_VERSION\",\n\t\"SolverBridgeObservation\",\n\t\"SolverLearningBridgeRecord\",\n\t\"SolverLearningTarget\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"build_learning_targets\",\n\t\"build_observation_compatibility_report\",\n",
+      "new": "\t\"build_learning_bridge_records\",\n\t\"build_learning_targets\",\n\t\"build_observation_compatibility_report\",\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "content": "from poker.solver import (\n\tMCCFRResult,\n\tbuild_learning_bridge_records,\n\tbuild_strategy_export,\n\tbuild_teacher_record_export,\n)\nfrom tools.benchmark_mccfr import create_benchmark_game\n\n\ndef build_teacher(game, state, strategy, scenario=\"equal\"):\n\tplayer = game.player_to_act(state)\n\tinformation_set = game.information_set_for_node(\n\t\tstate,\n\t\tplayer,\n\t)\n\tstrategy_payload = build_strategy_export(\n\t\tMCCFRResult(\n\t\t\titerations=1,\n\t\t\taverage_strategy={\n\t\t\t\tinformation_set: strategy,\n\t\t\t},\n\t\t\tcumulative_regret={},\n\t\t),\n\t\tgame,\n\t\tseed=42,\n\t\tscenario=scenario,\n\t\tbenchmark_version=2,\n\t)\n\treturn build_teacher_record_export(\n\t\tstrategy_payload,\n\t\tgame,\n\t)\n\n\ndef test_learning_bridge_contains_only_proven_observation_semantics():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(\n\t\tgame,\n\t\troot,\n\t\t{\n\t\t\t\"fold\": 0.1,\n\t\t\t\"call\": 0.2,\n\t\t\t\"raise\": 0.6,\n\t\t\t\"all_in\": 0.1,\n\t\t},\n\t)\n\n\trecord = build_learning_bridge_records(teacher)[0]\n\tobservation = record.observation\n\n\tassert observation.player_index == 0\n\tassert observation.street == \"preflop\"\n\tassert observation.hole_cards == (\n\t\t(14, \"H\"),\n\t\t(14, \"S\"),\n\t)\n\tassert observation.public_board == ()\n\tassert observation.hero_starting_stack == 20\n\tassert observation.hero_total_contribution == 1\n\tassert observation.hero_remaining_chips == 19\n\tassert observation.opponent_starting_stack == 20\n\tassert observation.opponent_total_contribution == 2\n\tassert observation.opponent_remaining_chips == 18\n\tassert observation.opponent_present is True\n\tassert observation.opponent_folded is False\n\tassert observation.absent_opponent_slots == (\n\t\t1,\n\t\t2,\n\t\t3,\n\t\t4,\n\t\t5,\n\t\t6,\n\t\t7,\n\t)\n\n\ndef test_learning_bridge_preserves_existing_six_category_target():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(\n\t\tgame,\n\t\troot,\n\t\t{\n\t\t\t\"fold\": 0.1,\n\t\t\t\"call\": 0.2,\n\t\t\t\"raise\": 0.6,\n\t\t\t\"all_in\": 0.1,\n\t\t},\n\t)\n\n\ttarget = build_learning_bridge_records(teacher)[0].target\n\n\tassert target.action_names == (\n\t\t\"fold\",\n\t\t\"check\",\n\t\t\"call\",\n\t\t\"bet\",\n\t\t\"raise\",\n\t\t\"all_in\",\n\t)\n\tassert target.probabilities == (\n\t\t0.1,\n\t\t0.0,\n\t\t0.2,\n\t\t0.0,\n\t\t0.6,\n\t\t0.1,\n\t)\n\n\ndef test_learning_bridge_lists_unavailable_production_features_explicitly():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(\n\t\tgame,\n\t\troot,\n\t\t{\n\t\t\t\"fold\": 1.0,\n\t\t},\n\t)\n\n\trecord = build_learning_bridge_records(teacher)[0]\n\n\tassert record.omitted_production_features == (\n\t\t\"table.pot\",\n\t\t\"table.target_bet\",\n\t\t\"table.minimum_raise\",\n\t\t\"hero.current_bet\",\n\t\t\"opponent.0.current_bet\",\n\t\t\"opponent.0.profile.*\",\n\t\t\"metadata.acting_player\",\n\t\t\"metadata.opponent_order\",\n\t)\n\tassert not hasattr(record.observation, \"pot\")\n\tassert not hasattr(record.observation, \"target_bet\")\n\tassert not hasattr(record.observation, \"minimum_raise\")\n\tassert not hasattr(record.observation, \"hero_current_bet\")\n\tassert not hasattr(record.observation, \"opponent_profile\")\n\n\ndef test_learning_bridge_derives_player_relative_stacks_for_player_one():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\traised = game.next_node(root, \"raise\")\n\tteacher = build_teacher(\n\t\tgame,\n\t\traised,\n\t\t{\n\t\t\t\"fold\": 0.2,\n\t\t\t\"call\": 0.3,\n\t\t\t\"all_in\": 0.5,\n\t\t},\n\t)\n\n\tobservation = build_learning_bridge_records(\n\t\tteacher\n\t)[0].observation\n\n\tassert observation.player_index == 1\n\tassert observation.hero_starting_stack == 20\n\tassert observation.hero_total_contribution == 2\n\tassert observation.hero_remaining_chips == 18\n\tassert observation.opponent_starting_stack == 20\n\tassert observation.opponent_total_contribution == 6\n\tassert observation.opponent_remaining_chips == 14\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The next solver step is to define a minimal bridge contract that contains only observation semantics proven direct/derived by this report plus the existing six-category `SolverLearningTarget`; it must carry an explicit list of omitted production feature groups and still must not instantiate `LearningSample` or zero-fill unavailable production fields. Use focused validation and keep dataset generation disconnected.",
+      "new": "A minimal solver-local learning bridge contract now combines the existing six-category `SolverLearningTarget` with only observation semantics proven direct or derived by `ObservationCompatibilityReport`. `SolverBridgeObservation` carries the acting solver player index, street, solver-card tuples, public board, player-relative starting stacks, total contributions, remaining chips, live heads-up opponent presence/fold state and the structurally absent production opponent slots. `SolverLearningBridgeRecord` also carries the exact unavailable production feature groups (`table.pot`, street-local target/minimum/current bets, opponent profiles and production player-name/order metadata) instead of fabricating values or zero-filling them. The bridge still does not import `poker.learning`, instantiate `LearningSample`, produce a production feature vector or connect to dataset generation. The next solver step is to make this bridge artifact serializable/versioned with strict validation so bridge records can be inspected and compared independently before deciding whether the solver state model must be expanded to supply currently unavailable production semantics. Keep it solver-local and use focused validation because production learning serialization remains unchanged."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "`ObservationCompatibilityReport` makes that mismatch machine-checkable without importing production learning code into `poker.solver`. Entries classify production observation semantics as direct, derived or unavailable and record their solver source fields/reason. Tests compare the declared groups with the real `LearningObservationEncoder` schema constants. In particular, total public commitments are not treated as equivalent to the production engine's street-local `current_bet`, collected pot, target bet or minimum raise. Persistent opponent profiles and production player identity/order are also absent. No compatibility entry authorizes silent zero filling.\n",
+      "new": "`ObservationCompatibilityReport` makes that mismatch machine-checkable without importing production learning code into `poker.solver`. Entries classify production observation semantics as direct, derived or unavailable and record their solver source fields/reason. Tests compare the declared groups with the real `LearningObservationEncoder` schema constants. In particular, total public commitments are not treated as equivalent to the production engine's street-local `current_bet`, collected pot, target bet or minimum raise. Persistent opponent profiles and production player identity/order are also absent. No compatibility entry authorizes silent zero filling.\n\n`SolverLearningBridgeRecord` is the first deliberately incomplete bridge across that boundary. Its `SolverBridgeObservation` carries only compatible semantics: acting solver player index, street/cards/public board, player-relative public stack caps, total commitments/remaining chips, live heads-up opponent presence and structurally absent extra opponent slots. The record pairs that observation with `SolverLearningTarget` and carries `omitted_production_features` as explicit metadata. It does not expose a production-sized vector and has no dependency on `poker.learning`, so unavailable semantics remain impossible to mistake for real zero-valued observations.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "next define a minimal bridge contract containing only proven-compatible observation semantics plus the six-category target, with omitted production feature groups carried explicitly and no `LearningSample`/dataset integration yet.",
+      "new": "a minimal solver-local bridge now combines only proven direct/derived observation semantics with the six-category target and carries unavailable production feature groups explicitly; next make this bridge a versioned validated research artifact before deciding whether to expand solver state semantics or connect any production learning path."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_learning_bridge.py tests/poker/test_solver_observation_compatibility.py tests/poker/test_solver_learning_target.py -q",
+      "python -m py_compile src/poker/solver/learning_bridge.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

@@ -427,6 +427,8 @@ A learning-neutral target boundary now sits after validated teacher records but 
 
 `ObservationCompatibilityReport` makes that mismatch machine-checkable without importing production learning code into `poker.solver`. Entries classify production observation semantics as direct, derived or unavailable and record their solver source fields/reason. Tests compare the declared groups with the real `LearningObservationEncoder` schema constants. In particular, total public commitments are not treated as equivalent to the production engine's street-local `current_bet`, collected pot, target bet or minimum raise. Persistent opponent profiles and production player identity/order are also absent. No compatibility entry authorizes silent zero filling.
 
+`SolverLearningBridgeRecord` is the first deliberately incomplete bridge across that boundary. Its `SolverBridgeObservation` carries only compatible semantics: acting solver player index, street/cards/public board, player-relative public stack caps, total commitments/remaining chips, live heads-up opponent presence and structurally absent extra opponent slots. The record pairs that observation with `SolverLearningTarget` and carries `omitted_production_features` as explicit metadata. It does not expose a production-sized vector and has no dependency on `poker.learning`, so unavailable semantics remain impossible to mistake for real zero-valued observations.
+
 Teacher quality is measured outside the agent:
 
 ```text

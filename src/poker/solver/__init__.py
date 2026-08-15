@@ -27,6 +27,11 @@ from poker.solver.holdem import (
 	HoldemActionAbstraction,
 	RestrictedHeadsUpHoldemGame,
 )
+from poker.solver.learning_bridge import (
+	SolverBridgeObservation,
+	SolverLearningBridgeRecord,
+	build_learning_bridge_records,
+)
 from poker.solver.learning_target import (
 	SOLVER_TARGET_ACTIONS,
 	SolverLearningTarget,
@@ -72,12 +77,15 @@ __all__ = [
 	"RestrictedSolverPolicy",
 	"SOLVER_TARGET_ACTIONS",
 	"STRATEGY_EXPORT_VERSION",
+	"SolverBridgeObservation",
+	"SolverLearningBridgeRecord",
 	"SolverLearningTarget",
 	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
 	"TwoPlayerSolverGame",
 	"ExternalSamplingMCCFR",
 	"MCCFRResult",
+	"build_learning_bridge_records",
 	"build_learning_targets",
 	"build_observation_compatibility_report",
 	"build_strategy_export",
