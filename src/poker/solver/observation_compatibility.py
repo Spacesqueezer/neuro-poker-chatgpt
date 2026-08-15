@@ -42,7 +42,7 @@ class ObservationCompatibilityReport:
 		)
 
 
-def build_observation_compatibility_report():
+def build_observation_compatibility_report(profile_input_available=False):
 	entries = (
 		ObservationCompatibilityEntry(
 			production_features=("street.*",),
@@ -145,11 +145,16 @@ def build_observation_compatibility_report():
 		),
 		ObservationCompatibilityEntry(
 			production_features=("opponent.0.profile.*",),
-			status="unavailable",
-			solver_sources=(),
+			status=(
+				"derived" if profile_input_available else "unavailable"
+			),
+			solver_sources=("opponent_profile_input",)
+			if profile_input_available
+			else (),
 			reason=(
-				"Restricted solver records contain no persistent global, "
-				"positional or agent-specific opponent profile data."
+				"The learning bridge can carry the canonical encoded 22-feature "
+				"opponent profile only when it is supplied explicitly by the "
+				"caller; solver state itself contains no persistence data."
 			),
 		),
 		ObservationCompatibilityEntry(

@@ -239,3 +239,14 @@ Restricted Hold'em player indices are mapped deterministically to `player_0` and
 Reason:
 The metadata contract needs stable acting/opponent identity, but importing production player objects or persistence would violate the solver boundary. Deterministic local labels preserve relative identity and ordering semantics while making the provenance explicit. Persistent opponent-profile features remain unavailable until supplied through a dedicated boundary.
 
+## ADR-021: Solver Bridge Accepts Encoded Opponent Profiles, Not Persistence
+
+Date:
+2026-08-15
+
+Decision:
+The solver learning bridge may receive optional opponent profiles only as caller-supplied encoded tuples matching the canonical `OpponentProfileEncoder.FEATURE_NAMES` order. Profiles are keyed by solver-local `player_0`/`player_1` identities. The solver does not resolve players, query persistence, choose private/global/combined scope or infer production positions. Learning bridge artifact format moves to version 3.
+
+Reason:
+The production 22-feature profile encoding already includes positional and agent-memory semantics. Passing the final encoded vector keeps those choices at the statistics/learning boundary where they belong, avoids a persistence dependency inside `poker.solver`, and prevents absent profile data from being misrepresented as real all-zero observations.
+

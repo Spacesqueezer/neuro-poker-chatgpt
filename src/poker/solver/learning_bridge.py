@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from poker.statistics.opponent_profile import OpponentProfileEncoder
 from poker.solver.learning_target import (
 	SolverLearningTarget,
 	build_learning_targets,
@@ -16,7 +17,8 @@ from poker.solver.teacher import (
 )
 
 
-LEARNING_BRIDGE_FORMAT_VERSION = 2
+LEARNING_BRIDGE_FORMAT_VERSION = 3
+OPPONENT_PROFILE_FEATURE_NAMES = OpponentProfileEncoder.FEATURE_NAMES
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,7 @@ class SolverBridgeObservation:
 	table_minimum_raise: int
 	hero_current_bet: int
 	opponent_current_bet: int
+	opponent_profile: tuple[float, ...] | None
 	absent_opponent_slots: tuple[int, ...]
 
 
@@ -50,14 +53,17 @@ class SolverLearningBridgeRecord:
 	omitted_production_features: tuple[str, ...]
 
 
-def build_learning_bridge_records(teacher_payload):
+def build_learning_bridge_records(teacher_payload, opponent_profiles=None):
 	targets = build_learning_targets(teacher_payload)
-	compatibility = build_observation_compatibility_report()
+	profiles = _validate_opponent_profiles(opponent_profiles)
+	compatibility = build_observation_compatibility_report(
+		profile_input_available=profiles is not None,
+	)
 	omitted = compatibility.unavailable_features
 
 	return tuple(
 		SolverLearningBridgeRecord(
-			observation=_bridge_observation(target),
+			observation=_bridge_observation(target, profiles),
 			target=target,
 			omitted_production_features=omitted,
 		)
@@ -65,10 +71,16 @@ def build_learning_bridge_records(teacher_payload):
 	)
 
 
-def build_learning_bridge_artifact(teacher_payload):
+def build_learning_bridge_artifact(teacher_payload, opponent_profiles=None):
 	validate_teacher_record_export(teacher_payload)
-	records = build_learning_bridge_records(teacher_payload)
-	compatibility = build_observation_compatibility_report()
+	profiles = _validate_opponent_profiles(opponent_profiles)
+	records = build_learning_bridge_records(
+		teacher_payload,
+		opponent_profiles=profiles,
+	)
+	compatibility = build_observation_compatibility_report(
+		profile_input_available=profiles is not None,
+	)
 
 	payload = {
 		"format_version": LEARNING_BRIDGE_FORMAT_VERSION,
@@ -87,6 +99,9 @@ def build_learning_bridge_artifact(teacher_payload):
 		],
 		"omitted_production_features": list(
 			compatibility.unavailable_features
+		),
+		"opponent_profile_feature_names": list(
+			OPPONENT_PROFILE_FEATURE_NAMES
 		),
 		"source_teacher": {
 			"format_version": teacher_payload["format_version"],
@@ -140,6 +155,7 @@ def validate_learning_bridge_artifact(payload):
 		"observation_compatibility_version",
 		"target_actions",
 		"omitted_production_features",
+		"opponent_profile_feature_names",
 		"source_teacher",
 		"record_count",
 		"records",
@@ -175,8 +191,20 @@ def validate_learning_bridge_artifact(payload):
 			"learning bridge target_actions mismatch"
 		)
 
+	if payload["opponent_profile_feature_names"] != list(
+		OPPONENT_PROFILE_FEATURE_NAMES
+	):
+		raise ValueError(
+			"learning bridge opponent profile feature names mismatch"
+		)
+	profile_input_available = not any(
+		feature == "opponent.0.profile.*"
+		for feature in payload["omitted_production_features"]
+	)
 	expected_omitted = list(
-		build_observation_compatibility_report().unavailable_features
+		build_observation_compatibility_report(
+			profile_input_available=profile_input_available,
+		).unavailable_features
 	)
 	if payload["omitted_production_features"] != expected_omitted:
 		raise ValueError(
@@ -252,6 +280,11 @@ def _serialize_bridge_record(record):
 			"hero_current_bet": record.observation.hero_current_bet,
 			"opponent_current_bet": (
 				record.observation.opponent_current_bet
+			),
+			"opponent_profile": (
+				list(record.observation.opponent_profile)
+				if record.observation.opponent_profile is not None
+				else None
 			),
 			"absent_opponent_slots": list(
 				record.observation.absent_opponent_slots
@@ -367,6 +400,7 @@ def _validate_serialized_bridge_observation(observation):
 		"table_minimum_raise",
 		"hero_current_bet",
 		"opponent_current_bet",
+		"opponent_profile",
 		"absent_opponent_slots",
 	}
 	if not isinstance(observation, dict) or set(observation) != required:
@@ -463,6 +497,20 @@ def _validate_serialized_bridge_observation(observation):
 			"learning bridge table_minimum_raise is invalid"
 		)
 
+	profile = observation["opponent_profile"]
+	if profile is not None:
+		if (
+			not isinstance(profile, list)
+			or len(profile) != len(OPPONENT_PROFILE_FEATURE_NAMES)
+			or any(
+				not isinstance(value, (int, float))
+				or isinstance(value, bool)
+				for value in profile
+			)
+		):
+			raise ValueError(
+				"learning bridge opponent_profile is invalid"
+			)
 	if observation["absent_opponent_slots"] != list(range(1, 8)):
 		raise ValueError(
 			"learning bridge absent opponent slots mismatch"
@@ -575,17 +623,52 @@ def _validate_serialized_bridge_target(target, expected_actions):
 		)
 
 
-def _bridge_observation(target):
+def _validate_opponent_profiles(opponent_profiles):
+	if opponent_profiles is None:
+		return None
+	if not isinstance(opponent_profiles, dict):
+		raise ValueError("opponent_profiles must be a dict")
+	if set(opponent_profiles) != {"player_0", "player_1"}:
+		raise ValueError(
+			"opponent_profiles must contain player_0 and player_1"
+		)
+
+	validated = {}
+	for player_name, values in opponent_profiles.items():
+		values = tuple(values)
+		if (
+			len(values) != len(OPPONENT_PROFILE_FEATURE_NAMES)
+			or any(
+				not isinstance(value, (int, float))
+				or isinstance(value, bool)
+				for value in values
+			)
+		):
+			raise ValueError(
+				f"opponent profile for {player_name} is invalid"
+			)
+		validated[player_name] = tuple(float(value) for value in values)
+	return validated
+
+
+def _bridge_observation(target, opponent_profiles=None):
 	info = target.information_set
 	player = info["player"]
 	opponent = 1 - player
 	starting_stacks = tuple(info["starting_stacks"])
 	commitments = tuple(info["commitments"])
 
+	opponent_name = f"player_{opponent}"
+	opponent_profile = (
+		opponent_profiles[opponent_name]
+		if opponent_profiles is not None
+		else None
+	)
+
 	return SolverBridgeObservation(
 		player_index=player,
 		acting_player=f"player_{player}",
-		opponent_order=(f"player_{opponent}",),
+		opponent_order=(opponent_name,),
 		street=info["street"],
 		hole_cards=tuple(
 			(card["rank"], card["suit"])
@@ -612,5 +695,6 @@ def _bridge_observation(target):
 		table_minimum_raise=info["minimum_raise"],
 		hero_current_bet=info["street_commitments"][player],
 		opponent_current_bet=info["street_commitments"][opponent],
+		opponent_profile=opponent_profile,
 		absent_opponent_slots=tuple(range(1, 8)),
 	)

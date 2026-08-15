@@ -29,6 +29,7 @@ from poker.solver.holdem import (
 )
 from poker.solver.learning_bridge import (
 	LEARNING_BRIDGE_FORMAT_VERSION,
+	OPPONENT_PROFILE_FEATURE_NAMES,
 	SolverBridgeObservation,
 	SolverLearningBridgeRecord,
 	build_learning_bridge_artifact,
@@ -75,6 +76,7 @@ __all__ = [
 	"KuhnPokerGame",
 	"LEARNING_BRIDGE_FORMAT_VERSION",
 	"OBSERVATION_COMPATIBILITY_VERSION",
+	"OPPONENT_PROFILE_FEATURE_NAMES",
 	"ObservationCompatibilityEntry",
 	"ObservationCompatibilityReport",
 	"POLICY_EVALUATION_VERSION",

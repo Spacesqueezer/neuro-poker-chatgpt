@@ -80,6 +80,15 @@ def test_unavailable_features_are_not_silently_claimed_as_derivable():
 	assert "hero.current_bet" not in report.unavailable_features
 	assert "opponent.0.current_bet" not in report.unavailable_features
 	assert "opponent.0.profile.*" in report.unavailable_features
+	with_profiles = build_observation_compatibility_report(
+		profile_input_available=True,
+	)
+	assert "opponent.0.profile.*" not in with_profiles.unavailable_features
+	assert "opponent.0.profile.*" in {
+		feature
+		for entry in with_profiles.by_status("derived")
+		for feature in entry.production_features
+	}
 	assert "metadata.acting_player" not in report.unavailable_features
 	assert "metadata.opponent_order" not in report.unavailable_features
 

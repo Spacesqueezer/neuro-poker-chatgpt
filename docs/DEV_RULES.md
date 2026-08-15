@@ -58,6 +58,22 @@ Every patch must:
 
 For `replace` operations, a mismatch report must identify the operation index, target file, match count and a short preview of the expected `old` text. Failed patches must be repaired from exact current repository state instead of guessing which replacement failed.
 
+## Mandatory AI-side patch preflight
+
+Before delivering any `.npatch.json` to the user, the AI MUST test the patch against the fresh `ai-development` state on its own side.
+
+At minimum, preflight must:
+- start from the current remote `ai-development` source, never from a failed transaction or old patch;
+- apply or faithfully simulate every patch operation sequentially in patch order;
+- verify that every `replace` operation matches exactly once at the moment it is applied;
+- verify that all declared files and operation types are valid for the current NeuroPatch implementation;
+- run the patch validation commands locally when the execution environment can run the repository;
+- never deliver a patch that has not passed operation-application preflight.
+
+If the execution environment cannot run the repository test suite, the AI must say so explicitly, but this does not waive operation-application preflight. A `Replace mismatch` caused by an untested anchor is an AI-side process failure and must not be delegated to the user as routine testing.
+
+After any failed user-side patch run, assume NeuroPatch rollback restored the pre-patch repository state unless the failure report explicitly says a commit was preserved. Rebuild and preflight the next patch from fresh remote state rather than layering a repair over rolled-back feature code.
+
 ## Validation profiles
 
 Validation commands are selected according to patch impact.

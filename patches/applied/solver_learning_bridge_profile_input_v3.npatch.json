@@ -1,0 +1,202 @@
+{
+  "patch_id": "solver_learning_bridge_profile_input_v3",
+  "goal": "Complete the explicit encoded opponent-profile learning-bridge feature, preserve the mandatory AI-side NeuroPatch preflight rule, and remove the stale regression assertion that contradicted the new optional opponent_profile field. This patch is rebuilt for the clean remote ai-development state after v2 was rolled back by validation failure.",
+  "allowed_files": [
+    "src/poker/solver/learning_bridge.py",
+    "src/poker/solver/observation_compatibility.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_learning_bridge.py",
+    "tests/poker/test_solver_observation_compatibility.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/DECISIONS.md",
+    "docs/ROADMAP.md",
+    "docs/DEV_RULES.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "from pathlib import Path\n\nfrom poker.solver.learning_target import (\n",
+      "new": "from pathlib import Path\n\nfrom poker.statistics.opponent_profile import OpponentProfileEncoder\nfrom poker.solver.learning_target import (\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "LEARNING_BRIDGE_FORMAT_VERSION = 2\n",
+      "new": "LEARNING_BRIDGE_FORMAT_VERSION = 3\nOPPONENT_PROFILE_FEATURE_NAMES = OpponentProfileEncoder.FEATURE_NAMES\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\topponent_current_bet: int\n\tabsent_opponent_slots: tuple[int, ...]\n",
+      "new": "\topponent_current_bet: int\n\topponent_profile: tuple[float, ...] | None\n\tabsent_opponent_slots: tuple[int, ...]\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "def build_learning_bridge_records(teacher_payload):\n\ttargets = build_learning_targets(teacher_payload)\n\tcompatibility = build_observation_compatibility_report()\n\tomitted = compatibility.unavailable_features\n\n\treturn tuple(\n\t\tSolverLearningBridgeRecord(\n\t\t\tobservation=_bridge_observation(target),\n",
+      "new": "def build_learning_bridge_records(teacher_payload, opponent_profiles=None):\n\ttargets = build_learning_targets(teacher_payload)\n\tprofiles = _validate_opponent_profiles(opponent_profiles)\n\tcompatibility = build_observation_compatibility_report(\n\t\tprofile_input_available=profiles is not None,\n\t)\n\tomitted = compatibility.unavailable_features\n\n\treturn tuple(\n\t\tSolverLearningBridgeRecord(\n\t\t\tobservation=_bridge_observation(target, profiles),\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "def build_learning_bridge_artifact(teacher_payload):\n\tvalidate_teacher_record_export(teacher_payload)\n\trecords = build_learning_bridge_records(teacher_payload)\n\tcompatibility = build_observation_compatibility_report()\n",
+      "new": "def build_learning_bridge_artifact(teacher_payload, opponent_profiles=None):\n\tvalidate_teacher_record_export(teacher_payload)\n\tprofiles = _validate_opponent_profiles(opponent_profiles)\n\trecords = build_learning_bridge_records(\n\t\tteacher_payload,\n\t\topponent_profiles=profiles,\n\t)\n\tcompatibility = build_observation_compatibility_report(\n\t\tprofile_input_available=profiles is not None,\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\"omitted_production_features\": list(\n\t\t\tcompatibility.unavailable_features\n\t\t),\n\t\t\"source_teacher\": {\n",
+      "new": "\t\t\"omitted_production_features\": list(\n\t\t\tcompatibility.unavailable_features\n\t\t),\n\t\t\"opponent_profile_feature_names\": list(\n\t\t\tOPPONENT_PROFILE_FEATURE_NAMES\n\t\t),\n\t\t\"source_teacher\": {\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\"target_actions\",\n\t\t\"omitted_production_features\",\n\t\t\"source_teacher\",\n",
+      "new": "\t\t\"target_actions\",\n\t\t\"omitted_production_features\",\n\t\t\"opponent_profile_feature_names\",\n\t\t\"source_teacher\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\texpected_omitted = list(\n\t\tbuild_observation_compatibility_report().unavailable_features\n\t)\n\tif payload[\"omitted_production_features\"] != expected_omitted:\n",
+      "new": "\tif payload[\"opponent_profile_feature_names\"] != list(\n\t\tOPPONENT_PROFILE_FEATURE_NAMES\n\t):\n\t\traise ValueError(\n\t\t\t\"learning bridge opponent profile feature names mismatch\"\n\t\t)\n\tprofile_input_available = not any(\n\t\tfeature == \"opponent.0.profile.*\"\n\t\tfor feature in payload[\"omitted_production_features\"]\n\t)\n\texpected_omitted = list(\n\t\tbuild_observation_compatibility_report(\n\t\t\tprofile_input_available=profile_input_available,\n\t\t).unavailable_features\n\t)\n\tif payload[\"omitted_production_features\"] != expected_omitted:\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\t\"opponent_current_bet\": (\n\t\t\t\trecord.observation.opponent_current_bet\n\t\t\t),\n\t\t\t\"absent_opponent_slots\": list(\n",
+      "new": "\t\t\t\"opponent_current_bet\": (\n\t\t\t\trecord.observation.opponent_current_bet\n\t\t\t),\n\t\t\t\"opponent_profile\": (\n\t\t\t\tlist(record.observation.opponent_profile)\n\t\t\t\tif record.observation.opponent_profile is not None\n\t\t\t\telse None\n\t\t\t),\n\t\t\t\"absent_opponent_slots\": list(\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\"opponent_current_bet\",\n\t\t\"absent_opponent_slots\",\n",
+      "new": "\t\t\"opponent_current_bet\",\n\t\t\"opponent_profile\",\n\t\t\"absent_opponent_slots\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\tif observation[\"absent_opponent_slots\"] != list(range(1, 8)):\n\t\traise ValueError(\n\t\t\t\"learning bridge absent opponent slots mismatch\"\n\t\t)\n\n\ndef _validate_serialized_cards(cards, expected_count):\n",
+      "new": "\tprofile = observation[\"opponent_profile\"]\n\tif profile is not None:\n\t\tif (\n\t\t\tnot isinstance(profile, list)\n\t\t\tor len(profile) != len(OPPONENT_PROFILE_FEATURE_NAMES)\n\t\t\tor any(\n\t\t\t\tnot isinstance(value, (int, float))\n\t\t\t\tor isinstance(value, bool)\n\t\t\t\tfor value in profile\n\t\t\t)\n\t\t):\n\t\t\traise ValueError(\n\t\t\t\t\"learning bridge opponent_profile is invalid\"\n\t\t\t)\n\tif observation[\"absent_opponent_slots\"] != list(range(1, 8)):\n\t\traise ValueError(\n\t\t\t\"learning bridge absent opponent slots mismatch\"\n\t\t)\n\n\ndef _validate_serialized_cards(cards, expected_count):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "def _bridge_observation(target):\n",
+      "new": "def _validate_opponent_profiles(opponent_profiles):\n\tif opponent_profiles is None:\n\t\treturn None\n\tif not isinstance(opponent_profiles, dict):\n\t\traise ValueError(\"opponent_profiles must be a dict\")\n\tif set(opponent_profiles) != {\"player_0\", \"player_1\"}:\n\t\traise ValueError(\n\t\t\t\"opponent_profiles must contain player_0 and player_1\"\n\t\t)\n\n\tvalidated = {}\n\tfor player_name, values in opponent_profiles.items():\n\t\tvalues = tuple(values)\n\t\tif (\n\t\t\tlen(values) != len(OPPONENT_PROFILE_FEATURE_NAMES)\n\t\t\tor any(\n\t\t\t\tnot isinstance(value, (int, float))\n\t\t\t\tor isinstance(value, bool)\n\t\t\t\tfor value in values\n\t\t\t)\n\t\t):\n\t\t\traise ValueError(\n\t\t\t\tf\"opponent profile for {player_name} is invalid\"\n\t\t\t)\n\t\tvalidated[player_name] = tuple(float(value) for value in values)\n\treturn validated\n\n\ndef _bridge_observation(target, opponent_profiles=None):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\treturn SolverBridgeObservation(\n\t\tplayer_index=player,\n\t\tacting_player=f\"player_{player}\",\n\t\topponent_order=(f\"player_{opponent}\",),\n",
+      "new": "\topponent_name = f\"player_{opponent}\"\n\topponent_profile = (\n\t\topponent_profiles[opponent_name]\n\t\tif opponent_profiles is not None\n\t\telse None\n\t)\n\n\treturn SolverBridgeObservation(\n\t\tplayer_index=player,\n\t\tacting_player=f\"player_{player}\",\n\t\topponent_order=(opponent_name,),\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\topponent_current_bet=info[\"street_commitments\"][opponent],\n\t\tabsent_opponent_slots=tuple(range(1, 8)),\n",
+      "new": "\t\topponent_current_bet=info[\"street_commitments\"][opponent],\n\t\topponent_profile=opponent_profile,\n\t\tabsent_opponent_slots=tuple(range(1, 8)),\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/observation_compatibility.py",
+      "old": "def build_observation_compatibility_report():\n",
+      "new": "def build_observation_compatibility_report(profile_input_available=False):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/observation_compatibility.py",
+      "old": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\"opponent.0.profile.*\",),\n\t\t\tstatus=\"unavailable\",\n\t\t\tsolver_sources=(),\n\t\t\treason=(\n\t\t\t\t\"Restricted solver records contain no persistent global, \"\n\t\t\t\t\"positional or agent-specific opponent profile data.\"\n\t\t\t),\n\t\t),\n",
+      "new": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\"opponent.0.profile.*\",),\n\t\t\tstatus=(\n\t\t\t\t\"derived\" if profile_input_available else \"unavailable\"\n\t\t\t),\n\t\t\tsolver_sources=(\"opponent_profile_input\",)\n\t\t\tif profile_input_available\n\t\t\telse (),\n\t\t\treason=(\n\t\t\t\t\"The learning bridge can carry the canonical encoded 22-feature \"\n\t\t\t\t\"opponent profile only when it is supplied explicitly by the \"\n\t\t\t\t\"caller; solver state itself contains no persistence data.\"\n\t\t\t),\n\t\t),\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\tLEARNING_BRIDGE_FORMAT_VERSION,\n\tSolverBridgeObservation,\n",
+      "new": "\tLEARNING_BRIDGE_FORMAT_VERSION,\n\tOPPONENT_PROFILE_FEATURE_NAMES,\n\tSolverBridgeObservation,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"OBSERVATION_COMPATIBILITY_VERSION\",\n\t\"ObservationCompatibilityEntry\",\n",
+      "new": "\t\"OBSERVATION_COMPATIBILITY_VERSION\",\n\t\"OPPONENT_PROFILE_FEATURE_NAMES\",\n\t\"ObservationCompatibilityEntry\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "import pytest\n\nfrom poker.solver import (\n",
+      "new": "import pytest\n\nfrom poker.statistics.opponent_profile import OpponentProfileEncoder\nfrom poker.solver import (\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert record.omitted_production_features == (\n\t\t\"opponent.0.profile.*\",\n\t)\n",
+      "new": "\tassert record.omitted_production_features == (\n\t\t\"opponent.0.profile.*\",\n\t)\n\tassert record.observation.opponent_profile is None\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert first[\"format_version\"] == 2\n\tassert first[\"observation_compatibility_version\"] == 1\n",
+      "new": "\tassert first[\"format_version\"] == 3\n\tassert first[\"observation_compatibility_version\"] == 1\n\tassert first[\"opponent_profile_feature_names\"] == list(\n\t\tOpponentProfileEncoder.FEATURE_NAMES\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\ndef test_learning_bridge_artifact_rejects_omitted_feature_drift():\n",
+      "new": "\ndef test_learning_bridge_accepts_explicit_encoded_opponent_profiles():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(game, root, {\"fold\": 1.0})\n\tplayer_0 = tuple(float(index) for index in range(22))\n\tplayer_1 = tuple(float(index + 100) for index in range(22))\n\n\trecord = build_learning_bridge_records(\n\t\tteacher,\n\t\topponent_profiles={\n\t\t\t\"player_0\": player_0,\n\t\t\t\"player_1\": player_1,\n\t\t},\n\t)[0]\n\n\tassert record.observation.opponent_profile == player_1\n\tassert record.omitted_production_features == ()\n\n\tpayload = build_learning_bridge_artifact(\n\t\tteacher,\n\t\topponent_profiles={\n\t\t\t\"player_0\": player_0,\n\t\t\t\"player_1\": player_1,\n\t\t},\n\t)\n\tassert payload[\"omitted_production_features\"] == []\n\tassert payload[\"records\"][0][\"observation\"][\"opponent_profile\"] == list(player_1)\n\n\ndef test_learning_bridge_rejects_invalid_explicit_opponent_profile_shape():\n\tgame = create_benchmark_game(\"equal\")\n\troot = game.initial_nodes()[0].state\n\tteacher = build_teacher(game, root, {\"fold\": 1.0})\n\n\twith pytest.raises(ValueError, match=\"opponent profile for player_0 is invalid\"):\n\t\tbuild_learning_bridge_records(\n\t\t\tteacher,\n\t\t\topponent_profiles={\n\t\t\t\t\"player_0\": (0.0,),\n\t\t\t\t\"player_1\": (0.0,) * 22,\n\t\t\t},\n\t\t)\n\n\ndef test_learning_bridge_artifact_rejects_omitted_feature_drift():\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_observation_compatibility.py",
+      "old": "\tassert \"opponent.0.profile.*\" in report.unavailable_features\n\tassert \"metadata.acting_player\" not in report.unavailable_features\n",
+      "new": "\tassert \"opponent.0.profile.*\" in report.unavailable_features\n\twith_profiles = build_observation_compatibility_report(\n\t\tprofile_input_available=True,\n\t)\n\tassert \"opponent.0.profile.*\" not in with_profiles.unavailable_features\n\tassert \"opponent.0.profile.*\" in {\n\t\tfeature\n\t\tfor entry in with_profiles.by_status(\"derived\")\n\t\tfor feature in entry.production_features\n\t}\n\tassert \"metadata.acting_player\" not in report.unavailable_features\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "Solver-local player identity metadata is now derived deterministically from the existing player index: the learning bridge exposes `player_0`/`player_1` as `acting_player` plus relative `opponent_order` without claiming production table names or importing the production engine. Learning bridge artifact format is version 2. Persistent opponent-profile features remain explicitly unavailable. The remaining compatibility gap is therefore the persistent `opponent.0.profile.*` feature group; close it only through an explicit solver-side profile input/boundary rather than persistence imports or fabricated zero semantics. Further bridge serialization changes require extended validation.",
+      "new": "Solver-local player identity metadata is derived deterministically from the existing player index: the learning bridge exposes `player_0`/`player_1` as `acting_player` plus relative `opponent_order` without claiming production table names or importing the production engine. The bridge now also accepts an optional explicit encoded opponent-profile input keyed by those solver-local identities. The input must match the canonical 22-feature `OpponentProfileEncoder.FEATURE_NAMES` order and is supplied by the caller after any required persistence lookup, profile scope selection and position-aware encoding. The solver does not import repositories/providers and does not fabricate zero profiles when input is absent. Learning bridge artifact format is version 3. Observation compatibility is complete when profile input is supplied; without it, `opponent.0.profile.*` remains explicitly unavailable. The next solver step should validate end-to-end bridge compatibility against the production `LearningObservationEncoder` numeric feature ordering/scaling without wiring solver policy into Arena or training yet."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "Solver player indices also provide a deterministic solver-local identity layer for bridge metadata: index 0/1 maps to `player_0`/`player_1`, allowing acting-player and relative opponent-order metadata to be represented honestly without pretending those labels are production table names.",
+      "new": "Solver player indices also provide a deterministic solver-local identity layer for bridge metadata: index 0/1 maps to `player_0`/`player_1`, allowing acting-player and relative opponent-order metadata to be represented honestly without pretending those labels are production table names. Opponent profiles cross this boundary only as an optional already-encoded 22-value tuple whose ordering is defined by `OpponentProfileEncoder.FEATURE_NAMES`. Persistence lookup, profile scope and position-aware encoding remain outside `poker.solver`; absent input stays absent rather than being silently replaced by a fabricated zero profile."
+    },
+    {
+      "type": "replace",
+      "file": "docs/DECISIONS.md",
+      "old": "Persistent opponent-profile features remain unavailable until supplied through a dedicated boundary.\n",
+      "new": "Persistent opponent-profile features remain unavailable until supplied through a dedicated boundary.\n\n## ADR-021: Solver Bridge Accepts Encoded Opponent Profiles, Not Persistence\n\nDate:\n2026-08-15\n\nDecision:\nThe solver learning bridge may receive optional opponent profiles only as caller-supplied encoded tuples matching the canonical `OpponentProfileEncoder.FEATURE_NAMES` order. Profiles are keyed by solver-local `player_0`/`player_1` identities. The solver does not resolve players, query persistence, choose private/global/combined scope or infer production positions. Learning bridge artifact format moves to version 3.\n\nReason:\nThe production 22-feature profile encoding already includes positional and agent-memory semantics. Passing the final encoded vector keeps those choices at the statistics/learning boundary where they belong, avoids a persistence dependency inside `poker.solver`, and prevents absent profile data from being misrepresented as real all-zero observations.\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "solver-local player indices now also map deterministically to acting-player/opponent-order metadata in learning bridge format v2 without claiming production names; the remaining observation compatibility gap is persistent opponent-profile features, which require an explicit solver-side profile input boundary rather than persistence coupling or fabricated defaults.",
+      "new": "solver-local player indices map deterministically to acting-player/opponent-order metadata without claiming production names; learning bridge format v3 now accepts optional caller-supplied encoded opponent profiles using the canonical 22-feature production profile schema, with persistence lookup/scope/position encoding kept outside the solver and absent profiles kept explicitly unavailable; next validate the completed bridge semantics against the production `LearningObservationEncoder` numeric ordering/scaling before any Arena or training integration."
+    },
+    {
+      "type": "replace",
+      "file": "docs/DEV_RULES.md",
+      "old": "For `replace` operations, a mismatch report must identify the operation index, target file, match count and a short preview of the expected `old` text. Failed patches must be repaired from exact current repository state instead of guessing which replacement failed.\n\n## Validation profiles\n",
+      "new": "For `replace` operations, a mismatch report must identify the operation index, target file, match count and a short preview of the expected `old` text. Failed patches must be repaired from exact current repository state instead of guessing which replacement failed.\n\n## Mandatory AI-side patch preflight\n\nBefore delivering any `.npatch.json` to the user, the AI MUST test the patch against the fresh `ai-development` state on its own side.\n\nAt minimum, preflight must:\n- start from the current remote `ai-development` source, never from a failed transaction or old patch;\n- apply or faithfully simulate every patch operation sequentially in patch order;\n- verify that every `replace` operation matches exactly once at the moment it is applied;\n- verify that all declared files and operation types are valid for the current NeuroPatch implementation;\n- run the patch validation commands locally when the execution environment can run the repository;\n- never deliver a patch that has not passed operation-application preflight.\n\nIf the execution environment cannot run the repository test suite, the AI must say so explicitly, but this does not waive operation-application preflight. A `Replace mismatch` caused by an untested anchor is an AI-side process failure and must not be delegated to the user as routine testing.\n\nAfter any failed user-side patch run, assume NeuroPatch rollback restored the pre-patch repository state unless the failure report explicitly says a commit was preserved. Rebuild and preflight the next patch from fresh remote state rather than layering a repair over rolled-back feature code.\n\n## Validation profiles\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert record.observation.opponent_current_bet == 2\n\tassert not hasattr(record.observation, \"opponent_profile\")\n",
+      "new": "\tassert record.observation.opponent_current_bet == 2\n"
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
