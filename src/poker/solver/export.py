@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 
-STRATEGY_EXPORT_VERSION = 2
+STRATEGY_EXPORT_VERSION = 3
 CHANCE_SPACE_VERSION = 1
 SUPPORTED_SOLVER = "external_sampling_mccfr"
 
@@ -65,6 +65,8 @@ def serialize_information_set(info_set):
 		public_board,
 		history,
 		commitments,
+		street_commitments,
+		collected_pot,
 		starting_stacks,
 	) = info_set
 
@@ -81,6 +83,8 @@ def serialize_information_set(info_set):
 		],
 		"history": list(history),
 		"commitments": list(commitments),
+		"street_commitments": list(street_commitments),
+		"collected_pot": collected_pot,
 		"starting_stacks": list(starting_stacks),
 	}
 
@@ -327,6 +331,8 @@ def _validate_serialized_information_set(information_set):
 		"public_board",
 		"history",
 		"commitments",
+		"street_commitments",
+		"collected_pot",
 		"starting_stacks",
 	}
 	if set(information_set) != required:
@@ -363,7 +369,11 @@ def _validate_serialized_information_set(information_set):
 			"strategy export history actions must be non-empty strings"
 		)
 
-	for field in ("commitments", "starting_stacks"):
+	for field in (
+		"commitments",
+		"street_commitments",
+		"starting_stacks",
+	):
 		values = information_set[field]
 		if (
 			not isinstance(values, list)
@@ -375,6 +385,13 @@ def _validate_serialized_information_set(information_set):
 		):
 			raise ValueError(
 				f"strategy export {field} must contain two non-negative integers"
+		)
+
+
+	collected_pot = information_set["collected_pot"]
+	if not isinstance(collected_pot, int) or collected_pot < 0:
+		raise ValueError(
+			"strategy export collected_pot must be a non-negative integer"
 		)
 
 

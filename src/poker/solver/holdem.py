@@ -31,12 +31,18 @@ class HeadsUpHoldemNode:
 	history: tuple[str, ...] = ()
 	street_history: tuple[str, ...] = ()
 	commitments: tuple[int, int] = (0, 0)
+	street_commitments: tuple[int, int] = (0, 0)
+	collected_pot: int = 0
 	starting_stacks: tuple[int, int] = (20, 20)
 	showdown_runout: bool = False
 
 	@property
 	def matched_stake(self):
 		return min(self.commitments)
+
+	@property
+	def target_bet(self):
+		return max(self.street_commitments)
 
 	@property
 	def public_board(self):
@@ -95,6 +101,11 @@ class RestrictedHeadsUpHoldemGame:
 						self.small_blind,
 						self.big_blind,
 					),
+					street_commitments=(
+						self.small_blind,
+						self.big_blind,
+					),
+					collected_pot=0,
 					starting_stacks=self.starting_stacks,
 					showdown_runout=(
 						self.starting_stacks[0]
@@ -211,6 +222,8 @@ class RestrictedHeadsUpHoldemGame:
 			state.public_board,
 			state.history,
 			state.commitments,
+			state.street_commitments,
+			state.collected_pot,
 			state.starting_stacks,
 		)
 
@@ -317,19 +330,23 @@ class RestrictedHeadsUpHoldemGame:
 		history = state.history + (action,)
 		street_history = state.street_history + (action,)
 		commitments = list(state.commitments)
+		street_commitments = list(state.street_commitments)
 
 		if state.street == "preflop":
 			if action == "call":
-				commitments[actor] = min(
+				target = min(
 					self._stack_for(actor),
 					max(commitments),
 				)
+				commitments[actor] = target
+				street_commitments[actor] = target
 			elif action == "raise":
-				commitments[actor] = self._preflop_raise_target(
-					actor
-				)
+				target = self._preflop_raise_target(actor)
+				commitments[actor] = target
+				street_commitments[actor] = target
 			elif action == "all_in":
 				commitments[actor] = self._stack_for(actor)
+				street_commitments[actor] = commitments[actor]
 				if state.street_history == ("raise",):
 					opponent = 1 - actor
 					commitments[opponent] = max(
@@ -339,6 +356,7 @@ class RestrictedHeadsUpHoldemGame:
 							commitments[actor],
 						),
 					)
+					street_commitments[opponent] = commitments[opponent]
 
 			if street_history in {
 				("call",),
@@ -349,6 +367,7 @@ class RestrictedHeadsUpHoldemGame:
 					history,
 					street_history,
 					commitments,
+					street_commitments,
 				)
 			return HeadsUpHoldemNode(
 				deal=state.deal,
@@ -356,25 +375,36 @@ class RestrictedHeadsUpHoldemGame:
 				history=history,
 				street_history=street_history,
 				commitments=tuple(commitments),
+				street_commitments=tuple(street_commitments),
+				collected_pot=state.collected_pot,
 				starting_stacks=state.starting_stacks,
 			)
 
 		if self._is_postflop_bet_action(action):
-			commitments[actor] = self._postflop_bet_target(
+			target = self._postflop_bet_target(
 				state,
 				actor,
 				action,
 			)
+			delta = target - commitments[actor]
+			commitments[actor] = target
+			street_commitments[actor] += delta
 		elif action == "raise":
-			commitments[actor] = self._postflop_raise_target(
+			target = self._postflop_raise_target(
 				state,
 				actor,
 			)
+			delta = target - commitments[actor]
+			commitments[actor] = target
+			street_commitments[actor] += delta
 		elif action == "call":
-			commitments[actor] = min(
+			target = min(
 				self._stack_for(actor),
 				max(commitments),
 			)
+			delta = target - commitments[actor]
+			commitments[actor] = target
+			street_commitments[actor] += delta
 
 		street_closed = (
 			street_history == ("check", "check")
@@ -388,6 +418,7 @@ class RestrictedHeadsUpHoldemGame:
 				history,
 				street_history,
 				commitments,
+				street_commitments,
 			)
 
 		return HeadsUpHoldemNode(
@@ -396,6 +427,8 @@ class RestrictedHeadsUpHoldemGame:
 			history=history,
 			street_history=street_history,
 			commitments=tuple(commitments),
+			street_commitments=tuple(street_commitments),
+			collected_pot=state.collected_pot,
 			starting_stacks=state.starting_stacks,
 		)
 
@@ -540,6 +573,7 @@ class RestrictedHeadsUpHoldemGame:
 		history,
 		street_history,
 		commitments,
+		street_commitments,
 	):
 		commitments = tuple(commitments)
 		if self._any_player_all_in(commitments):
@@ -549,6 +583,8 @@ class RestrictedHeadsUpHoldemGame:
 				history=history,
 				street_history=street_history,
 				commitments=commitments,
+				street_commitments=(0, 0),
+				collected_pot=sum(commitments),
 				starting_stacks=state.starting_stacks,
 				showdown_runout=True,
 			)
@@ -559,6 +595,8 @@ class RestrictedHeadsUpHoldemGame:
 				history=history,
 				street_history=street_history,
 				commitments=commitments,
+				street_commitments=(0, 0),
+				collected_pot=sum(commitments),
 				starting_stacks=state.starting_stacks,
 			)
 		return HeadsUpHoldemNode(
@@ -566,6 +604,8 @@ class RestrictedHeadsUpHoldemGame:
 			street=self._next_street(state.street),
 			history=history,
 			commitments=commitments,
+			street_commitments=(0, 0),
+			collected_pot=sum(commitments),
 			starting_stacks=state.starting_stacks,
 		)
 

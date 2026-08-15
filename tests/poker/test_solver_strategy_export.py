@@ -29,6 +29,8 @@ def test_information_set_export_contains_only_acting_player_cards():
 	assert {"rank": 13, "suit": "H"} not in serialized["hole_cards"]
 	assert {"rank": 13, "suit": "S"} not in serialized["hole_cards"]
 	assert serialized["public_board"] == []
+	assert serialized["street_commitments"] == [1, 2]
+	assert serialized["collected_pot"] == 0
 	assert serialized["starting_stacks"] == [8, 20]
 
 
@@ -63,7 +65,7 @@ def test_strategy_export_is_deterministic_and_carries_metadata(tmp_path):
 	)
 
 	assert first == second
-	assert first["format_version"] == 2
+	assert first["format_version"] == 3
 	assert first["solver"] == "external_sampling_mccfr"
 	assert first["benchmark"]["version"] == 2
 	assert first["benchmark"]["scenario"] == "asymmetric"

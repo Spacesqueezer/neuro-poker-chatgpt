@@ -74,11 +74,11 @@ def test_direct_card_and_street_semantics_match_current_encoder_shape():
 def test_unavailable_features_are_not_silently_claimed_as_derivable():
 	report = build_observation_compatibility_report()
 
-	assert "table.pot" in report.unavailable_features
-	assert "table.target_bet" in report.unavailable_features
+	assert "table.pot" not in report.unavailable_features
+	assert "table.target_bet" not in report.unavailable_features
 	assert "table.minimum_raise" in report.unavailable_features
-	assert "hero.current_bet" in report.unavailable_features
-	assert "opponent.0.current_bet" in report.unavailable_features
+	assert "hero.current_bet" not in report.unavailable_features
+	assert "opponent.0.current_bet" not in report.unavailable_features
 	assert "opponent.0.profile.*" in report.unavailable_features
 	assert "metadata.acting_player" in report.unavailable_features
 	assert "metadata.opponent_order" in report.unavailable_features

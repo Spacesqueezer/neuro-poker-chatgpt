@@ -33,6 +33,10 @@ class SolverBridgeObservation:
 	opponent_remaining_chips: int
 	opponent_present: bool
 	opponent_folded: bool
+	table_pot: int
+	table_target_bet: int
+	hero_current_bet: int
+	opponent_current_bet: int
 	absent_opponent_slots: tuple[int, ...]
 
 
@@ -235,6 +239,12 @@ def _serialize_bridge_record(record):
 			),
 			"opponent_present": record.observation.opponent_present,
 			"opponent_folded": record.observation.opponent_folded,
+			"table_pot": record.observation.table_pot,
+			"table_target_bet": record.observation.table_target_bet,
+			"hero_current_bet": record.observation.hero_current_bet,
+			"opponent_current_bet": (
+				record.observation.opponent_current_bet
+			),
 			"absent_opponent_slots": list(
 				record.observation.absent_opponent_slots
 			),
@@ -342,6 +352,10 @@ def _validate_serialized_bridge_observation(observation):
 		"opponent_remaining_chips",
 		"opponent_present",
 		"opponent_folded",
+		"table_pot",
+		"table_target_bet",
+		"hero_current_bet",
+		"opponent_current_bet",
 		"absent_opponent_slots",
 	}
 	if not isinstance(observation, dict) or set(observation) != required:
@@ -399,6 +413,26 @@ def _validate_serialized_bridge_observation(observation):
 		raise ValueError(
 			"learning bridge live decision opponent cannot be folded"
 		)
+
+	for field in (
+		"table_pot",
+		"table_target_bet",
+		"hero_current_bet",
+		"opponent_current_bet",
+	):
+		if not isinstance(observation[field], int) or observation[field] < 0:
+			raise ValueError(
+				f"learning bridge {field} is invalid"
+			)
+
+	if observation["table_target_bet"] != max(
+		observation["hero_current_bet"],
+		observation["opponent_current_bet"],
+	):
+		raise ValueError(
+			"learning bridge target bet mismatch"
+		)
+
 	if observation["absent_opponent_slots"] != list(range(1, 8)):
 		raise ValueError(
 			"learning bridge absent opponent slots mismatch"
@@ -541,5 +575,9 @@ def _bridge_observation(target):
 		),
 		opponent_present=True,
 		opponent_folded=False,
+		table_pot=info["collected_pot"],
+		table_target_bet=max(info["street_commitments"]),
+		hero_current_bet=info["street_commitments"][player],
+		opponent_current_bet=info["street_commitments"][opponent],
 		absent_opponent_slots=tuple(range(1, 8)),
 	)

@@ -205,3 +205,15 @@ The solver-to-learning bridge is persisted as its own versioned research artifac
 Reason:
 The restricted solver still lacks several production observation semantics. Serializing a bridge as if it were a complete production sample would force fabricated values or hide schema loss. A separate validated artifact allows reproducible inspection and comparison while keeping unavailable features explicit until the solver state model is intentionally expanded.
 
+
+## ADR-018: Solver Tracks Street Betting State Explicitly
+
+Date:
+2026-08-15
+
+Decision:
+Restricted Hold'em solver nodes store both total hand commitments and separate street-local commitments plus collected-pot state. These fields are part of the information set and strategy artifact serialization. Strategy export format is bumped to version 3.
+
+Reason:
+Total commitments alone cannot distinguish production-style current bets, target bet and collected pot. Keeping those semantics explicit inside the finite solver state lets the learning bridge derive them honestly without importing mutable production betting-engine state or reconstructing them heuristically from action history.
+

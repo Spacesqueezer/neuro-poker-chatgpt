@@ -120,16 +120,26 @@ def build_observation_compatibility_report():
 			production_features=(
 				"table.pot",
 				"table.target_bet",
-				"table.minimum_raise",
 				"hero.current_bet",
 				"opponent.0.current_bet",
 			),
-			status="unavailable",
-			solver_sources=("commitments", "history"),
+			status="derived",
+			solver_sources=(
+				"street_commitments",
+				"collected_pot",
+			),
 			reason=(
-				"Solver commitments are total hand commitments. They do "
-				"not preserve the production engine's street-local current "
-				"bets, collected pot boundary, target bet or minimum raise."
+				"Street-local commitments and collected-pot state now "
+				"preserve these production betting semantics explicitly."
+			),
+		),
+		ObservationCompatibilityEntry(
+			production_features=("table.minimum_raise",),
+			status="unavailable",
+			solver_sources=("history",),
+			reason=(
+				"The restricted solver still models finite raise sizing "
+				"without production minimum-raise state."
 			),
 		),
 		ObservationCompatibilityEntry(

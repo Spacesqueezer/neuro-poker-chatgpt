@@ -1,0 +1,265 @@
+{
+  "patch_id": "solver_street_betting_state_v6",
+  "goal": "Expand restricted Hold'em solver state with explicit street-local betting semantics so table.pot, table.target_bet, hero.current_bet and opponent.current_bet are derivable without importing the production betting engine. Deliberately bump strategy serialization to v3.",
+  "allowed_files": [
+    "src/poker/solver/holdem.py",
+    "src/poker/solver/export.py",
+    "src/poker/solver/observation_compatibility.py",
+    "src/poker/solver/learning_bridge.py",
+    "tests/poker/test_restricted_holdem_solver.py",
+    "tests/poker/test_solver_strategy_export.py",
+    "tests/poker/test_solver_learning_target.py",
+    "tests/poker/test_solver_observation_compatibility.py",
+    "tests/poker/test_solver_learning_bridge.py",
+    "docs/PROJECT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/DECISIONS.md",
+    "docs/ROADMAP.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\tcommitments: tuple[int, int] = (0, 0)\n\tstarting_stacks: tuple[int, int] = (20, 20)\n",
+      "new": "\tcommitments: tuple[int, int] = (0, 0)\n\tstreet_commitments: tuple[int, int] = (0, 0)\n\tcollected_pot: int = 0\n\tstarting_stacks: tuple[int, int] = (20, 20)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\tdef matched_stake(self):\n\t\treturn min(self.commitments)\n\n\t@property\n\tdef public_board(self):\n",
+      "new": "\tdef matched_stake(self):\n\t\treturn min(self.commitments)\n\n\t@property\n\tdef target_bet(self):\n\t\treturn max(self.street_commitments)\n\n\t@property\n\tdef public_board(self):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\t\tcommitments=(\n\t\t\t\t\t\tself.small_blind,\n\t\t\t\t\t\tself.big_blind,\n\t\t\t\t\t),\n\t\t\t\t\tstarting_stacks=self.starting_stacks,\n",
+      "new": "\t\t\t\t\tcommitments=(\n\t\t\t\t\t\tself.small_blind,\n\t\t\t\t\t\tself.big_blind,\n\t\t\t\t\t),\n\t\t\t\t\tstreet_commitments=(\n\t\t\t\t\t\tself.small_blind,\n\t\t\t\t\t\tself.big_blind,\n\t\t\t\t\t),\n\t\t\t\t\tcollected_pot=0,\n\t\t\t\t\tstarting_stacks=self.starting_stacks,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\tstate.history,\n\t\t\tstate.commitments,\n\t\t\tstate.starting_stacks,\n",
+      "new": "\t\t\tstate.history,\n\t\t\tstate.commitments,\n\t\t\tstate.street_commitments,\n\t\t\tstate.collected_pot,\n\t\t\tstate.starting_stacks,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\tstreet_history = state.street_history + (action,)\n\t\tcommitments = list(state.commitments)\n",
+      "new": "\t\tstreet_history = state.street_history + (action,)\n\t\tcommitments = list(state.commitments)\n\t\tstreet_commitments = list(state.street_commitments)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\tif action == \"call\":\n\t\t\t\tcommitments[actor] = min(\n\t\t\t\t\tself._stack_for(actor),\n\t\t\t\t\tmax(commitments),\n\t\t\t\t)\n\t\t\telif action == \"raise\":\n\t\t\t\tcommitments[actor] = self._preflop_raise_target(\n\t\t\t\t\tactor\n\t\t\t\t)\n\t\t\telif action == \"all_in\":\n\t\t\t\tcommitments[actor] = self._stack_for(actor)\n",
+      "new": "\t\t\tif action == \"call\":\n\t\t\t\ttarget = min(\n\t\t\t\t\tself._stack_for(actor),\n\t\t\t\t\tmax(commitments),\n\t\t\t\t)\n\t\t\t\tcommitments[actor] = target\n\t\t\t\tstreet_commitments[actor] = target\n\t\t\telif action == \"raise\":\n\t\t\t\ttarget = self._preflop_raise_target(actor)\n\t\t\t\tcommitments[actor] = target\n\t\t\t\tstreet_commitments[actor] = target\n\t\t\telif action == \"all_in\":\n\t\t\t\tcommitments[actor] = self._stack_for(actor)\n\t\t\t\tstreet_commitments[actor] = commitments[actor]\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\t\tcommitments[opponent] = max(\n\t\t\t\t\t\tcommitments[opponent],\n\t\t\t\t\t\tmin(\n\t\t\t\t\t\t\tself._stack_for(opponent),\n\t\t\t\t\t\t\tcommitments[actor],\n\t\t\t\t\t\t),\n\t\t\t\t\t)\n",
+      "new": "\t\t\t\t\tcommitments[opponent] = max(\n\t\t\t\t\t\tcommitments[opponent],\n\t\t\t\t\t\tmin(\n\t\t\t\t\t\t\tself._stack_for(opponent),\n\t\t\t\t\t\t\tcommitments[actor],\n\t\t\t\t\t\t),\n\t\t\t\t\t)\n\t\t\t\t\tstreet_commitments[opponent] = commitments[opponent]\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\t\tstreet_history,\n\t\t\t\t\tcommitments,\n\t\t\t\t)\n",
+      "new": "\t\t\t\t\tstreet_history,\n\t\t\t\t\tcommitments,\n\t\t\t\t\tstreet_commitments,\n\t\t\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\tstreet_history=street_history,\n\t\t\t\tcommitments=tuple(commitments),\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\n\t\tif self._is_postflop_bet_action(action):\n",
+      "new": "\t\t\t\tstreet_history=street_history,\n\t\t\t\tcommitments=tuple(commitments),\n\t\t\t\tstreet_commitments=tuple(street_commitments),\n\t\t\t\tcollected_pot=state.collected_pot,\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\n\t\tif self._is_postflop_bet_action(action):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\tif self._is_postflop_bet_action(action):\n\t\t\tcommitments[actor] = self._postflop_bet_target(\n\t\t\t\tstate,\n\t\t\t\tactor,\n\t\t\t\taction,\n\t\t\t)\n\t\telif action == \"raise\":\n\t\t\tcommitments[actor] = self._postflop_raise_target(\n\t\t\t\tstate,\n\t\t\t\tactor,\n\t\t\t)\n\t\telif action == \"call\":\n\t\t\tcommitments[actor] = min(\n\t\t\t\tself._stack_for(actor),\n\t\t\t\tmax(commitments),\n\t\t\t)\n",
+      "new": "\t\tif self._is_postflop_bet_action(action):\n\t\t\ttarget = self._postflop_bet_target(\n\t\t\t\tstate,\n\t\t\t\tactor,\n\t\t\t\taction,\n\t\t\t)\n\t\t\tdelta = target - commitments[actor]\n\t\t\tcommitments[actor] = target\n\t\t\tstreet_commitments[actor] += delta\n\t\telif action == \"raise\":\n\t\t\ttarget = self._postflop_raise_target(\n\t\t\t\tstate,\n\t\t\t\tactor,\n\t\t\t)\n\t\t\tdelta = target - commitments[actor]\n\t\t\tcommitments[actor] = target\n\t\t\tstreet_commitments[actor] += delta\n\t\telif action == \"call\":\n\t\t\ttarget = min(\n\t\t\t\tself._stack_for(actor),\n\t\t\t\tmax(commitments),\n\t\t\t)\n\t\t\tdelta = target - commitments[actor]\n\t\t\tcommitments[actor] = target\n\t\t\tstreet_commitments[actor] += delta\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\tstreet_history,\n\t\t\t\tcommitments,\n\t\t\t)\n\n\t\treturn HeadsUpHoldemNode(\n",
+      "new": "\t\t\t\tstreet_history,\n\t\t\t\tcommitments,\n\t\t\t\tstreet_commitments,\n\t\t\t)\n\n\t\treturn HeadsUpHoldemNode(\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\tstreet_history=street_history,\n\t\t\tcommitments=tuple(commitments),\n\t\t\tstarting_stacks=state.starting_stacks,\n\t\t)\n",
+      "new": "\t\t\tstreet_history=street_history,\n\t\t\tcommitments=tuple(commitments),\n\t\t\tstreet_commitments=tuple(street_commitments),\n\t\t\tcollected_pot=state.collected_pot,\n\t\t\tstarting_stacks=state.starting_stacks,\n\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\tdef _closed_betting_node(\n\t\tself,\n\t\tstate,\n\t\thistory,\n\t\tstreet_history,\n\t\tcommitments,\n\t):\n",
+      "new": "\tdef _closed_betting_node(\n\t\tself,\n\t\tstate,\n\t\thistory,\n\t\tstreet_history,\n\t\tcommitments,\n\t\tstreet_commitments,\n\t):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\tstreet_history=street_history,\n\t\t\t\tcommitments=commitments,\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t\tshowdown_runout=True,\n",
+      "new": "\t\t\t\tstreet_history=street_history,\n\t\t\t\tcommitments=commitments,\n\t\t\t\tstreet_commitments=(0, 0),\n\t\t\t\tcollected_pot=sum(commitments),\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t\tshowdown_runout=True,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\t\tstreet_history=street_history,\n\t\t\t\tcommitments=commitments,\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\t\treturn HeadsUpHoldemNode(\n",
+      "new": "\t\t\t\tstreet_history=street_history,\n\t\t\t\tcommitments=commitments,\n\t\t\t\tstreet_commitments=(0, 0),\n\t\t\t\tcollected_pot=sum(commitments),\n\t\t\t\tstarting_stacks=state.starting_stacks,\n\t\t\t)\n\t\treturn HeadsUpHoldemNode(\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/holdem.py",
+      "old": "\t\t\tstreet=self._next_street(state.street),\n\t\t\thistory=history,\n\t\t\tcommitments=commitments,\n\t\t\tstarting_stacks=state.starting_stacks,\n",
+      "new": "\t\t\tstreet=self._next_street(state.street),\n\t\t\thistory=history,\n\t\t\tcommitments=commitments,\n\t\t\tstreet_commitments=(0, 0),\n\t\t\tcollected_pot=sum(commitments),\n\t\t\tstarting_stacks=state.starting_stacks,\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "STRATEGY_EXPORT_VERSION = 2\n",
+      "new": "STRATEGY_EXPORT_VERSION = 3\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "def serialize_information_set(info_set):\n\t(\n\t\tplayer,\n\t\thole_cards,\n\t\tstreet,\n\t\tpublic_board,\n\t\thistory,\n\t\tcommitments,\n\t\tstarting_stacks,\n\t) = info_set\n\n\treturn {\n\t\t\"player\": player,\n\t\t\"hole_cards\": [\n\t\t\tserialize_card(card)\n\t\t\tfor card in hole_cards\n\t\t],\n\t\t\"street\": street,\n\t\t\"public_board\": [\n\t\t\tserialize_card(card)\n\t\t\tfor card in public_board\n\t\t],\n\t\t\"history\": list(history),\n\t\t\"commitments\": list(commitments),\n\t\t\"starting_stacks\": list(starting_stacks),\n\t}\n",
+      "new": "def serialize_information_set(info_set):\n\t(\n\t\tplayer,\n\t\thole_cards,\n\t\tstreet,\n\t\tpublic_board,\n\t\thistory,\n\t\tcommitments,\n\t\tstreet_commitments,\n\t\tcollected_pot,\n\t\tstarting_stacks,\n\t) = info_set\n\n\treturn {\n\t\t\"player\": player,\n\t\t\"hole_cards\": [\n\t\t\tserialize_card(card)\n\t\t\tfor card in hole_cards\n\t\t],\n\t\t\"street\": street,\n\t\t\"public_board\": [\n\t\t\tserialize_card(card)\n\t\t\tfor card in public_board\n\t\t],\n\t\t\"history\": list(history),\n\t\t\"commitments\": list(commitments),\n\t\t\"street_commitments\": list(street_commitments),\n\t\t\"collected_pot\": collected_pot,\n\t\t\"starting_stacks\": list(starting_stacks),\n\t}\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "\t\t\"history\",\n\t\t\"commitments\",\n\t\t\"starting_stacks\",\n\t}\n",
+      "new": "\t\t\"history\",\n\t\t\"commitments\",\n\t\t\"street_commitments\",\n\t\t\"collected_pot\",\n\t\t\"starting_stacks\",\n\t}\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "\tfor field in (\"commitments\", \"starting_stacks\"):\n\t\tvalues = information_set[field]\n",
+      "new": "\tfor field in (\n\t\t\"commitments\",\n\t\t\"street_commitments\",\n\t\t\"starting_stacks\",\n\t):\n\t\tvalues = information_set[field]\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/export.py",
+      "old": "def _validate_card_list(cards, field, expected_length=None):\n",
+      "new": "\tcollected_pot = information_set[\"collected_pot\"]\n\tif not isinstance(collected_pot, int) or collected_pot < 0:\n\t\traise ValueError(\n\t\t\t\"strategy export collected_pot must be a non-negative integer\"\n\t\t)\n\n\ndef _validate_card_list(cards, field, expected_length=None):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/observation_compatibility.py",
+      "old": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\n\t\t\t\t\"table.pot\",\n\t\t\t\t\"table.target_bet\",\n\t\t\t\t\"table.minimum_raise\",\n\t\t\t\t\"hero.current_bet\",\n\t\t\t\t\"opponent.0.current_bet\",\n\t\t\t),\n\t\t\tstatus=\"unavailable\",\n\t\t\tsolver_sources=(\"commitments\", \"history\"),\n\t\t\treason=(\n\t\t\t\t\"Solver commitments are total hand commitments. They do \"\n\t\t\t\t\"not preserve the production engine's street-local current \"\n\t\t\t\t\"bets, collected pot boundary, target bet or minimum raise.\"\n\t\t\t),\n\t\t),\n",
+      "new": "\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\n\t\t\t\t\"table.pot\",\n\t\t\t\t\"table.target_bet\",\n\t\t\t\t\"hero.current_bet\",\n\t\t\t\t\"opponent.0.current_bet\",\n\t\t\t),\n\t\t\tstatus=\"derived\",\n\t\t\tsolver_sources=(\n\t\t\t\t\"street_commitments\",\n\t\t\t\t\"collected_pot\",\n\t\t\t),\n\t\t\treason=(\n\t\t\t\t\"Street-local commitments and collected-pot state now \"\n\t\t\t\t\"preserve these production betting semantics explicitly.\"\n\t\t\t),\n\t\t),\n\t\tObservationCompatibilityEntry(\n\t\t\tproduction_features=(\"table.minimum_raise\",),\n\t\t\tstatus=\"unavailable\",\n\t\t\tsolver_sources=(\"history\",),\n\t\t\treason=(\n\t\t\t\t\"The restricted solver still models finite raise sizing \"\n\t\t\t\t\"without production minimum-raise state.\"\n\t\t\t),\n\t\t),\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\topponent_present: bool\n\topponent_folded: bool\n\tabsent_opponent_slots: tuple[int, ...]\n",
+      "new": "\topponent_present: bool\n\topponent_folded: bool\n\ttable_pot: int\n\ttable_target_bet: int\n\thero_current_bet: int\n\topponent_current_bet: int\n\tabsent_opponent_slots: tuple[int, ...]\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\t\"opponent_present\": record.observation.opponent_present,\n\t\t\t\"opponent_folded\": record.observation.opponent_folded,\n\t\t\t\"absent_opponent_slots\": list(\n",
+      "new": "\t\t\t\"opponent_present\": record.observation.opponent_present,\n\t\t\t\"opponent_folded\": record.observation.opponent_folded,\n\t\t\t\"table_pot\": record.observation.table_pot,\n\t\t\t\"table_target_bet\": record.observation.table_target_bet,\n\t\t\t\"hero_current_bet\": record.observation.hero_current_bet,\n\t\t\t\"opponent_current_bet\": (\n\t\t\t\trecord.observation.opponent_current_bet\n\t\t\t),\n\t\t\t\"absent_opponent_slots\": list(\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\t\"opponent_present\",\n\t\t\"opponent_folded\",\n\t\t\"absent_opponent_slots\",\n",
+      "new": "\t\t\"opponent_present\",\n\t\t\"opponent_folded\",\n\t\t\"table_pot\",\n\t\t\"table_target_bet\",\n\t\t\"hero_current_bet\",\n\t\t\"opponent_current_bet\",\n\t\t\"absent_opponent_slots\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\tif observation[\"opponent_folded\"] is not False:\n\t\traise ValueError(\n\t\t\t\"learning bridge live decision opponent cannot be folded\"\n\t\t)\n\tif observation[\"absent_opponent_slots\"] != list(range(1, 8)):\n",
+      "new": "\tif observation[\"opponent_folded\"] is not False:\n\t\traise ValueError(\n\t\t\t\"learning bridge live decision opponent cannot be folded\"\n\t\t)\n\n\tfor field in (\n\t\t\"table_pot\",\n\t\t\"table_target_bet\",\n\t\t\"hero_current_bet\",\n\t\t\"opponent_current_bet\",\n\t):\n\t\tif not isinstance(observation[field], int) or observation[field] < 0:\n\t\t\traise ValueError(\n\t\t\t\tf\"learning bridge {field} is invalid\"\n\t\t\t)\n\n\tif observation[\"table_target_bet\"] != max(\n\t\tobservation[\"hero_current_bet\"],\n\t\tobservation[\"opponent_current_bet\"],\n\t):\n\t\traise ValueError(\n\t\t\t\"learning bridge target bet mismatch\"\n\t\t)\n\n\tif observation[\"absent_opponent_slots\"] != list(range(1, 8)):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/learning_bridge.py",
+      "old": "\t\topponent_present=True,\n\t\topponent_folded=False,\n\t\tabsent_opponent_slots=tuple(range(1, 8)),\n",
+      "new": "\t\topponent_present=True,\n\t\topponent_folded=False,\n\t\ttable_pot=info[\"collected_pot\"],\n\t\ttable_target_bet=max(info[\"street_commitments\"]),\n\t\thero_current_bet=info[\"street_commitments\"][player],\n\t\topponent_current_bet=info[\"street_commitments\"][opponent],\n\t\tabsent_opponent_slots=tuple(range(1, 8)),\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_strategy_export.py",
+      "old": "\tassert first[\"format_version\"] == 2\n",
+      "new": "\tassert first[\"format_version\"] == 3\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_strategy_export.py",
+      "old": "\tassert serialized[\"starting_stacks\"] == [8, 20]\n",
+      "new": "\tassert serialized[\"street_commitments\"] == [1, 2]\n\tassert serialized[\"collected_pot\"] == 0\n\tassert serialized[\"starting_stacks\"] == [8, 20]\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_target.py",
+      "old": "\t\t\"history\",\n\t\t\"commitments\",\n\t\t\"starting_stacks\",\n",
+      "new": "\t\t\"history\",\n\t\t\"commitments\",\n\t\t\"street_commitments\",\n\t\t\"collected_pot\",\n\t\t\"starting_stacks\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_restricted_holdem_solver.py",
+      "old": "\tassert root.commitments == (1, 2)\n\n\traised = game.next_node(root, \"raise\")\n\tassert raised.commitments == (6, 2)\n\n\tflop = game.next_node(raised, \"call\")\n\tassert flop.commitments == (6, 6)\n\n\tbet = game.next_node(flop, \"bet_2bb\")\n\tassert bet.commitments == (6, 10)\n\n\tturn = game.next_node(bet, \"call\")\n\tassert turn.commitments == (10, 10)\n\tassert turn.matched_stake == 10\n",
+      "new": "\tassert root.commitments == (1, 2)\n\tassert root.street_commitments == (1, 2)\n\tassert root.collected_pot == 0\n\tassert root.target_bet == 2\n\n\traised = game.next_node(root, \"raise\")\n\tassert raised.commitments == (6, 2)\n\tassert raised.street_commitments == (6, 2)\n\n\tflop = game.next_node(raised, \"call\")\n\tassert flop.commitments == (6, 6)\n\tassert flop.street_commitments == (0, 0)\n\tassert flop.collected_pot == 12\n\tassert flop.target_bet == 0\n\n\tbet = game.next_node(flop, \"bet_2bb\")\n\tassert bet.commitments == (6, 10)\n\tassert bet.street_commitments == (0, 4)\n\tassert bet.collected_pot == 12\n\tassert bet.target_bet == 4\n\n\tturn = game.next_node(bet, \"call\")\n\tassert turn.commitments == (10, 10)\n\tassert turn.street_commitments == (0, 0)\n\tassert turn.collected_pot == 20\n\tassert turn.matched_stake == 10\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert observation.opponent_present is True\n\tassert observation.opponent_folded is False\n\tassert observation.absent_opponent_slots == (\n",
+      "new": "\tassert observation.opponent_present is True\n\tassert observation.opponent_folded is False\n\tassert observation.table_pot == 0\n\tassert observation.table_target_bet == 2\n\tassert observation.hero_current_bet == 1\n\tassert observation.opponent_current_bet == 2\n\tassert observation.absent_opponent_slots == (\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert record.omitted_production_features == (\n\t\t\"table.pot\",\n\t\t\"table.target_bet\",\n\t\t\"table.minimum_raise\",\n\t\t\"hero.current_bet\",\n\t\t\"opponent.0.current_bet\",\n\t\t\"opponent.0.profile.*\",\n",
+      "new": "\tassert record.omitted_production_features == (\n\t\t\"table.minimum_raise\",\n\t\t\"opponent.0.profile.*\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_learning_bridge.py",
+      "old": "\tassert not hasattr(record.observation, \"pot\")\n\tassert not hasattr(record.observation, \"target_bet\")\n\tassert not hasattr(record.observation, \"minimum_raise\")\n\tassert not hasattr(record.observation, \"hero_current_bet\")\n\tassert not hasattr(record.observation, \"opponent_profile\")\n",
+      "new": "\tassert record.observation.table_pot == 0\n\tassert record.observation.table_target_bet == 2\n\tassert record.observation.hero_current_bet == 1\n\tassert record.observation.opponent_current_bet == 2\n\tassert not hasattr(record.observation, \"minimum_raise\")\n\tassert not hasattr(record.observation, \"opponent_profile\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_observation_compatibility.py",
+      "old": "\tassert \"table.pot\" in report.unavailable_features\n\tassert \"table.target_bet\" in report.unavailable_features\n\tassert \"table.minimum_raise\" in report.unavailable_features\n\tassert \"hero.current_bet\" in report.unavailable_features\n\tassert \"opponent.0.current_bet\" in report.unavailable_features\n",
+      "new": "\tassert \"table.pot\" not in report.unavailable_features\n\tassert \"table.target_bet\" not in report.unavailable_features\n\tassert \"table.minimum_raise\" in report.unavailable_features\n\tassert \"hero.current_bet\" not in report.unavailable_features\n\tassert \"opponent.0.current_bet\" not in report.unavailable_features\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The next solver step is to use the explicit omitted-feature list to decide the first solver-state expansion: add solver-local street betting state sufficient to derive production `table.pot`, `table.target_bet`, `hero.current_bet` and `opponent.0.current_bet` semantics without importing the production betting engine. `table.minimum_raise`, opponent profiles and production player identity/order should remain explicitly unavailable until separately modeled. This changes solver state/information-set semantics and therefore must update solver serialization/chance-compatible regression deliberately rather than backfilling bridge artifacts heuristically.",
+      "new": "Restricted Hold'em solver nodes now retain explicit street-local commitments and collected-pot state in addition to total hand commitments. Information sets and strategy serialization include `street_commitments` and `collected_pot`, so strategy artifact format is intentionally bumped to version 3 rather than silently reinterpreting older artifacts. Closed streets move accumulated contributions into `collected_pot` semantics and reset street commitments; live-street bets/calls/raises update both total and street-local commitments. The observation compatibility report now classifies production `table.pot`, `table.target_bet`, `hero.current_bet` and `opponent.0.current_bet` as derived, and `SolverBridgeObservation` exposes them explicitly. `table.minimum_raise`, opponent profiles and production player identity/order remain unavailable. The next solver step is to add explicit solver-local minimum-raise semantics compatible with the restricted finite action abstraction, without importing the production betting engine, so `table.minimum_raise` can move from unavailable to derived. Preserve strict strategy artifact v3 compatibility and use extended validation when solver state/serialization semantics change."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ARCHITECTURE.md",
+      "old": "Solver nodes carry player-explicit public commitments; `matched_stake` is derived as the minimum commitment rather than being the accounting source of truth. Calls, bets, raises and all-ins are capped by the acting player's public starting stack.",
+      "new": "Solver nodes carry player-explicit total commitments plus street-local commitments and collected-pot state; `matched_stake` is derived as the minimum total commitment rather than being the accounting source of truth. Closed streets reset street commitments and move the accumulated contribution boundary into `collected_pot`, so current-bet/target-bet/pot semantics remain explicit without importing production betting state. Calls, bets, raises and all-ins remain capped by the acting player's public starting stack."
+    },
+    {
+      "type": "replace",
+      "file": "docs/DECISIONS.md",
+      "old": "Reason:\nThe restricted solver still lacks several production observation semantics. Serializing a bridge as if it were a complete production sample would force fabricated values or hide schema loss. A separate validated artifact allows reproducible inspection and comparison while keeping unavailable features explicit until the solver state model is intentionally expanded.",
+      "new": "Reason:\nThe restricted solver still lacks several production observation semantics. Serializing a bridge as if it were a complete production sample would force fabricated values or hide schema loss. A separate validated artifact allows reproducible inspection and comparison while keeping unavailable features explicit until the solver state model is intentionally expanded.\n\n\n## ADR-018: Solver Tracks Street Betting State Explicitly\n\nDate:\n2026-08-15\n\nDecision:\nRestricted Hold'em solver nodes store both total hand commitments and separate street-local commitments plus collected-pot state. These fields are part of the information set and strategy artifact serialization. Strategy export format is bumped to version 3.\n\nReason:\nTotal commitments alone cannot distinguish production-style current bets, target bet and collected pot. Keeping those semantics explicit inside the finite solver state lets the learning bridge derive them honestly without importing mutable production betting-engine state or reconstructing them heuristically from action history."
+    },
+    {
+      "type": "replace",
+      "file": "docs/ROADMAP.md",
+      "old": "the minimal solver-local bridge is now persisted as a deterministic versioned artifact bound to compatibility schema, target actions, omitted production features and teacher provenance, with strict validation on load; next expand solver-local street betting state so pot/target/current-bet production semantics become derivable while minimum-raise, profile and player-identity gaps remain explicit.",
+      "new": "the solver state now carries street-local commitments and collected-pot semantics, strategy artifacts deliberately move to format v3, and the learning bridge derives production pot/target/current-bet fields without engine imports; next add explicit solver-local minimum-raise semantics while keeping profile and production player-identity gaps explicit."
+    }
+  ],
+  "validation": {
+    "profile": "extended",
+    "commands": [
+      "python -m pytest -q",
+      "python tools/verify_history.py"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
