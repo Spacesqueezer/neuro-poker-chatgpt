@@ -1,0 +1,61 @@
+{
+  "patch_id": "solver_training_validation_report_v2",
+  "goal": "Implement the framework-neutral solver training validation layer that the failed v1 test expected. Combine masked soft-policy cross-entropy and legal-action top-1 accuracy into SolverTrainingMetrics, export the existing training contracts through poker.solver, and record the next concrete boundary gap.",
+  "allowed_files": [
+    "src/poker/solver/training_validation.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_training_validation.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_validation.py",
+      "content": "from poker.solver.training_metrics import SolverTrainingMetrics\nfrom poker.solver.training_objective import SolverTrainingObjective\n\n\ndef evaluate_solver_predictions(\n\tpredicted_probabilities,\n\ttarget_probabilities,\n\tlegal_masks,\n):\n\tpredictions = tuple(tuple(values) for values in predicted_probabilities)\n\ttargets = tuple(tuple(values) for values in target_probabilities)\n\tmasks = tuple(tuple(values) for values in legal_masks)\n\n\tif not predictions:\n\t\traise ValueError(\"solver validation predictions must not be empty\")\n\tif len(predictions) != len(targets) or len(predictions) != len(masks):\n\t\traise ValueError(\"solver validation sample counts must match\")\n\n\tlosses = []\n\tcorrect = 0\n\n\tfor predicted, target, legal_mask in zip(predictions, targets, masks):\n\t\tif len(predicted) != 6 or len(target) != 6 or len(legal_mask) != 6:\n\t\t\traise ValueError(\"solver validation samples must use six actions\")\n\n\t\tlosses.append(\n\t\t\tSolverTrainingObjective.cross_entropy(\n\t\t\t\tpredicted,\n\t\t\t\ttarget,\n\t\t\t\tlegal_mask,\n\t\t\t)\n\t\t)\n\n\t\tlegal_indices = [\n\t\t\tindex\n\t\t\tfor index, allowed in enumerate(legal_mask)\n\t\t\tif allowed > 0.0\n\t\t]\n\t\tif not legal_indices:\n\t\t\traise ValueError(\"solver validation sample has no legal actions\")\n\n\t\tpredicted_action = max(\n\t\t\tlegal_indices,\n\t\t\tkey=lambda index: (predicted[index], -index),\n\t\t)\n\t\ttarget_action = max(\n\t\t\tlegal_indices,\n\t\t\tkey=lambda index: (target[index], -index),\n\t\t)\n\t\tif predicted_action == target_action:\n\t\t\tcorrect += 1\n\n\tsamples = len(predictions)\n\treturn SolverTrainingMetrics(\n\t\tsamples=samples,\n\t\tmean_loss=sum(losses) / samples,\n\t\taccuracy=correct / samples,\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.supervised_dataset import (\n\tSOLVER_SUPERVISED_SAMPLE_VERSION,\n\tSolverSupervisedDatasetAnalyzer,\n\tSolverSupervisedDatasetWriter,\n\tSolverSupervisedSample,\n\tbridge_record_to_supervised_sample,\n\tbuild_solver_supervised_samples,\n)\nfrom poker.solver.teacher import (\n",
+      "new": "from poker.solver.supervised_dataset import (\n\tSOLVER_SUPERVISED_SAMPLE_VERSION,\n\tSolverSupervisedDatasetAnalyzer,\n\tSolverSupervisedDatasetWriter,\n\tSolverSupervisedSample,\n\tbridge_record_to_supervised_sample,\n\tbuild_solver_supervised_samples,\n)\nfrom poker.solver.training_batch import (\n\tSolverTrainingBatch,\n\tbuild_solver_training_batch,\n)\nfrom poker.solver.training_input import (\n\tSolverTrainingExample,\n\tSolverTrainingInput,\n\tSolverTrainingObjectiveContract,\n)\nfrom poker.solver.training_metrics import SolverTrainingMetrics\nfrom poker.solver.training_objective import SolverTrainingObjective\nfrom poker.solver.training_validation import evaluate_solver_predictions\nfrom poker.solver.teacher import (\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"SolverSupervisedSample\",\n\t\"TEACHER_RECORD_FORMAT_VERSION\",\n",
+      "new": "\t\"SolverSupervisedSample\",\n\t\"SolverTrainingBatch\",\n\t\"SolverTrainingExample\",\n\t\"SolverTrainingInput\",\n\t\"SolverTrainingMetrics\",\n\t\"SolverTrainingObjective\",\n\t\"SolverTrainingObjectiveContract\",\n\t\"TEACHER_RECORD_FORMAT_VERSION\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"build_solver_supervised_samples\",\n\t\"build_strategy_export\",\n",
+      "new": "\t\"build_solver_supervised_samples\",\n\t\"build_solver_training_batch\",\n\t\"build_strategy_export\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"evaluate_restricted_policy\",\n\t\"load_learning_bridge_artifact\",\n",
+      "new": "\t\"evaluate_restricted_policy\",\n\t\"evaluate_solver_predictions\",\n\t\"load_learning_bridge_artifact\",\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_validation.py",
+      "content": "import pytest\n\nfrom poker.solver import (\n\tSolverTrainingMetrics,\n\tevaluate_solver_predictions,\n)\n\n\ndef test_solver_training_validation_reports_loss_and_legal_top1_accuracy():\n\tmetrics = evaluate_solver_predictions(\n\t\tpredicted_probabilities=(\n\t\t\t(0.7, 0.1, 0.1, 0.05, 0.03, 0.02),\n\t\t\t(0.1, 0.1, 0.6, 0.1, 0.05, 0.05),\n\t\t),\n\t\ttarget_probabilities=(\n\t\t\t(1.0, 0.0, 0.0, 0.0, 0.0, 0.0),\n\t\t\t(0.0, 0.0, 1.0, 0.0, 0.0, 0.0),\n\t\t),\n\t\tlegal_masks=(\n\t\t\t(1.0, 0.0, 1.0, 0.0, 1.0, 1.0),\n\t\t\t(1.0, 0.0, 1.0, 0.0, 1.0, 1.0),\n\t\t),\n\t)\n\n\tassert isinstance(metrics, SolverTrainingMetrics)\n\tassert metrics.samples == 2\n\tassert metrics.mean_loss > 0.0\n\tassert metrics.accuracy == 1.0\n\n\ndef test_solver_training_validation_ignores_illegal_action_for_accuracy():\n\tmetrics = evaluate_solver_predictions(\n\t\tpredicted_probabilities=(\n\t\t\t(0.4, 0.9, 0.6, 0.0, 0.0, 0.0),\n\t\t),\n\t\ttarget_probabilities=(\n\t\t\t(0.0, 0.0, 1.0, 0.0, 0.0, 0.0),\n\t\t),\n\t\tlegal_masks=(\n\t\t\t(1.0, 0.0, 1.0, 0.0, 0.0, 0.0),\n\t\t),\n\t)\n\n\tassert metrics.accuracy == 1.0\n\n\ndef test_solver_training_validation_rejects_sample_count_mismatch():\n\twith pytest.raises(\n\t\tValueError,\n\t\tmatch=\"solver validation sample counts must match\",\n\t):\n\t\tevaluate_solver_predictions(\n\t\t\tpredicted_probabilities=((1.0, 0.0, 0.0, 0.0, 0.0, 0.0),),\n\t\t\ttarget_probabilities=(),\n\t\t\tlegal_masks=((1.0, 0.0, 0.0, 0.0, 0.0, 0.0),),\n\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The next solver step should reconcile these small training-boundary modules into one coherent public solver API and define masked soft-policy loss/metric semantics against legal-action masks before any concrete trainer or model implementation. Because these are solver-local contracts rather than production poker-engine behavior, focused solver tests are sufficient until a cross-subsystem training integration is introduced.",
+      "new": "The solver training boundary now also has a framework-neutral validation layer: `evaluate_solver_predictions()` combines the existing masked soft-policy cross-entropy objective with deterministic legal-action top-1 accuracy and returns `SolverTrainingMetrics`. The training contracts are exported through `poker.solver` so future consumers do not need to import internal module paths. No tensor backend, model, optimizer or Arena integration is introduced. The next solver step should make legal-action masks first-class data in `SolverTrainingBatch` and connect `SolverTrainingInput` -> batch -> validation end-to-end, removing the remaining mismatch where batches currently carry observations/probabilities but not masks. This remains solver-local, so focused validation is sufficient until a concrete trainer or cross-subsystem integration is added."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_validation.py tests/poker/test_solver_training_objective.py tests/poker/test_solver_training_batch.py tests/poker/test_solver_training_input.py tests/poker/test_solver_training_metrics.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

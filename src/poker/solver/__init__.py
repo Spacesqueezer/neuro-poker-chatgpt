@@ -64,6 +64,18 @@ from poker.solver.supervised_dataset import (
 	bridge_record_to_supervised_sample,
 	build_solver_supervised_samples,
 )
+from poker.solver.training_batch import (
+	SolverTrainingBatch,
+	build_solver_training_batch,
+)
+from poker.solver.training_input import (
+	SolverTrainingExample,
+	SolverTrainingInput,
+	SolverTrainingObjectiveContract,
+)
+from poker.solver.training_metrics import SolverTrainingMetrics
+from poker.solver.training_objective import SolverTrainingObjective
+from poker.solver.training_validation import evaluate_solver_predictions
 from poker.solver.teacher import (
 	TEACHER_RECORD_FORMAT_VERSION,
 	build_teacher_record_export,
@@ -103,6 +115,12 @@ __all__ = [
 	"SolverSupervisedDatasetAnalyzer",
 	"SolverSupervisedDatasetWriter",
 	"SolverSupervisedSample",
+	"SolverTrainingBatch",
+	"SolverTrainingExample",
+	"SolverTrainingInput",
+	"SolverTrainingMetrics",
+	"SolverTrainingObjective",
+	"SolverTrainingObjectiveContract",
 	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
 	"TwoPlayerSolverGame",
@@ -114,11 +132,13 @@ __all__ = [
 	"build_learning_targets",
 	"build_observation_compatibility_report",
 	"build_solver_supervised_samples",
+	"build_solver_training_batch",
 	"build_strategy_export",
 	"build_teacher_record_export",
 	"bridge_record_to_supervised_sample",
 	"chance_space_metadata",
 	"evaluate_restricted_policy",
+	"evaluate_solver_predictions",
 	"load_learning_bridge_artifact",
 	"load_strategy_export",
 	"load_teacher_record_export",
