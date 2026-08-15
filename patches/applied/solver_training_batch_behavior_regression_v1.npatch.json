@@ -1,0 +1,23 @@
+{
+  "patch_id": "solver_training_batch_behavior_regression_v1",
+  "goal": "Add regression coverage for SolverTrainingBatch validation behavior. Keep the solver training boundary stable before adding higher-level training consumers.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_batch_behavior.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_batch_behavior.py",
+      "content": "from poker.solver.training_batch import SolverTrainingBatch\n\n\ndef test_training_batch_accepts_valid_action_distribution():\n\tbatch = SolverTrainingBatch(\n\t\tobservations=((0.0, 1.0),),\n\t\tprobabilities=((0.2, 0.2, 0.2, 0.2, 0.1, 0.1),),\n\t)\n\n\tbatch.validate()\n\n\ndef test_training_batch_rejects_invalid_action_distribution_size():\n\tbatch = SolverTrainingBatch(\n\t\tobservations=((0.0, 1.0),),\n\t\tprobabilities=((1.0,),),\n\t)\n\n\ttry:\n\t\tbatch.validate()\n\t\traise AssertionError(\"validation should fail\")\n\texcept ValueError:\n\t\tpass\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_batch_behavior.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
