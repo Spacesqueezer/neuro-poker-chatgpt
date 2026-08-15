@@ -1,0 +1,50 @@
+{
+  "patch_id": "neuropatch_transaction_patch_copy_v1",
+  "goal": "Make NeuroPatch independent of the Downloads patch file during long validation runs. Copy the loaded .npatch.json into transaction storage immediately after transaction creation, use that transaction-local copy when staging patches/applied after validation, and add regression coverage proving archival still succeeds if the original Downloads file disappears.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py",
+    "docs/DEV_RULES.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "def stage_successful_patch_archive(patch_path, patch_id):\n",
+      "new": "def stage_patch_transaction_copy(patch_path, transaction):\n\ttarget = transaction / \"patch.npatch.json\"\n\tshutil.copy2(patch_path, target)\n\treturn target\n\n\ndef stage_successful_patch_archive(patch_path, patch_id):\n"
+    },
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "\ttransaction = create_transaction(patch[\"patch_id\"])\n\tstarted_monotonic = time.perf_counter()\n",
+      "new": "\ttransaction = create_transaction(patch[\"patch_id\"])\n\ttransaction_patch = stage_patch_transaction_copy(\n\t\tpatch_path,\n\t\ttransaction,\n\t)\n\tstarted_monotonic = time.perf_counter()\n"
+    },
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "\t\t\tarchived_patch = stage_successful_patch_archive(\n\t\t\t\tpatch_path,\n\t\t\t\tpatch[\"patch_id\"],\n\t\t\t)\n",
+      "new": "\t\t\tarchived_patch = stage_successful_patch_archive(\n\t\t\t\ttransaction_patch,\n\t\t\t\tpatch[\"patch_id\"],\n\t\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/test_neuropatch_workflow.py",
+      "old": "def test_cleanup_downloaded_patch_removes_successful_source(tmp_path):\n",
+      "new": "def test_transaction_patch_copy_survives_download_source_removal(tmp_path):\n\tdownloads = tmp_path / \"Downloads\"\n\tdownloads.mkdir()\n\tpatch_path = downloads / \"example.npatch.json\"\n\tpatch_path.write_text('{\"patch_id\":\"example\"}', encoding=\"utf-8\")\n\ttransaction = tmp_path / \"transaction\"\n\ttransaction.mkdir()\n\n\ttransaction_patch = neuropatch.stage_patch_transaction_copy(\n\t\tpatch_path,\n\t\ttransaction,\n\t)\n\tpatch_path.unlink()\n\n\tassert not patch_path.exists()\n\tassert transaction_patch.exists()\n\tassert transaction_patch.read_text(encoding=\"utf-8\") == (\n\t\t'{\"patch_id\":\"example\"}'\n\t)\n\n\ndef test_archive_can_use_transaction_patch_after_download_disappears(\n\ttmp_path,\n\tmonkeypatch,\n):\n\tdownloads = tmp_path / \"Downloads\"\n\tdownloads.mkdir()\n\tpatch_path = downloads / \"example.npatch.json\"\n\tpatch_path.write_text('{\"patch_id\":\"example\"}', encoding=\"utf-8\")\n\ttransaction = tmp_path / \"transaction\"\n\ttransaction.mkdir()\n\tarchive_dir = tmp_path / \"repo\" / \"patches\" / \"applied\"\n\tmonkeypatch.setattr(neuropatch, \"APPLIED_PATCH_DIR\", archive_dir)\n\n\ttransaction_patch = neuropatch.stage_patch_transaction_copy(\n\t\tpatch_path,\n\t\ttransaction,\n\t)\n\tpatch_path.unlink()\n\tarchived = neuropatch.stage_successful_patch_archive(\n\t\ttransaction_patch,\n\t\t\"example\",\n\t)\n\n\tassert archived.read_text(encoding=\"utf-8\") == (\n\t\t'{\"patch_id\":\"example\"}'\n\t)\n\n\ndef test_cleanup_downloaded_patch_removes_successful_source(tmp_path):\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/DEV_RULES.md",
+      "old": "Every successfully committed patch file is archived in the tracked repository path `patches/applied/<patch_id>.npatch.json` and removed from Downloads only after the commit succeeds. Failed patches remain in Downloads for diagnosis or retry. Archived patches are provenance records; they do not replace the current repository state, `PROJECT_STATE.md` or source inspection as sources of truth.\n",
+      "new": "Every loaded patch is copied into its external NeuroPatch transaction directory immediately after transaction creation. Validation, archival and commit workflow must not depend on the original Downloads file remaining present during a long run. Every successfully committed patch file is archived in the tracked repository path `patches/applied/<patch_id>.npatch.json` from the transaction-local copy and the original Downloads file is removed only after the commit and push succeed. Failed patches remain in Downloads when still present for diagnosis or retry; the transaction-local copy is also retained with the transaction. Archived patches are provenance records; they do not replace the current repository state, `PROJECT_STATE.md` or source inspection as sources of truth.\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

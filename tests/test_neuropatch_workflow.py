@@ -28,6 +28,55 @@ def test_successful_patch_archive_stages_copy_without_deleting_source(
 	)
 
 
+def test_transaction_patch_copy_survives_download_source_removal(tmp_path):
+	downloads = tmp_path / "Downloads"
+	downloads.mkdir()
+	patch_path = downloads / "example.npatch.json"
+	patch_path.write_text('{"patch_id":"example"}', encoding="utf-8")
+	transaction = tmp_path / "transaction"
+	transaction.mkdir()
+
+	transaction_patch = neuropatch.stage_patch_transaction_copy(
+		patch_path,
+		transaction,
+	)
+	patch_path.unlink()
+
+	assert not patch_path.exists()
+	assert transaction_patch.exists()
+	assert transaction_patch.read_text(encoding="utf-8") == (
+		'{"patch_id":"example"}'
+	)
+
+
+def test_archive_can_use_transaction_patch_after_download_disappears(
+	tmp_path,
+	monkeypatch,
+):
+	downloads = tmp_path / "Downloads"
+	downloads.mkdir()
+	patch_path = downloads / "example.npatch.json"
+	patch_path.write_text('{"patch_id":"example"}', encoding="utf-8")
+	transaction = tmp_path / "transaction"
+	transaction.mkdir()
+	archive_dir = tmp_path / "repo" / "patches" / "applied"
+	monkeypatch.setattr(neuropatch, "APPLIED_PATCH_DIR", archive_dir)
+
+	transaction_patch = neuropatch.stage_patch_transaction_copy(
+		patch_path,
+		transaction,
+	)
+	patch_path.unlink()
+	archived = neuropatch.stage_successful_patch_archive(
+		transaction_patch,
+		"example",
+	)
+
+	assert archived.read_text(encoding="utf-8") == (
+		'{"patch_id":"example"}'
+	)
+
+
 def test_cleanup_downloaded_patch_removes_successful_source(tmp_path):
 	patch_path = tmp_path / "example.npatch.json"
 	patch_path.write_text("{}", encoding="utf-8")

@@ -242,6 +242,12 @@ def load_patch():
 	return patches[0]
 
 
+def stage_patch_transaction_copy(patch_path, transaction):
+	target = transaction / "patch.npatch.json"
+	shutil.copy2(patch_path, target)
+	return target
+
+
 def stage_successful_patch_archive(patch_path, patch_id):
 	APPLIED_PATCH_DIR.mkdir(parents=True, exist_ok=True)
 	target = APPLIED_PATCH_DIR / f"{patch_id}.npatch.json"
@@ -411,6 +417,10 @@ def main():
 		branch = ensure_ai_work_branch()
 
 	transaction = create_transaction(patch["patch_id"])
+	transaction_patch = stage_patch_transaction_copy(
+		patch_path,
+		transaction,
+	)
 	started_monotonic = time.perf_counter()
 
 	report = {
@@ -435,7 +445,7 @@ def main():
 			run_tests(patch)
 
 			archived_patch = stage_successful_patch_archive(
-				patch_path,
+				transaction_patch,
 				patch["patch_id"],
 			)
 
