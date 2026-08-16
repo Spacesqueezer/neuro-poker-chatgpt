@@ -1,0 +1,30 @@
+{
+  "patch_id": "solver_training_evaluation_metrics_contract_v1",
+  "goal": "Add framework-neutral metrics contract for solver training evaluation without introducing model-specific dependencies.",
+  "allowed_files": [
+    "src/poker/solver/training_evaluation_metrics.py",
+    "tests/poker/test_solver_training_evaluation_metrics.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_evaluation_metrics.py",
+      "content": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass SolverTrainingEvaluationMetrics:\n\tsample_count: int\n\tcorrect_count: int\n\taccuracy: float\n\n\ndef build_evaluation_metrics(predictions):\n\tsample_count = len(predictions)\n\tcorrect_count = sum(1 for item in predictions if item)\n\n\taccuracy = (\n\t\tcorrect_count / sample_count\n\t\tif sample_count\n\t\telse 0.0\n\t)\n\n\treturn SolverTrainingEvaluationMetrics(\n\t\tsample_count=sample_count,\n\t\tcorrect_count=correct_count,\n\t\taccuracy=accuracy,\n\t)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_evaluation_metrics.py",
+      "content": "from poker.solver.training_evaluation_metrics import (\n\tSolverTrainingEvaluationMetrics,\n\tbuild_evaluation_metrics,\n)\n\n\ndef test_training_evaluation_metrics_contract():\n\tmetrics = build_evaluation_metrics((True, False, True))\n\n\tassert isinstance(metrics, SolverTrainingEvaluationMetrics)\n\tassert metrics.sample_count == 3\n\tassert metrics.correct_count == 2\n\tassert metrics.accuracy == 2 / 3\n\n\ndef test_training_evaluation_metrics_empty_input():\n\tmetrics = build_evaluation_metrics(())\n\n\tassert metrics.sample_count == 0\n\tassert metrics.correct_count == 0\n\tassert metrics.accuracy == 0.0\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_evaluation_metrics.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
