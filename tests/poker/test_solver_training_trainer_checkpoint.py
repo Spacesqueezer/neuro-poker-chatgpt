@@ -28,3 +28,13 @@ def test_solver_trainer_state_round_trip():
 		"trainer": "SolverTrainer",
 	}
 	assert restored.current_step == 4
+
+
+def test_solver_trainer_resume_summary_matches_state():
+	trainer = SolverTrainer(lambda samples: None)
+	trainer.train([], steps=5)
+
+	assert trainer.get_resume_summary() == {
+		"current_step": 5,
+		"trainer": "SolverTrainer",
+	}

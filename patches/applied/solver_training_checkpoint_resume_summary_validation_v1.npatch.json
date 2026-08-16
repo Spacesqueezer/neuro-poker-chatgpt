@@ -1,0 +1,24 @@
+{
+  "patch_id": "solver_training_checkpoint_resume_summary_validation_v1",
+  "goal": "Add regression coverage for SolverTrainer resume summary contract.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_trainer_checkpoint.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_trainer_checkpoint.py",
+      "old": "\tassert restored.current_step == 4\n",
+      "new": "\tassert restored.current_step == 4\n\n\ndef test_solver_trainer_resume_summary_matches_state():\n\ttrainer = SolverTrainer(lambda samples: None)\n\ttrainer.train([], steps=5)\n\n\tassert trainer.get_resume_summary() == {\n\t\t\"current_step\": 5,\n\t\t\"trainer\": \"SolverTrainer\",\n\t}\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_checkpoint.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
