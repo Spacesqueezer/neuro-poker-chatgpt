@@ -1,0 +1,22 @@
+{
+  "patch_id": "solver_training_checkpoint_full_resume_contract_v1",
+  "goal": "Add checkpoint store restore contract test covering serialized checkpoint metadata round trip.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_checkpoint_resume_contract.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_resume_contract.py",
+      "content": "from poker.solver.training_checkpoint import create_checkpoint\nfrom poker.solver.training_checkpoint_store import TrainingCheckpointStore\n\n\ndef test_checkpoint_store_preserves_metadata(tmp_path):\n\tcheckpoint = create_checkpoint(\n\t\tstep=10,\n\t\tmetadata={\n\t\t\t\"training_run_state\": {\n\t\t\t\t\"run_id\": \"run-1\",\n\t\t\t\t\"steps_completed\": 10,\n\t\t\t}\n\t\t},\n\t)\n\n\tstore = TrainingCheckpointStore(tmp_path / \"checkpoint.json\")\n\tstore.save(checkpoint)\n\n\trestored = store.load()\n\n\tassert restored.step == 10\n\tassert restored.metadata[\"training_run_state\"][\"run_id\"] == \"run-1\"\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_resume_contract.py -q"
+    ]
+  },
+  "git": {
+    "commit_message": "solver_training_checkpoint_full_resume_contract_v1"
+  }
+}
