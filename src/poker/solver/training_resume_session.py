@@ -9,7 +9,8 @@ class TrainingResumeSession:
 
 	def restore(self):
 		checkpoint = self.checkpoint_store.restore_artifact(self.coordinator)
-		self.trainer_state = extract_checkpoint_trainer_state(checkpoint)
+		if hasattr(checkpoint, "metadata"):
+			self.trainer_state = extract_checkpoint_trainer_state(checkpoint)
 		return checkpoint
 
 	def resume(self):

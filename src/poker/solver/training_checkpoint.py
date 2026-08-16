@@ -58,7 +58,7 @@ def deserialize_checkpoint(payload):
 	if set(data) != {"step", "metadata"}:
 		raise ValueError("checkpoint payload fields are invalid")
 	if not isinstance(data["step"], int) or data["step"] < 0:
-		raise ValueError("checkpoint step is invalid")
+		raise ValueError("step must be non-negative")
 	if not isinstance(data["metadata"], dict):
 		raise ValueError("checkpoint metadata is invalid")
 

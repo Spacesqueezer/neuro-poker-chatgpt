@@ -1,0 +1,33 @@
+{
+  "patch_id": "solver_training_checkpoint_resume_compatibility_v1",
+  "goal": "Restore compatibility with existing checkpoint and resume flows after trainer state integration.",
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_checkpoint.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "raise ValueError(\"checkpoint step is invalid\")",
+          "new": "raise ValueError(\"step must be non-negative\")"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_resume_session.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "self.trainer_state = extract_checkpoint_trainer_state(checkpoint)",
+          "new": "if hasattr(checkpoint, \"metadata\"):\n\t\t\tself.trainer_state = extract_checkpoint_trainer_state(checkpoint)"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_serialization.py tests/poker/test_solver_training_resume_session.py -q"
+    ]
+  }
+}
