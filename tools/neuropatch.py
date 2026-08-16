@@ -354,6 +354,22 @@ def apply_operation(operation, operation_index=None):
 			encoding="utf-8"
 		)
 
+	elif operation["type"] == "modify_file":
+		if not target.exists():
+			raise PatchError(f"Missing file: {operation['file']}")
+
+		for nested_index, nested_operation in enumerate(operation.get("operations", [])):
+			if nested_operation["type"] != "replace":
+				raise PatchError(
+					f"Unsupported nested operation: {nested_operation['type']}"
+				)
+
+			nested_operation = {
+				**nested_operation,
+				"file": operation["file"],
+			}
+			apply_operation(nested_operation, nested_index)
+
 	elif operation["type"] == "replace":
 		if not target.exists():
 			raise PatchError(f"Missing file: {operation['file']}")

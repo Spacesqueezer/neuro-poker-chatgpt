@@ -1,0 +1,26 @@
+{
+  "patch_id": "neuropatch_modify_file_operation_support_v3",
+  "goal": "Add modify_file support to NeuroPatch as a container for replace operations using the current apply_operation implementation.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py",
+    "docs/DEV_RULES.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tools/neuropatch.py",
+      "old": "\telif operation[\"type\"] == \"replace\":\n\t\tif not target.exists():\n\t\t\traise PatchError(f\"Missing file: {operation['file']}\")\n",
+      "new": "\telif operation[\"type\"] == \"modify_file\":\n\t\tif not target.exists():\n\t\t\traise PatchError(f\"Missing file: {operation['file']}\")\n\n\t\tfor nested_index, nested_operation in enumerate(operation.get(\"operations\", [])):\n\t\t\tif nested_operation[\"type\"] != \"replace\":\n\t\t\t\traise PatchError(\n\t\t\t\t\tf\"Unsupported nested operation: {nested_operation['type']}\"\n\t\t\t\t)\n\n\t\t\tnested_operation = {\n\t\t\t\t**nested_operation,\n\t\t\t\t\"file\": operation[\"file\"],\n\t\t\t}\n\t\t\tapply_operation(nested_operation, nested_index)\n\n\telif operation[\"type\"] == \"replace\":\n\t\tif not target.exists():\n\t\t\traise PatchError(f\"Missing file: {operation['file']}\")\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
