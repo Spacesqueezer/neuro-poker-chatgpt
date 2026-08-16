@@ -1,0 +1,37 @@
+{
+  "patch_id": "solver_training_checkpoint_state_bridge_v1",
+  "goal": "Connect SolverTrainer checkpoint creation and restoration through the same training state contract.",
+  "allowed_files": [
+    "src/poker/solver/training_trainer.py",
+    "tests/poker/test_solver_training_trainer_checkpoint.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\tdef create_checkpoint(self):\n\t\treturn create_checkpoint(\n\t\t\tstep=self.current_step,\n\t\t\tmetadata={\n\t\t\t\t\"trainer\": \"SolverTrainer\",\n\t\t\t},\n\t\t)\n",
+      "new": "\tdef create_checkpoint(self):\n\t\treturn create_checkpoint(\n\t\t\tstep=self.current_step,\n\t\t\tmetadata=self.get_training_state(),\n\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\tdef restore_checkpoint(self, checkpoint: TrainingCheckpoint):\n\t\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\t\traise TypeError(\"invalid checkpoint\")\n\n\t\tself.current_step = checkpoint.step\n\t\treturn self.current_step\n",
+      "new": "\tdef restore_checkpoint(self, checkpoint: TrainingCheckpoint):\n\t\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\t\traise TypeError(\"invalid checkpoint\")\n\n\t\tif checkpoint.metadata:\n\t\t\tself.restore_training_state(checkpoint.metadata)\n\t\telse:\n\t\t\tself.current_step = checkpoint.step\n\n\t\tif self.current_step != checkpoint.step:\n\t\t\traise ValueError(\"checkpoint state mismatch\")\n\n\t\treturn self.current_step\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_trainer_checkpoint.py",
+      "old": "\tassert checkpoint.step == 3\n\tassert restored.current_step == 3\n",
+      "new": "\tassert checkpoint.step == 3\n\tassert checkpoint.metadata == {\n\t\t\"current_step\": 3,\n\t\t\"trainer\": \"SolverTrainer\",\n\t}\n\tassert restored.current_step == 3\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_checkpoint.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}

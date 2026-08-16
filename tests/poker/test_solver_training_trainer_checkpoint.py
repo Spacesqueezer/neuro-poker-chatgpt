@@ -11,6 +11,10 @@ def test_solver_trainer_checkpoint_round_trip():
 	restored.restore_checkpoint(checkpoint)
 
 	assert checkpoint.step == 3
+	assert checkpoint.metadata == {
+		"current_step": 3,
+		"trainer": "SolverTrainer",
+	}
 	assert restored.current_step == 3
 
 

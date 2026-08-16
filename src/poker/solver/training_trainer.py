@@ -33,16 +33,21 @@ class SolverTrainer:
 	def create_checkpoint(self):
 		return create_checkpoint(
 			step=self.current_step,
-			metadata={
-				"trainer": "SolverTrainer",
-			},
+			metadata=self.get_training_state(),
 		)
 
 	def restore_checkpoint(self, checkpoint: TrainingCheckpoint):
 		if not isinstance(checkpoint, TrainingCheckpoint):
 			raise TypeError("invalid checkpoint")
 
-		self.current_step = checkpoint.step
+		if checkpoint.metadata:
+			self.restore_training_state(checkpoint.metadata)
+		else:
+			self.current_step = checkpoint.step
+
+		if self.current_step != checkpoint.step:
+			raise ValueError("checkpoint state mismatch")
+
 		return self.current_step
 
 	def export_checkpoint(self):
