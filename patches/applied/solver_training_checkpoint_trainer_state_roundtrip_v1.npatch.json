@@ -1,0 +1,19 @@
+{
+  "patch_id": "solver_training_checkpoint_trainer_state_roundtrip_v1",
+  "goal": "Extend trainer state checkpoint coverage with a restore session contract.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_trainer_state_roundtrip.py",
+      "content": "from poker.solver.trainer_state import TrainerState\nfrom poker.solver.training_checkpoint import (\n\tcreate_checkpoint,\n\textract_checkpoint_trainer_state,\n)\n\n\ndef test_checkpoint_round_trip_restores_trainer_state():\n\tstate = TrainerState(\n\t\tglobal_step=100,\n\t\tpayload={\"loss\": 0.1},\n\t)\n\n\tcheckpoint = create_checkpoint(\n\t\tstep=100,\n\t\ttrainer_state=state,\n\t)\n\n\trestored = extract_checkpoint_trainer_state(checkpoint)\n\n\tassert restored == state\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_trainer_state_roundtrip.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
