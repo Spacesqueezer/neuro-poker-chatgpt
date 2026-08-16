@@ -1,0 +1,22 @@
+{
+  "patch_id": "solver_training_checkpoint_restore_integration_v2",
+  "goal": "Add checkpoint restore integration coverage without assuming an outdated training_trainer.py implementation shape.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_checkpoint_restore_integration.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_restore_integration.py",
+      "content": "from poker.solver import SolverTrainer, TrainingCheckpointStore\n\n\ndef test_trainer_restore_checkpoint_integration(tmp_path):\n\ttrainer = SolverTrainer(lambda samples: None)\n\ttrainer.train([], steps=3)\n\n\tstore = TrainingCheckpointStore(tmp_path / \"checkpoint.json\")\n\tstore.save(trainer.create_checkpoint())\n\n\tloaded = store.restore_into(trainer)\n\n\tassert loaded.step == 3\n\tassert trainer.current_step == 3\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_restore_api.py tests/poker/test_solver_training_checkpoint_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
