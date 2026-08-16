@@ -50,3 +50,8 @@ class SolverTrainer:
 
 	def import_checkpoint(self, checkpoint):
 		return self.restore_checkpoint(checkpoint)
+
+	def get_training_state(self):
+		return {
+			"current_step": self.current_step,
+		}
