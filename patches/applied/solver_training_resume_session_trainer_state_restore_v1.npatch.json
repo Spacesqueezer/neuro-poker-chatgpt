@@ -1,0 +1,35 @@
+{
+  "patch_id": "solver_training_resume_session_trainer_state_restore_v1",
+  "goal": "Expose restored TrainerState through TrainingResumeSession after checkpoint restore.",
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_resume_session.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "class TrainingResumeSession:\n\tdef __init__(self, coordinator, checkpoint_store):\n\t\tself.coordinator = coordinator\n\t\tself.checkpoint_store = checkpoint_store\n",
+          "new": "from .training_checkpoint import extract_checkpoint_trainer_state\n\n\nclass TrainingResumeSession:\n\tdef __init__(self, coordinator, checkpoint_store):\n\t\tself.coordinator = coordinator\n\t\tself.checkpoint_store = checkpoint_store\n\t\tself.trainer_state = None\n"
+        },
+        {
+          "type": "replace",
+          "old": "\tdef restore(self):\n\t\tcheckpoint = self.checkpoint_store.restore_artifact(self.coordinator)\n\t\treturn checkpoint\n",
+          "new": "\tdef restore(self):\n\t\tcheckpoint = self.checkpoint_store.restore_artifact(self.coordinator)\n\t\tself.trainer_state = extract_checkpoint_trainer_state(checkpoint)\n\t\treturn checkpoint\n"
+        }
+      ]
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_resume_session_trainer_state.py",
+      "content": "from poker.solver.trainer_state import TrainerState\nfrom poker.solver.training_checkpoint import create_checkpoint\nfrom poker.solver.training_resume_session import TrainingResumeSession\n\n\nclass FakeStore:\n\tdef __init__(self, checkpoint):\n\t\tself.checkpoint = checkpoint\n\n\tdef restore_artifact(self, coordinator):\n\t\treturn self.checkpoint\n\n\nclass FakeCoordinator:\n\tpass\n\n\ndef test_resume_session_exposes_restored_trainer_state():\n\tstate = TrainerState(global_step=5, payload={\"loss\": 1})\n\tcheckpoint = create_checkpoint(5, trainer_state=state)\n\n\tsession = TrainingResumeSession(FakeCoordinator(), FakeStore(checkpoint))\n\tsession.restore()\n\n\tassert session.trainer_state == state\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_resume_session_trainer_state.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
