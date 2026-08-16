@@ -18,4 +18,7 @@ class TrainingResumeSession:
 
 	def resume_training(self, samples, steps):
 		checkpoint = self.restore()
-		return self.coordinator.train(samples, steps)
+		result = self.coordinator.train(samples, steps)
+		if self.trainer_state is not None:
+			self.trainer_state = self.trainer_state.advance(steps)
+		return result

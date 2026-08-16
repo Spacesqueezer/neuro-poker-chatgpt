@@ -1,0 +1,36 @@
+{
+  "patch_id": "solver_training_resume_session_trainer_state_progress_v1",
+  "goal": "Make TrainingResumeSession expose and advance trainer progress state during resume.",
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_resume_session.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tdef resume_training(self, samples, steps):\n\t\tcheckpoint = self.restore()\n\t\treturn self.coordinator.train(samples, steps)\n",
+          "new": "\tdef resume_training(self, samples, steps):\n\t\tcheckpoint = self.restore()\n\t\tresult = self.coordinator.train(samples, steps)\n\t\tif self.trainer_state is not None:\n\t\t\tself.trainer_state = self.trainer_state.advance(steps)\n\t\treturn result\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/poker/test_solver_training_resume_session_trainer_state.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "assert session.trainer_state == state\n",
+          "new": "assert session.trainer_state == state\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_resume_session_trainer_state.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
