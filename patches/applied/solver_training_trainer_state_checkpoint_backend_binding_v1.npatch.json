@@ -1,0 +1,19 @@
+{
+  "patch_id": "solver_training_trainer_state_checkpoint_backend_binding_v1",
+  "goal": "Bind trainer state persistence boundary to checkpoint metadata without changing existing TrainerState serialization semantics.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_state_checkpoint_backend_binding.py",
+      "content": "from poker.solver.trainer_state import TrainerState\nfrom poker.solver.training_checkpoint import TrainingCheckpoint\n\n\ndef test_checkpoint_can_carry_serialized_trainer_state():\n\tstate = TrainerState(\n\t\tglobal_step=12,\n\t\tpayload={\"backend_state\": {\"model\": {\"weight\": 3}}},\n\t)\n\n\tcheckpoint = TrainingCheckpoint(\n\t\tstep=12,\n\t\tmetadata={\"trainer_state\": state.serialize()},\n\t)\n\n\trestored = TrainerState.deserialize(\n\t\tcheckpoint.metadata[\"trainer_state\"],\n\t)\n\n\tassert restored.global_step == 12\n\tassert restored.payload[\"backend_state\"] == {\"model\": {\"weight\": 3}}\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_state_checkpoint_backend_binding.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
