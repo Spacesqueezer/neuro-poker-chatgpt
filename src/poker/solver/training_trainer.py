@@ -43,3 +43,4 @@ class SolverTrainer:
 			raise TypeError("invalid checkpoint")
 
 		self.current_step = checkpoint.step
+		return self.current_step
