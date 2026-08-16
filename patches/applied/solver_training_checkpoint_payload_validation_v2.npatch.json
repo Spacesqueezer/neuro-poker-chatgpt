@@ -1,0 +1,45 @@
+{
+  "patch_id": "solver_training_checkpoint_payload_validation_v2",
+  "goal": "Validate checkpoint payload field types during deserialization and cover malformed resume artifacts.",
+  "allowed_files": [
+    "src/poker/solver/training_checkpoint.py",
+    "tests/poker/test_solver_training_checkpoint_resume_contract.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_checkpoint.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tif set(data) != {\"step\", \"metadata\"}:\n\t\traise ValueError(\"checkpoint payload fields are invalid\")\n\n\treturn create_checkpoint(\n",
+          "new": "\tif set(data) != {\"step\", \"metadata\"}:\n\t\traise ValueError(\"checkpoint payload fields are invalid\")\n\tif not isinstance(data[\"step\"], int) or data[\"step\"] < 0:\n\t\traise ValueError(\"checkpoint step is invalid\")\n\tif not isinstance(data[\"metadata\"], dict):\n\t\traise ValueError(\"checkpoint metadata is invalid\")\n\n\treturn create_checkpoint(\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/poker/test_solver_training_checkpoint_resume_contract.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "from poker.solver.training_checkpoint import create_checkpoint\n",
+          "new": "import pytest\n\nfrom poker.solver.training_checkpoint import (\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n)\n"
+        },
+        {
+          "type": "replace",
+          "old": "\tassert restored.step == 10\n\tassert restored.metadata[\"training_run_state\"][\"run_id\"] == \"run-1\"\n",
+          "new": "\tassert restored.step == 10\n\tassert restored.metadata[\"training_run_state\"][\"run_id\"] == \"run-1\"\n\n\n@pytest.mark.parametrize(\n\t\"payload\",\n\t[\n\t\t'{\"step\":\"10\",\"metadata\":{}}',\n\t\t'{\"step\":-1,\"metadata\":{}}',\n\t\t'{\"step\":10,\"metadata\":[]}',\n\t],\n)\ndef test_checkpoint_deserialization_rejects_invalid_field_types(payload):\n\twith pytest.raises(ValueError):\n\t\tdeserialize_checkpoint(payload)\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_resume_contract.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
