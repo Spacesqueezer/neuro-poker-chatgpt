@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_dataset_training_orchestration_contract_v1",
+  "goal": "Add a small orchestration contract above the dataset training execution boundary without coupling learning pipeline internals.",
+  "allowed_files": [
+    "src/poker/learning/solver_dataset_training_orchestrator.py",
+    "tests/poker/test_solver_dataset_training_orchestrator.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/learning/solver_dataset_training_orchestrator.py",
+      "content": "class SolverDatasetTrainingOrchestrator:\n\tdef __init__(self, executor):\n\t\tself.executor = executor\n\n\tdef run(self, records):\n\t\treturn self.executor.execute(records)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_dataset_training_orchestrator.py",
+      "content": "from poker.learning.solver_dataset_training_orchestrator import SolverDatasetTrainingOrchestrator\n\n\nclass FakeExecutor:\n\tdef execute(self, records):\n\t\treturn list(records)\n\n\ndef test_solver_dataset_training_orchestrator_delegates_execution():\n\torchestrator = SolverDatasetTrainingOrchestrator(FakeExecutor())\n\n\tassert orchestrator.run([1, 2, 3]) == [1, 2, 3]\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_dataset_training_orchestrator.py tests/poker/test_solver_dataset_training_executor.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
