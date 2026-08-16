@@ -1,0 +1,37 @@
+{
+  "patch_id": "solver_training_checkpoint_serialization_v2",
+  "goal": "Add deterministic JSON serialization for TrainingCheckpoint using only supported NeuroPatch operations, validate the round trip, and synchronize PROJECT_STATE with the training boundaries already present on ai-development.",
+  "allowed_files": [
+    "src/poker/solver/training_checkpoint.py",
+    "tests/poker/test_solver_training_checkpoint_serialization.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_checkpoint.py",
+      "old": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass TrainingCheckpoint:\n\tstep: int\n\tmetadata: dict\n\n\ndef create_checkpoint(step, metadata=None):\n\tif step < 0:\n\t\traise ValueError(\"step must be non-negative\")\n\n\treturn TrainingCheckpoint(\n\t\tstep=step,\n\t\tmetadata={} if metadata is None else dict(metadata),\n\t)\n\n\ndef restore_checkpoint(checkpoint):\n\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\traise TypeError(\"invalid checkpoint\")\n\n\treturn checkpoint\n",
+      "new": "from dataclasses import asdict, dataclass\nimport json\n\n\n@dataclass(frozen=True)\nclass TrainingCheckpoint:\n\tstep: int\n\tmetadata: dict\n\n\ndef create_checkpoint(step, metadata=None):\n\tif step < 0:\n\t\traise ValueError(\"step must be non-negative\")\n\n\treturn TrainingCheckpoint(\n\t\tstep=step,\n\t\tmetadata={} if metadata is None else dict(metadata),\n\t)\n\n\ndef restore_checkpoint(checkpoint):\n\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\traise TypeError(\"invalid checkpoint\")\n\n\treturn checkpoint\n\n\ndef serialize_checkpoint(checkpoint):\n\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\traise TypeError(\"invalid checkpoint\")\n\n\treturn json.dumps(\n\t\tasdict(checkpoint),\n\t\tsort_keys=True,\n\t\tseparators=(\",\", \":\"),\n\t)\n\n\ndef deserialize_checkpoint(payload):\n\tdata = json.loads(payload)\n\n\tif not isinstance(data, dict):\n\t\traise ValueError(\"checkpoint payload must be an object\")\n\tif set(data) != {\"step\", \"metadata\"}:\n\t\traise ValueError(\"checkpoint payload fields are invalid\")\n\n\treturn create_checkpoint(\n\t\tstep=data[\"step\"],\n\t\tmetadata=data[\"metadata\"],\n\t)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_serialization.py",
+      "content": "import pytest\n\nfrom poker.solver.training_checkpoint import (\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n\tserialize_checkpoint,\n)\n\n\ndef test_training_checkpoint_json_round_trip_is_deterministic():\n\tcheckpoint = create_checkpoint(\n\t\t10,\n\t\t{\n\t\t\t\"epoch\": 2,\n\t\t\t\"source\": \"solver\",\n\t\t},\n\t)\n\n\tpayload = serialize_checkpoint(checkpoint)\n\trestored = deserialize_checkpoint(payload)\n\n\tassert payload == (\n\t\t'{\"metadata\":{\"epoch\":2,\"source\":\"solver\"},\"step\":10}'\n\t)\n\tassert restored == checkpoint\n\n\ndef test_training_checkpoint_serialization_rejects_wrong_type():\n\twith pytest.raises(TypeError, match=\"invalid checkpoint\"):\n\t\tserialize_checkpoint({\"step\": 1})\n\n\ndef test_training_checkpoint_deserialization_rejects_extra_fields():\n\twith pytest.raises(\n\t\tValueError,\n\t\tmatch=\"checkpoint payload fields are invalid\",\n\t):\n\t\tdeserialize_checkpoint(\n\t\t\t'{\"metadata\":{},\"step\":1,\"unexpected\":true}'\n\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "A validation report boundary now consumes validated `SolverTrainingBatch` instances and returns framework-neutral structural metrics. A separate prediction evaluation boundary now consumes validation reports without duplicating legality and shape checks. Regression coverage now protects the validation-to-evaluation handoff. The next solver step should introduce model-output comparison metrics while keeping framework-specific training code outside the solver contract layer. This remains solver-local, so focused validation is sufficient until a concrete trainer or cross-subsystem integration is added.",
+      "new": "A validation report boundary consumes validated `SolverTrainingBatch` instances, and prediction evaluation, evaluation metrics, pipeline and orchestration boundaries now exist above it. A framework-neutral `SolverTrainer` provides the first explicit training-loop boundary, and `TrainingCheckpoint` represents resumable trainer state without importing a concrete ML framework. Training checkpoints now have deterministic JSON serialization/deserialization with strict top-level field validation. The next solver step should connect `SolverTrainer` progress to `TrainingCheckpoint` creation/restoration so resumed runs preserve step semantics before any model/optimizer state is introduced. This remains solver-local, so focused validation is sufficient until a concrete trainer backend or cross-subsystem integration is added."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint.py tests/poker/test_solver_training_checkpoint_serialization.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
