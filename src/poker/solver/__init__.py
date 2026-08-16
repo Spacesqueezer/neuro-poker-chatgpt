@@ -91,6 +91,7 @@ from poker.solver.training_objective import SolverTrainingObjective
 from poker.solver.training_run import (
 	TrainingRunCheckpointPolicy,
 	TrainingRunCoordinator,
+	TrainingRunState,
 )
 from poker.solver.training_trainer import SolverTrainer, TrainingRunResult
 from poker.solver.training_validation import evaluate_solver_predictions
@@ -147,6 +148,7 @@ __all__ = [
 	"TrainingCheckpointStore",
 	"TrainingRunCheckpointPolicy",
 	"TrainingRunCoordinator",
+	"TrainingRunState",
 	"TrainingRunResult",
 	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
