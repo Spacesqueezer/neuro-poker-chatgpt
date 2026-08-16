@@ -1,0 +1,22 @@
+{
+  "patch_id": "solver_training_checkpoint_artifact_contract_v1",
+  "goal": "Document and lock the checkpoint artifact contract before extending trainer state persistence.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_checkpoint_artifact_contract.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_artifact_contract.py",
+      "content": "from poker.solver.training_checkpoint import TrainingCheckpoint\n\n\ndef test_training_checkpoint_contains_metadata_contract():\n\tcheckpoint = TrainingCheckpoint(\n\t\tstep=1,\n\t\tmetadata={\"source\": \"test\"},\n\t)\n\n\tassert checkpoint.step == 1\n\tassert checkpoint.metadata[\"source\"] == \"test\"\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_artifact_contract.py -q"
+    ]
+  },
+  "git": {
+    "commit_message": "solver_training_checkpoint_artifact_contract_v1"
+  }
+}
