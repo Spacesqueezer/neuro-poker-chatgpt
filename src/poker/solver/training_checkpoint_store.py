@@ -28,3 +28,8 @@ class TrainingCheckpointStore:
 		checkpoint = self.load()
 		trainer.restore_checkpoint(checkpoint)
 		return checkpoint
+
+	def restore_into_coordinator(self, coordinator):
+		checkpoint = self.load()
+		coordinator.restore_checkpoint(checkpoint)
+		return checkpoint

@@ -1,0 +1,34 @@
+{
+  "patch_id": "solver_training_checkpoint_store_coordinator_resume_v4",
+  "goal": "Connect TrainingCheckpointStore to TrainingRunCoordinator restore flow and cover persisted run-state restoration.",
+  "allowed_files": [
+    "src/poker/solver/training_checkpoint_store.py",
+    "tests/poker/test_solver_training_checkpoint_store_coordinator.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_checkpoint_store.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tdef restore_into(self, trainer):\n\t\tcheckpoint = self.load()\n\t\ttrainer.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n",
+          "new": "\tdef restore_into(self, trainer):\n\t\tcheckpoint = self.load()\n\t\ttrainer.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n\n\tdef restore_into_coordinator(self, coordinator):\n\t\tcheckpoint = self.load()\n\t\tcoordinator.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n"
+        }
+      ]
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_store_coordinator.py",
+      "content": "from poker.solver import (\n\tTrainingCheckpoint,\n\tTrainingCheckpointStore,\n\tTrainingRunCoordinator,\n\tTrainingRunState,\n\tattach_training_run_state,\n)\n\n\nclass FakeTrainer:\n\tdef restore_checkpoint(self, checkpoint):\n\t\tself.restored = checkpoint\n\t\treturn checkpoint\n\n\ndef test_checkpoint_store_restores_into_coordinator(tmp_path):\n\tpersisted_state = TrainingRunState(\n\t\trun_id=\"persisted-run\",\n\t\tsteps_completed=12,\n\t\tcreated_at=\"2026-08-16T00:00:00+00:00\",\n\t)\n\tcheckpoint = attach_training_run_state(\n\t\tTrainingCheckpoint(step=12, metadata={}),\n\t\tpersisted_state,\n\t)\n\tstore = TrainingCheckpointStore(tmp_path / \"checkpoint.json\")\n\tstore.save(checkpoint)\n\n\ttrainer = FakeTrainer()\n\tcoordinator = TrainingRunCoordinator(\n\t\ttrainer,\n\t\tstate=TrainingRunState(run_id=\"fresh-run\"),\n\t)\n\n\tloaded = store.restore_into_coordinator(coordinator)\n\n\tassert loaded == checkpoint\n\tassert trainer.restored == checkpoint\n\tassert coordinator.state == persisted_state\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_store_coordinator.py tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
