@@ -54,4 +54,5 @@ class SolverTrainer:
 	def get_training_state(self):
 		return {
 			"current_step": self.current_step,
+			"trainer": "SolverTrainer",
 		}
