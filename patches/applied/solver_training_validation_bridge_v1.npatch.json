@@ -1,0 +1,30 @@
+{
+  "patch_id": "solver_training_validation_bridge_v1",
+  "goal": "Connect SolverTrainingBatch to validation reporting through a public framework-neutral boundary.",
+  "allowed_files": [
+    "src/poker/solver/training_validation_report.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_validation_report.py",
+      "content": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass SolverTrainingValidationReport:\n\tbatch_size: int\n\tobservation_sizes: tuple[int, ...]\n\tvalid: bool\n\n\ndef validate_solver_training_batch(batch):\n\tbatch.validate()\n\treturn SolverTrainingValidationReport(\n\t\tbatch_size=batch.size,\n\t\tobservation_sizes=tuple(sorted({len(item) for item in batch.observations})),\n\t\tvalid=True,\n\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The next solver step should connect `SolverTrainingInput.to_batch()` -> `evaluate_solver_predictions()` end-to-end and remove duplicated target-validation knowledge between dataset, input, batch and validation layers.",
+      "new": "A validation report boundary now consumes validated `SolverTrainingBatch` instances and returns framework-neutral structural metrics. The next solver step should connect batch validation reports with prediction evaluation without duplicating legality and shape checks between layers."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_validation.py tests/poker/test_solver_training_batch.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
