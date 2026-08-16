@@ -1,0 +1,49 @@
+{
+  "patch_id": "solver_training_run_checkpoint_contract_v1",
+  "goal": "Introduce a solver-local training run contract that centralizes optional periodic checkpoint persistence without coupling training logic to storage implementations.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_training_run_checkpoint_contract.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_run.py",
+      "content": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass TrainingRunCheckpointPolicy:\n\tinterval_steps: int\n\n\tdef should_checkpoint(self, step):\n\t\tif self.interval_steps <= 0:\n\t\t\traise ValueError(\"interval_steps must be positive\")\n\n\t\treturn step > 0 and step % self.interval_steps == 0\n\n\nclass TrainingRunCoordinator:\n\tdef __init__(self, trainer, checkpoint_policy=None):\n\t\tself.trainer = trainer\n\t\tself.checkpoint_policy = checkpoint_policy\n\n\tdef train(self, samples, steps):\n\t\tresult = self.trainer.train(samples, steps=steps)\n\n\t\tif self.checkpoint_policy is not None:\n\t\t\tif self.checkpoint_policy.should_checkpoint(result.steps):\n\t\t\t\tself.trainer.save_checkpoint()\n\n\t\treturn result\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.training_trainer import SolverTrainer, TrainingRunResult\n",
+      "new": "from poker.solver.training_run import (\n\tTrainingRunCheckpointPolicy,\n\tTrainingRunCoordinator,\n)\nfrom poker.solver.training_trainer import SolverTrainer, TrainingRunResult\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"TrainingCheckpointStore\",\n\t\"TrainingRunResult\",\n",
+      "new": "\t\"TrainingCheckpointStore\",\n\t\"TrainingRunCheckpointPolicy\",\n\t\"TrainingRunCoordinator\",\n\t\"TrainingRunResult\",\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_run_checkpoint_contract.py",
+      "content": "from poker.solver import (\n\tSolverTrainer,\n\tTrainingRunCheckpointPolicy,\n\tTrainingRunCoordinator,\n\tTrainingCheckpointStore,\n)\n\n\nclass CountingStore:\n\tdef __init__(self):\n\t\tself.count = 0\n\n\tdef save(self, checkpoint):\n\t\tself.count += 1\n\n\ndef test_training_run_coordinator_checkpoints_on_interval(tmp_path):\n\tstore = CountingStore()\n\ttrainer = SolverTrainer(lambda samples: None, checkpoint_store=store)\n\tcoordinator = TrainingRunCoordinator(\n\t\ttrainer,\n\t\tTrainingRunCheckpointPolicy(interval_steps=2),\n\t)\n\n\tcoordinator.train([], steps=2)\n\n\tassert store.count == 1\n\n\ndef test_checkpoint_policy_rejects_invalid_interval():\n\tpolicy = TrainingRunCheckpointPolicy(interval_steps=0)\n\n\ttry:\n\t\tpolicy.should_checkpoint(1)\n\texcept ValueError as error:\n\t\tassert str(error) == \"interval_steps must be positive\"\n\telse:\n\t\traise AssertionError(\"expected ValueError\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "A trainer resume flow restores serialized checkpoint state through the public checkpoint boundary. `TrainingCheckpointStore` persists and reloads checkpoints through the existing deterministic checkpoint serializer instead of defining a second storage format. `SolverTrainer` now accepts an optional checkpoint store and exposes explicit `save_checkpoint()` / `load_checkpoint()` entry points that preserve the existing in-memory checkpoint API while providing a persistent resume lifecycle. The next solver step should introduce a higher-level training-run contract for periodic checkpointing and resumable execution, without wiring policy execution into Arena yet.",
+      "new": "A trainer resume flow restores serialized checkpoint state through the public checkpoint boundary. `TrainingCheckpointStore` persists and reloads checkpoints through the existing deterministic checkpoint serializer instead of defining a second storage format. `SolverTrainer` now accepts an optional checkpoint store and exposes explicit `save_checkpoint()` / `load_checkpoint()` entry points that preserve the existing in-memory checkpoint API while providing a persistent resume lifecycle. `TrainingRunCoordinator` and `TrainingRunCheckpointPolicy` now provide the first higher-level training-run contract for optional periodic checkpoint persistence. This layer coordinates checkpoint timing but keeps solver training policy and Arena integration separate."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_storage.py tests/poker/test_solver_training_checkpoint_lifecycle.py tests/poker/test_solver_training_run_checkpoint_contract.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
