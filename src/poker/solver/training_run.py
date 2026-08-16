@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from poker.solver.training_checkpoint import TrainingCheckpoint
+
 
 @dataclass(frozen=True)
 class TrainingRunState:
@@ -22,6 +24,30 @@ class TrainingRunState:
 			steps_completed=payload.get("steps_completed", 0),
 			created_at=payload["created_at"],
 		)
+
+
+TRAINING_RUN_STATE_METADATA_KEY = "training_run_state"
+
+
+def attach_training_run_state(checkpoint, state):
+	if not isinstance(checkpoint, TrainingCheckpoint):
+		raise TypeError("invalid checkpoint")
+	if not isinstance(state, TrainingRunState):
+		raise TypeError("invalid training run state")
+
+	metadata = dict(checkpoint.metadata)
+	metadata[TRAINING_RUN_STATE_METADATA_KEY] = state.to_dict()
+	return TrainingCheckpoint(step=checkpoint.step, metadata=metadata)
+
+
+def extract_training_run_state(checkpoint):
+	if not isinstance(checkpoint, TrainingCheckpoint):
+		raise TypeError("invalid checkpoint")
+
+	payload = checkpoint.metadata.get(TRAINING_RUN_STATE_METADATA_KEY)
+	if payload is None:
+		return None
+	return TrainingRunState.from_dict(payload)
 
 
 @dataclass(frozen=True)

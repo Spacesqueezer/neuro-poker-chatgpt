@@ -89,9 +89,12 @@ from poker.solver.training_checkpoint_store import TrainingCheckpointStore
 from poker.solver.training_metrics import SolverTrainingMetrics
 from poker.solver.training_objective import SolverTrainingObjective
 from poker.solver.training_run import (
+	TRAINING_RUN_STATE_METADATA_KEY,
 	TrainingRunCheckpointPolicy,
 	TrainingRunCoordinator,
 	TrainingRunState,
+	attach_training_run_state,
+	extract_training_run_state,
 )
 from poker.solver.training_trainer import SolverTrainer, TrainingRunResult
 from poker.solver.training_validation import evaluate_solver_predictions
@@ -146,6 +149,7 @@ __all__ = [
 	"SolverTrainer",
 	"TrainingCheckpoint",
 	"TrainingCheckpointStore",
+	"TRAINING_RUN_STATE_METADATA_KEY",
 	"TrainingRunCheckpointPolicy",
 	"TrainingRunCoordinator",
 	"TrainingRunState",
@@ -155,6 +159,7 @@ __all__ = [
 	"TwoPlayerSolverGame",
 	"ExternalSamplingMCCFR",
 	"MCCFRResult",
+	"attach_training_run_state",
 	"bridge_observation_to_numeric",
 	"build_learning_bridge_artifact",
 	"build_learning_bridge_records",
@@ -170,6 +175,7 @@ __all__ = [
 	"chance_space_metadata",
 	"evaluate_restricted_policy",
 	"evaluate_solver_predictions",
+	"extract_training_run_state",
 	"load_learning_bridge_artifact",
 	"load_strategy_export",
 	"load_teacher_record_export",

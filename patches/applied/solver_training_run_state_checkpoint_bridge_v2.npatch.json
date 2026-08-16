@@ -1,0 +1,62 @@
+{
+  "patch_id": "solver_training_run_state_checkpoint_bridge_v2",
+  "goal": "Add an explicit bridge for embedding TrainingRunState into TrainingCheckpoint metadata and restoring it without coupling run state to checkpoint storage.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_training_run_checkpoint_bridge.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_run.py",
+      "old": "from dataclasses import dataclass, field\nfrom datetime import datetime, timezone\n",
+      "new": "from dataclasses import dataclass, field\nfrom datetime import datetime, timezone\n\nfrom poker.solver.training_checkpoint import TrainingCheckpoint\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_run.py",
+      "old": "\n\n@dataclass(frozen=True)\nclass TrainingRunCheckpointPolicy:\n",
+      "new": "\n\nTRAINING_RUN_STATE_METADATA_KEY = \"training_run_state\"\n\n\ndef attach_training_run_state(checkpoint, state):\n\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\traise TypeError(\"invalid checkpoint\")\n\tif not isinstance(state, TrainingRunState):\n\t\traise TypeError(\"invalid training run state\")\n\n\tmetadata = dict(checkpoint.metadata)\n\tmetadata[TRAINING_RUN_STATE_METADATA_KEY] = state.to_dict()\n\treturn TrainingCheckpoint(step=checkpoint.step, metadata=metadata)\n\n\ndef extract_training_run_state(checkpoint):\n\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\traise TypeError(\"invalid checkpoint\")\n\n\tpayload = checkpoint.metadata.get(TRAINING_RUN_STATE_METADATA_KEY)\n\tif payload is None:\n\t\treturn None\n\treturn TrainingRunState.from_dict(payload)\n\n\n@dataclass(frozen=True)\nclass TrainingRunCheckpointPolicy:\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.training_run import (\n\tTrainingRunCheckpointPolicy,\n\tTrainingRunCoordinator,\n\tTrainingRunState,\n)\n",
+      "new": "from poker.solver.training_run import (\n\tTRAINING_RUN_STATE_METADATA_KEY,\n\tTrainingRunCheckpointPolicy,\n\tTrainingRunCoordinator,\n\tTrainingRunState,\n\tattach_training_run_state,\n\textract_training_run_state,\n)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"TrainingRunCheckpointPolicy\",\n\t\"TrainingRunCoordinator\",\n\t\"TrainingRunState\",\n",
+      "new": "\t\"TRAINING_RUN_STATE_METADATA_KEY\",\n\t\"TrainingRunCheckpointPolicy\",\n\t\"TrainingRunCoordinator\",\n\t\"TrainingRunState\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"bridge_observation_to_numeric\",\n",
+      "new": "\t\"attach_training_run_state\",\n\t\"bridge_observation_to_numeric\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"evaluate_solver_predictions\",\n",
+      "new": "\t\"evaluate_solver_predictions\",\n\t\"extract_training_run_state\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_run_checkpoint_bridge.py",
+      "old": "from poker.solver import TrainingRunState\n\n\ndef test_training_run_state_can_be_embedded_in_checkpoint_payload():\n\tstate = TrainingRunState(run_id=\"run-1\", steps_completed=5)\n\tpayload = state.to_dict()\n\n\tassert payload[\"run_id\"] == \"run-1\"\n\tassert payload[\"steps_completed\"] == 5\n",
+      "new": "from poker.solver import (\n\tTrainingRunState,\n\tattach_training_run_state,\n\tcreate_checkpoint,\n\textract_training_run_state,\n)\n\n\ndef test_training_run_state_can_be_embedded_in_checkpoint_payload():\n\tcheckpoint = create_checkpoint(step=5, metadata={\"trainer\": \"SolverTrainer\"})\n\tstate = TrainingRunState(\n\t\trun_id=\"run-1\",\n\t\tsteps_completed=5,\n\t\tcreated_at=\"2026-01-01T00:00:00+00:00\",\n\t)\n\n\tbridged = attach_training_run_state(checkpoint, state)\n\trestored = extract_training_run_state(bridged)\n\n\tassert bridged.step == checkpoint.step\n\tassert bridged.metadata[\"trainer\"] == \"SolverTrainer\"\n\tassert restored == state\n\n\ndef test_training_run_state_is_optional_in_checkpoint_payload():\n\tcheckpoint = create_checkpoint(step=0)\n\n\tassert extract_training_run_state(checkpoint) is None\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_run_checkpoint_contract.py tests/poker/test_solver_training_run_state.py tests/poker/test_solver_training_run_state_serialization.py tests/poker/test_solver_training_run_checkpoint_bridge.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
