@@ -67,6 +67,7 @@ from poker.solver.supervised_dataset import (
 from poker.solver.training_backend import (
 	NullSolverTrainingBackend,
 	SolverTrainingBackend,
+	SolverTrainingBackendState,
 )
 from poker.solver.training_batch import (
 	SolverTrainingBatch,
@@ -129,6 +130,7 @@ __all__ = [
 	"SolverSupervisedSample",
 	"NullSolverTrainingBackend",
 	"SolverTrainingBackend",
+	"SolverTrainingBackendState",
 	"SolverTrainingBatch",
 	"SolverTrainingExample",
 	"SolverTrainingInput",

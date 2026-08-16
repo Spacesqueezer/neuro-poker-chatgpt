@@ -1,0 +1,62 @@
+{
+  "patch_id": "solver_training_backend_lifecycle_v2",
+  "goal": "Add an explicit framework-neutral backend state lifecycle contract without coupling SolverTrainer to model or optimizer internals yet.",
+  "allowed_files": [
+    "src/poker/solver/training_backend.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_training_backend_lifecycle.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_backend.py",
+      "old": "from abc import ABC, abstractmethod\n",
+      "new": "from abc import ABC, abstractmethod\nfrom dataclasses import dataclass\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_backend.py",
+      "old": "\t@abstractmethod\n\tdef predict(self, observation):\n\t\t\"\"\"Return backend policy output for one observation.\"\"\"\n\t\traise NotImplementedError\n\n\nclass NullSolverTrainingBackend(SolverTrainingBackend):\n",
+      "new": "\t@abstractmethod\n\tdef predict(self, observation):\n\t\t\"\"\"Return backend policy output for one observation.\"\"\"\n\t\traise NotImplementedError\n\n\t@abstractmethod\n\tdef save_state(self):\n\t\t\"\"\"Return serializable backend-owned state.\"\"\"\n\t\traise NotImplementedError\n\n\t@abstractmethod\n\tdef load_state(self, state):\n\t\t\"\"\"Restore previously exported backend-owned state.\"\"\"\n\t\traise NotImplementedError\n\n\n@dataclass(frozen=True)\nclass SolverTrainingBackendState:\n\tpayload: dict\n\n\nclass NullSolverTrainingBackend(SolverTrainingBackend):\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_backend.py",
+      "old": "\tdef predict(self, observation):\n\t\tif observation is None:\n\t\t\traise ValueError(\"observation is required\")\n\t\treturn tuple()\n",
+      "new": "\tdef predict(self, observation):\n\t\tif observation is None:\n\t\t\traise ValueError(\"observation is required\")\n\t\treturn tuple()\n\n\tdef save_state(self):\n\t\treturn SolverTrainingBackendState(payload={})\n\n\tdef load_state(self, state):\n\t\tif not isinstance(state, SolverTrainingBackendState):\n\t\t\traise TypeError(\"invalid backend state\")\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.training_backend import (\n\tNullSolverTrainingBackend,\n\tSolverTrainingBackend,\n)\n",
+      "new": "from poker.solver.training_backend import (\n\tNullSolverTrainingBackend,\n\tSolverTrainingBackend,\n\tSolverTrainingBackendState,\n)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"SolverTrainingBackend\",\n\t\"SolverTrainingBatch\",\n",
+      "new": "\t\"SolverTrainingBackend\",\n\t\"SolverTrainingBackendState\",\n\t\"SolverTrainingBatch\",\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_backend_lifecycle.py",
+      "content": "import pytest\n\nfrom poker.solver import (\n\tNullSolverTrainingBackend,\n\tSolverTrainingBackendState,\n)\n\n\ndef test_null_backend_state_round_trip_contract():\n\tbackend = NullSolverTrainingBackend()\n\n\tstate = backend.save_state()\n\tbackend.load_state(state)\n\n\tassert state == SolverTrainingBackendState(payload={})\n\n\ndef test_null_backend_rejects_invalid_state():\n\tbackend = NullSolverTrainingBackend()\n\n\twith pytest.raises(TypeError, match=\"invalid backend state\"):\n\t\tbackend.load_state({})\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The solver training path now defines a minimal framework-neutral trainable-backend contract that consumes validated solver batches and exposes prediction semantics without selecting a concrete ML framework. A null backend verifies the boundary without introducing model dependencies. The next solver step should add lifecycle integration between SolverTrainer and backend instances, including explicit checkpoint ownership boundaries for future model/optimizer state, without wiring policy execution into Arena yet. This remains solver-local, so focused validation is sufficient until a concrete backend or cross-subsystem integration is added.",
+      "new": "The solver training path now defines a minimal framework-neutral trainable-backend contract that consumes validated solver batches and exposes prediction semantics without selecting a concrete ML framework. A null backend verifies the boundary without introducing model dependencies. Backend instances now also expose an explicit framework-neutral state lifecycle through `save_state()`/`load_state()` and immutable `SolverTrainingBackendState`, establishing the ownership boundary for future model/optimizer state without serializing those internals into solver code. The next solver step should connect `SolverTrainer` to a backend instance so training delegates validated batches through that boundary and trainer checkpoints can carry backend-owned state explicitly, without wiring policy execution into Arena yet. This remains solver-local, so focused validation is sufficient until a concrete backend or cross-subsystem integration is added."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_backend.py tests/poker/test_solver_training_backend_lifecycle.py tests/poker/test_solver_training_api_surface.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
