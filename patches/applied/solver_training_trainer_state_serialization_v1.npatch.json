@@ -1,0 +1,22 @@
+{
+  "patch_id": "solver_training_trainer_state_serialization_v1",
+  "goal": "Add a focused regression test for the existing TrainerState serialization contract.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_trainer_state_serialization.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_state_serialization.py",
+      "content": "from poker.solver.trainer_state import TrainerState\n\n\ndef test_trainer_state_serialize_deserialize_round_trip():\n\tstate = TrainerState(\n\t\tglobal_step=42,\n\t\tpayload={\"backend_state\": {\"model\": {\"weight\": 1}}},\n\t)\n\n\tserialized = state.serialize()\n\trestored = TrainerState.deserialize(serialized)\n\n\tassert restored == state\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_state_serialization.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
