@@ -1,0 +1,25 @@
+{
+  "patch_id": "solver_training_checkpoint_coordinator_backend_state_restore_v4",
+  "goal": "Allow TrainingRunCoordinator to restore checkpoint state through trainer backend state support without requiring the optional restore_checkpoint method.",
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_run.py",
+      "changes": [
+        {
+          "operation": "replace",
+          "old": "\tdef restore_checkpoint(self, checkpoint):\n\t\tif not hasattr(self.trainer, \"restore_checkpoint\"):\n\t\t\traise AttributeError(\"trainer does not support checkpoint restore\")\n\t\tself.trainer.restore_checkpoint(checkpoint)\n",
+          "new": "\tdef restore_checkpoint(self, checkpoint):\n\t\tif hasattr(self.trainer, \"restore_checkpoint\"):\n\t\t\tself.trainer.restore_checkpoint(checkpoint)\n\t\t\treturn\n\n\t\tif hasattr(self.trainer, \"restore_backend_state\"):\n\t\t\tself.trainer.restore_backend_state(checkpoint.metadata)\n\t\t\treturn\n\n\t\traise AttributeError(\"trainer does not support checkpoint restore\")\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_coordinator_backend_state_restore.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
