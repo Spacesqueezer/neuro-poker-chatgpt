@@ -61,10 +61,15 @@ class SolverTrainer:
 		return self.restore_checkpoint(checkpoint)
 
 	def get_training_state(self):
-		return {
+		state = {
 			"current_step": self.current_step,
 			"trainer": "SolverTrainer",
 		}
+
+		if self.backend is not None:
+			state["backend_state"] = self.backend.save_state()
+
+		return state
 
 	def restore_training_state(self, state):
 		if not isinstance(state, dict):
@@ -75,6 +80,12 @@ class SolverTrainer:
 			raise ValueError("invalid current_step")
 
 		self.current_step = step
+
+		if "backend_state" in state:
+			if self.backend is None:
+				raise ValueError("backend state requires backend")
+			self.backend.load_state(state["backend_state"])
+
 		return self.current_step
 
 	def get_resume_summary(self):

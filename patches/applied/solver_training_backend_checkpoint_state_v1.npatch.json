@@ -1,0 +1,49 @@
+{
+  "patch_id": "solver_training_backend_checkpoint_state_v1",
+  "goal": "Persist optional backend-owned training state through SolverTrainer checkpoints without coupling checkpoint format to ML frameworks.",
+  "allowed_files": [
+    "src/poker/solver/training_trainer.py",
+    "tests/poker/test_solver_training_backend_checkpoint_state.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\tdef create_checkpoint(self):\n\t\treturn create_checkpoint(\n\t\t\tstep=self.current_step,\n\t\t\tmetadata=self.get_training_state(),\n\t\t)\n",
+      "new": "\tdef create_checkpoint(self):\n\t\treturn create_checkpoint(\n\t\t\tstep=self.current_step,\n\t\t\tmetadata=self.get_training_state(),\n\t\t)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\tdef get_training_state(self):\n\t\treturn {\n\t\t\t\"current_step\": self.current_step,\n\t\t\t\"trainer\": \"SolverTrainer\",\n\t\t}\n",
+      "new": "\tdef get_training_state(self):\n\t\tstate = {\n\t\t\t\"current_step\": self.current_step,\n\t\t\t\"trainer\": \"SolverTrainer\",\n\t\t}\n\n\t\tif self.backend is not None:\n\t\t\tstate[\"backend_state\"] = self.backend.save_state()\n\n\t\treturn state\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\t\tstep = state.get(\"current_step\")\n\t\tif not isinstance(step, int) or step < 0:\n\t\t\traise ValueError(\"invalid current_step\")\n\n\t\tself.current_step = step\n\t\treturn self.current_step\n",
+      "new": "\t\tstep = state.get(\"current_step\")\n\t\tif not isinstance(step, int) or step < 0:\n\t\t\traise ValueError(\"invalid current_step\")\n\n\t\tself.current_step = step\n\n\t\tif \"backend_state\" in state:\n\t\t\tif self.backend is None:\n\t\t\t\traise ValueError(\"backend state requires backend\")\n\t\t\tself.backend.load_state(state[\"backend_state\"])\n\n\t\treturn self.current_step\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_backend_checkpoint_state.py",
+      "content": "from poker.solver import SolverTrainer\n\n\nclass StatefulBackend:\n\tdef __init__(self):\n\t\tself.saved = None\n\n\tdef train_batch(self, batch):\n\t\treturn None\n\n\tdef save_state(self):\n\t\treturn {\"weights\": 123}\n\n\tdef load_state(self, state):\n\t\tself.saved = state\n\n\ndef test_checkpoint_contains_backend_state():\n\tbackend = StatefulBackend()\n\ttrainer = SolverTrainer(lambda samples: None, backend=backend)\n\n\tcheckpoint = trainer.create_checkpoint()\n\n\tassert checkpoint.metadata[\"backend_state\"] == {\"weights\": 123}\n\n\ndef test_restore_checkpoint_loads_backend_state():\n\tbackend = StatefulBackend()\n\ttrainer = SolverTrainer(lambda samples: None, backend=backend)\n\n\ttrainer.restore_training_state({\n\t\t\"current_step\": 5,\n\t\t\"backend_state\": {\"weights\": 456},\n\t})\n\n\tassert trainer.current_step == 5\n\tassert backend.saved == {\"weights\": 456}\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "`SolverTrainer` now accepts an optional backend and delegates each training step through `backend.train_batch()` when present while preserving the historical objective-only path when no backend is configured. The next solver step should extend trainer checkpoint state to carry backend-owned state explicitly and restore it through the backend lifecycle boundary, without wiring policy execution into Arena yet.",
+      "new": "`SolverTrainer` now accepts an optional backend and delegates each training step through `backend.train_batch()` when present while preserving the historical objective-only path when no backend is configured. Trainer checkpoints now carry optional backend-owned state through the backend lifecycle boundary and restore it through `load_state()` without exposing framework-specific serialization. The next solver step should expose a concrete trainer resume flow around serialized checkpoints, without wiring policy execution into Arena yet."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_backend.py tests/poker/test_solver_training_backend_lifecycle.py tests/poker/test_solver_training_trainer.py tests/poker/test_solver_training_trainer_checkpoint.py tests/poker/test_solver_training_trainer_backend_bridge.py tests/poker/test_solver_training_backend_checkpoint_state.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
