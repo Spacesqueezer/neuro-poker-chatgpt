@@ -1,0 +1,27 @@
+{
+  "patch_id": "solver_training_run_resume_api_v1",
+  "goal": "Add a coordinator-level resume API that restores a checkpoint and continues training through the existing flow.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_run.py",
+      "changes": [
+        {
+          "find": "\t\treturn result\n\n\tdef train(self, samples, steps):\n",
+          "replace": "\t\treturn result\n\n\tdef resume(self, checkpoint, samples, steps):\n\t\tself.restore_checkpoint(checkpoint)\n\t\treturn self.train(samples, steps)\n\n\tdef train(self, samples, steps):\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_restore_api.py tests/poker/test_solver_training_checkpoint_restore_integration.py tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "commit_message": "solver_training_run_resume_api_v1"
+  }
+}
