@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_training_run_restore_integration_v3",
+  "goal": "Add restore_checkpoint support to TrainingRunCoordinator and cover the restore boundary with a new integration test.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py",
+    "tests/poker/test_solver_training_run_restore_integration.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_run.py",
+      "old": "\tdef train(self, samples, steps):\n",
+      "new": "\tdef restore_checkpoint(self, checkpoint):\n\t\tif not hasattr(self.trainer, \"restore_checkpoint\"):\n\t\t\traise AttributeError(\"trainer does not support checkpoint restore\")\n\n\t\tresult = self.trainer.restore_checkpoint(checkpoint)\n\n\t\tif self.state is not None:\n\t\t\tself.state = TrainingRunState(\n\t\t\t\trun_id=self.state.run_id,\n\t\t\t\tsteps_completed=checkpoint.step,\n\t\t\t\tcreated_at=self.state.created_at,\n\t\t\t)\n\n\t\treturn result\n\n\tdef train(self, samples, steps):\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_run_restore_integration.py",
+      "content": "from poker.solver import TrainingRunCoordinator\n\n\nclass FakeTrainer:\n\tdef restore_checkpoint(self, checkpoint):\n\t\tself.restored = checkpoint\n\t\treturn checkpoint\n\n\ndef test_training_run_restore_delegates_checkpoint():\n\ttrainer = FakeTrainer()\n\tcoordinator = TrainingRunCoordinator(trainer)\n\tcheckpoint = type(\"Checkpoint\", (), {\"step\": 5})()\n\n\tresult = coordinator.restore_checkpoint(checkpoint)\n\n\tassert trainer.restored == checkpoint\n\tassert result == checkpoint\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_restore_api.py tests/poker/test_solver_training_checkpoint_restore_integration.py tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}

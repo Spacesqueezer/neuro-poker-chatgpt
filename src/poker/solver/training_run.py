@@ -67,6 +67,21 @@ class TrainingRunCoordinator:
 		self.checkpoint_policy = checkpoint_policy
 		self.state = state
 
+	def restore_checkpoint(self, checkpoint):
+		if not hasattr(self.trainer, "restore_checkpoint"):
+			raise AttributeError("trainer does not support checkpoint restore")
+
+		result = self.trainer.restore_checkpoint(checkpoint)
+
+		if self.state is not None:
+			self.state = TrainingRunState(
+				run_id=self.state.run_id,
+				steps_completed=checkpoint.step,
+				created_at=self.state.created_at,
+			)
+
+		return result
+
 	def train(self, samples, steps):
 		result = self.trainer.train(samples, steps=steps)
 
