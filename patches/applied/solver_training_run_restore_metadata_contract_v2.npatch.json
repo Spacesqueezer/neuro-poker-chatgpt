@@ -1,0 +1,45 @@
+{
+  "patch_id": "solver_training_run_restore_metadata_contract_v2",
+  "goal": "Restore TrainingRunState from checkpoint metadata and cover the real coordinator restore contract.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py",
+    "tests/poker/test_solver_training_run_restore_integration.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_run.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\t\tresult = self.trainer.restore_checkpoint(checkpoint)\n\n\t\tif self.state is not None:\n\t\t\tself.state = TrainingRunState(\n\t\t\t\trun_id=self.state.run_id,\n\t\t\t\tsteps_completed=checkpoint.step,\n\t\t\t\tcreated_at=self.state.created_at,\n\t\t\t)\n\n\t\treturn result\n",
+          "new": "\t\tresult = self.trainer.restore_checkpoint(checkpoint)\n\n\t\trestored_state = (\n\t\t\textract_training_run_state(checkpoint)\n\t\t\tif isinstance(checkpoint, TrainingCheckpoint)\n\t\t\telse None\n\t\t)\n\t\tif restored_state is not None:\n\t\t\tself.state = restored_state\n\t\telif self.state is not None:\n\t\t\tself.state = TrainingRunState(\n\t\t\t\trun_id=self.state.run_id,\n\t\t\t\tsteps_completed=checkpoint.step,\n\t\t\t\tcreated_at=self.state.created_at,\n\t\t\t)\n\n\t\treturn result\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/poker/test_solver_training_run_restore_integration.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "from poker.solver import TrainingRunCoordinator\n",
+          "new": "from poker.solver import (\n\tTrainingCheckpoint,\n\tTrainingRunCoordinator,\n\tTrainingRunState,\n\tattach_training_run_state,\n)\n"
+        },
+        {
+          "type": "replace",
+          "old": "\tassert trainer.restored == checkpoint\n\tassert result == checkpoint\n",
+          "new": "\tassert trainer.restored == checkpoint\n\tassert result == checkpoint\n\n\ndef test_training_run_restore_uses_checkpoint_run_state_metadata():\n\ttrainer = FakeTrainer()\n\tcoordinator = TrainingRunCoordinator(\n\t\ttrainer,\n\t\tstate=TrainingRunState(run_id=\"fresh-run\"),\n\t)\n\tpersisted_state = TrainingRunState(\n\t\trun_id=\"persisted-run\",\n\t\tsteps_completed=12,\n\t\tcreated_at=\"2026-08-16T00:00:00+00:00\",\n\t)\n\tcheckpoint = attach_training_run_state(\n\t\tTrainingCheckpoint(step=12, metadata={}),\n\t\tpersisted_state,\n\t)\n\n\tcoordinator.restore_checkpoint(checkpoint)\n\n\tassert coordinator.state == persisted_state\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

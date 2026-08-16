@@ -73,7 +73,14 @@ class TrainingRunCoordinator:
 
 		result = self.trainer.restore_checkpoint(checkpoint)
 
-		if self.state is not None:
+		restored_state = (
+			extract_training_run_state(checkpoint)
+			if isinstance(checkpoint, TrainingCheckpoint)
+			else None
+		)
+		if restored_state is not None:
+			self.state = restored_state
+		elif self.state is not None:
 			self.state = TrainingRunState(
 				run_id=self.state.run_id,
 				steps_completed=checkpoint.step,
