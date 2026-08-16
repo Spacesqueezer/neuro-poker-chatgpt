@@ -1,0 +1,25 @@
+{
+  "patch_id": "solver_training_checkpoint_serialization_bridge_v1",
+  "goal": "Expose checkpoint serialization helpers through SolverTrainer without coupling callers to checkpoint internals.",
+  "allowed_files": [
+    "src/poker/solver/training_trainer.py",
+    "tests/poker/test_solver_training_trainer_checkpoint.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\tdef restore_checkpoint(self, checkpoint: TrainingCheckpoint):\n\t\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\t\traise TypeError(\"invalid checkpoint\")\n\n\t\tself.current_step = checkpoint.step\n\t\treturn self.current_step\n",
+      "new": "\tdef restore_checkpoint(self, checkpoint: TrainingCheckpoint):\n\t\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\t\traise TypeError(\"invalid checkpoint\")\n\n\t\tself.current_step = checkpoint.step\n\t\treturn self.current_step\n\n\tdef export_checkpoint(self):\n\t\treturn self.create_checkpoint()\n\n\tdef import_checkpoint(self, checkpoint):\n\t\treturn self.restore_checkpoint(checkpoint)\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer.py tests/poker/test_solver_training_trainer_checkpoint.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}

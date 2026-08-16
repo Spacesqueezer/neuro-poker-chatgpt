@@ -44,3 +44,9 @@ class SolverTrainer:
 
 		self.current_step = checkpoint.step
 		return self.current_step
+
+	def export_checkpoint(self):
+		return self.create_checkpoint()
+
+	def import_checkpoint(self, checkpoint):
+		return self.restore_checkpoint(checkpoint)
