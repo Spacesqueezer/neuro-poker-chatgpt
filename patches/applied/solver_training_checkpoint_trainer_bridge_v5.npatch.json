@@ -1,0 +1,30 @@
+{
+  "patch_id": "solver_training_checkpoint_trainer_bridge_v5",
+  "goal": "Connect SolverTrainer progress with TrainingCheckpoint using the exact current trainer contract.",
+  "allowed_files": [
+    "src/poker/solver/training_trainer.py",
+    "tests/poker/test_solver_training_trainer_checkpoint.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass TrainingRunResult:\n\tsteps: int\n\tstatus: str\n\n\nclass SolverTrainer:\n\tdef __init__(self, objective):\n\t\tself.objective = objective\n\n\tdef train(self, samples, steps=1):\n\t\tif steps < 0:\n\t\t\traise ValueError(\"steps must be non-negative\")\n\n\t\tfor _ in range(steps):\n\t\t\tself.objective(samples)\n\n\t\treturn TrainingRunResult(\n\t\t\tsteps=steps,\n\t\t\tstatus=\"completed\",\n\t\t)\n",
+      "new": "from dataclasses import dataclass\n\nfrom poker.solver.training_checkpoint import (\n\tTrainingCheckpoint,\n\tcreate_checkpoint,\n)\n\n\n@dataclass(frozen=True)\nclass TrainingRunResult:\n\tsteps: int\n\tstatus: str\n\n\nclass SolverTrainer:\n\tdef __init__(self, objective):\n\t\tself.objective = objective\n\t\tself.current_step = 0\n\n\tdef train(self, samples, steps=1):\n\t\tif steps < 0:\n\t\t\traise ValueError(\"steps must be non-negative\")\n\n\t\tfor _ in range(steps):\n\t\t\tself.objective(samples)\n\t\t\tself.current_step += 1\n\n\t\treturn TrainingRunResult(\n\t\t\tsteps=self.current_step,\n\t\t\tstatus=\"completed\",\n\t\t)\n\n\tdef create_checkpoint(self):\n\t\treturn create_checkpoint(\n\t\t\tstep=self.current_step,\n\t\t\tmetadata={\n\t\t\t\t\"trainer\": \"SolverTrainer\",\n\t\t\t},\n\t\t)\n\n\tdef restore_checkpoint(self, checkpoint: TrainingCheckpoint):\n\t\tif not isinstance(checkpoint, TrainingCheckpoint):\n\t\t\traise TypeError(\"invalid checkpoint\")\n\n\t\tself.current_step = checkpoint.step\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_checkpoint.py",
+      "content": "from poker.solver.training_trainer import SolverTrainer\n\n\ndef test_solver_trainer_checkpoint_round_trip():\n\ttrainer = SolverTrainer(lambda samples: None)\n\n\ttrainer.train([], steps=3)\n\tcheckpoint = trainer.create_checkpoint()\n\n\trestored = SolverTrainer(lambda samples: None)\n\trestored.restore_checkpoint(checkpoint)\n\n\tassert checkpoint.step == 3\n\tassert restored.current_step == 3\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer.py tests/poker/test_solver_training_trainer_checkpoint.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
