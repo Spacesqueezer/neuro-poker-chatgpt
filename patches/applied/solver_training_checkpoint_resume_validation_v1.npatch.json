@@ -1,0 +1,24 @@
+{
+  "patch_id": "solver_training_checkpoint_resume_validation_v1",
+  "goal": "Add regression coverage for invalid training state restoration at the SolverTrainer resume boundary.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_trainer_checkpoint.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_trainer_checkpoint.py",
+      "old": "\tassert trainer.get_resume_summary() == {\n\t\t\"current_step\": 5,\n\t\t\"trainer\": \"SolverTrainer\",\n\t}\n",
+      "new": "\tassert trainer.get_resume_summary() == {\n\t\t\"current_step\": 5,\n\t\t\"trainer\": \"SolverTrainer\",\n\t}\n\n\ndef test_solver_trainer_restore_training_state_rejects_invalid_step():\n\ttrainer = SolverTrainer(lambda samples: None)\n\n\ttry:\n\t\ttrainer.restore_training_state({\"current_step\": -1})\n\texcept ValueError as error:\n\t\tassert str(error) == \"invalid current_step\"\n\telse:\n\t\traise AssertionError(\"invalid training state was accepted\")\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_checkpoint.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}

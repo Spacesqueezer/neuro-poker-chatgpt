@@ -38,3 +38,14 @@ def test_solver_trainer_resume_summary_matches_state():
 		"current_step": 5,
 		"trainer": "SolverTrainer",
 	}
+
+
+def test_solver_trainer_restore_training_state_rejects_invalid_step():
+	trainer = SolverTrainer(lambda samples: None)
+
+	try:
+		trainer.restore_training_state({"current_step": -1})
+	except ValueError as error:
+		assert str(error) == "invalid current_step"
+	else:
+		raise AssertionError("invalid training state was accepted")
