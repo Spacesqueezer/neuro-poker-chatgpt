@@ -1,0 +1,27 @@
+{
+  "patch_id": "solver_training_run_checkpoint_state_persistence_v3",
+  "goal": "Persist current TrainingRunState when TrainingRunCoordinator saves checkpoints during training.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_run.py",
+      "changes": [
+        {
+          "find": "\t\tif self.checkpoint_policy is not None:\n\t\t\tif self.checkpoint_policy.should_checkpoint(result.steps):\n\t\t\t\tself.trainer.save_checkpoint()\n",
+          "replace": "\t\tif self.checkpoint_policy is not None:\n\t\t\tif self.checkpoint_policy.should_checkpoint(result.steps):\n\t\t\t\tcheckpoint = self.trainer.save_checkpoint()\n\t\t\t\tif checkpoint is not None and self.state is not None:\n\t\t\t\t\tcheckpoint = attach_training_run_state(checkpoint, self.state)\n\n\t\t\t\treturn checkpoint\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_restore_api.py tests/poker/test_solver_training_checkpoint_restore_integration.py tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "commit_message": "solver_training_run_checkpoint_state_persistence_v3"
+  }
+}
