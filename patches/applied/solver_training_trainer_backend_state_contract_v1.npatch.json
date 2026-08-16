@@ -1,0 +1,26 @@
+{
+  "patch_id": "solver_training_trainer_backend_state_contract_v1",
+  "goal": "Introduce a contract boundary for persistent trainer backend state required for full training continuation.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/trainer_backend_state.py",
+      "content": "from dataclasses import dataclass\nfrom typing import Any\n\n\n@dataclass\nclass TrainerBackendState:\n\tglobal_step: int\n\tmodel_state: dict[str, Any]\n\toptimizer_state: dict[str, Any] | None = None\n\tscheduler_state: dict[str, Any] | None = None\n\n\tdef to_payload(self) -> dict[str, Any]:\n\t\treturn {\n\t\t\t\"global_step\": self.global_step,\n\t\t\t\"model_state\": self.model_state,\n\t\t\t\"optimizer_state\": self.optimizer_state,\n\t\t\t\"scheduler_state\": self.scheduler_state,\n\t\t}\n\n\t@classmethod\n\tdef from_payload(cls, payload: dict[str, Any]) -> \"TrainerBackendState\":\n\t\treturn cls(\n\t\t\tglobal_step=int(payload[\"global_step\"]),\n\t\t\tmodel_state=dict(payload.get(\"model_state\", {})),\n\t\t\toptimizer_state=payload.get(\"optimizer_state\"),\n\t\t\tscheduler_state=payload.get(\"scheduler_state\"),\n\t\t)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_backend_state.py",
+      "content": "from poker.solver.trainer_backend_state import TrainerBackendState\n\n\ndef test_backend_state_round_trip():\n\tstate = TrainerBackendState(\n\t\tglobal_step=100,\n\t\tmodel_state={\"weights\": \"snapshot\"},\n\t\toptimizer_state={\"lr\": 0.001},\n\t\tscheduler_state={\"epoch\": 2},\n\t)\n\n\trestored = TrainerBackendState.from_payload(state.to_payload())\n\n\tassert restored.global_step == 100\n\tassert restored.model_state[\"weights\"] == \"snapshot\"\n\tassert restored.optimizer_state[\"lr\"] == 0.001\n\tassert restored.scheduler_state[\"epoch\"] == 2\n"
+    },
+    {
+      "type": "modify_file",
+      "file": "docs/PROJECT_STATE.md",
+      "note": "Update current solver training resume state with trainer backend state boundary."
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_backend_state.py -q"
+    ]
+  }
+}
