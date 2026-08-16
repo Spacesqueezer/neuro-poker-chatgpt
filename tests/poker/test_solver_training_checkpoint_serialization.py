@@ -38,3 +38,10 @@ def test_training_checkpoint_deserialization_rejects_extra_fields():
 		deserialize_checkpoint(
 			'{"metadata":{},"step":1,"unexpected":true}'
 		)
+
+
+def test_training_checkpoint_deserialization_rejects_negative_step():
+	with pytest.raises(ValueError, match="step must be non-negative"):
+		deserialize_checkpoint(
+			'{"metadata":{},"step":-1}'
+		)

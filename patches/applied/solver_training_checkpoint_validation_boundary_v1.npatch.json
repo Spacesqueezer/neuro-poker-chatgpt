@@ -1,0 +1,24 @@
+{
+  "patch_id": "solver_training_checkpoint_validation_boundary_v1",
+  "goal": "Strengthen checkpoint deserialization boundary validation without changing the checkpoint API.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_checkpoint_serialization.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_checkpoint_serialization.py",
+      "old": "import pytest\n\nfrom poker.solver.training_checkpoint import (\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n\tserialize_checkpoint,\n)\n\n\ndef test_training_checkpoint_json_round_trip_is_deterministic():\n\tcheckpoint = create_checkpoint(\n\t\t10,\n\t\t{\n\t\t\t\"epoch\": 2,\n\t\t\t\"source\": \"solver\",\n\t\t},\n\t)\n\n\tpayload = serialize_checkpoint(checkpoint)\n\trestored = deserialize_checkpoint(payload)\n\n\tassert payload == (\n\t\t'{\"metadata\":{\"epoch\":2,\"source\":\"solver\"},\"step\":10}'\n\t)\n\tassert restored == checkpoint\n\n\ndef test_training_checkpoint_serialization_rejects_wrong_type():\n\twith pytest.raises(TypeError, match=\"invalid checkpoint\"):\n\t\tserialize_checkpoint({\"step\": 1})\n\n\ndef test_training_checkpoint_deserialization_rejects_extra_fields():\n\twith pytest.raises(\n\t\tValueError,\n\t\tmatch=\"checkpoint payload fields are invalid\",\n\t):\n\t\tdeserialize_checkpoint(\n\t\t\t'{\"metadata\":{},\"step\":1,\"unexpected\":true}'\n\t\t)\n",
+      "new": "import pytest\n\nfrom poker.solver.training_checkpoint import (\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n\tserialize_checkpoint,\n)\n\n\ndef test_training_checkpoint_json_round_trip_is_deterministic():\n\tcheckpoint = create_checkpoint(\n\t\t10,\n\t\t{\n\t\t\t\"epoch\": 2,\n\t\t\t\"source\": \"solver\",\n\t\t},\n\t)\n\n\tpayload = serialize_checkpoint(checkpoint)\n\trestored = deserialize_checkpoint(payload)\n\n\tassert payload == (\n\t\t'{\"metadata\":{\"epoch\":2,\"source\":\"solver\"},\"step\":10}'\n\t)\n\tassert restored == checkpoint\n\n\ndef test_training_checkpoint_serialization_rejects_wrong_type():\n\twith pytest.raises(TypeError, match=\"invalid checkpoint\"):\n\t\tserialize_checkpoint({\"step\": 1})\n\n\ndef test_training_checkpoint_deserialization_rejects_extra_fields():\n\twith pytest.raises(\n\t\tValueError,\n\t\tmatch=\"checkpoint payload fields are invalid\",\n\t):\n\t\tdeserialize_checkpoint(\n\t\t\t'{\"metadata\":{},\"step\":1,\"unexpected\":true}'\n\t\t)\n\n\ndef test_training_checkpoint_deserialization_rejects_negative_step():\n\twith pytest.raises(ValueError, match=\"step must be non-negative\"):\n\t\tdeserialize_checkpoint(\n\t\t\t'{\"metadata\":{},\"step\":-1}'\n\t\t)\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_serialization.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
