@@ -9,3 +9,7 @@ class TrainingResumeSession:
 	def resume(self):
 		self.restore()
 		return self.coordinator
+
+	def resume_training(self, samples, steps):
+		self.restore()
+		return self.coordinator.train(samples, steps)

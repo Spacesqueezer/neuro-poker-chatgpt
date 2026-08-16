@@ -1,0 +1,40 @@
+{
+  "patch_id": "solver_training_resume_session_training_entry_v1",
+  "goal": "Add a resume-session training entry point that restores state before delegating continued training to the coordinator.",
+  "allowed_files": [
+    "src/poker/solver/training_resume_session.py",
+    "tests/poker/test_solver_training_resume_session.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_resume_session.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tdef resume(self):\n\t\tself.restore()\n\t\treturn self.coordinator\n",
+          "new": "\tdef resume(self):\n\t\tself.restore()\n\t\treturn self.coordinator\n\n\tdef resume_training(self, samples, steps):\n\t\tself.restore()\n\t\treturn self.coordinator.train(samples, steps)\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/poker/test_solver_training_resume_session.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tassert coordinator.restored is True\n",
+          "new": "\tassert coordinator.restored is True\n\n\ndef test_resume_session_training_delegates_after_restore():\n\tclass TrainingCoordinator:\n\t\tdef __init__(self):\n\t\t\tself.calls = []\n\n\t\tdef train(self, samples, steps):\n\t\t\tself.calls.append((samples, steps))\n\t\t\treturn \"trained\"\n\n\tcoordinator = TrainingCoordinator()\n\n\tclass Store:\n\t\tdef restore_artifact(self, target):\n\t\t\ttarget.restored = True\n\n\tsession = TrainingResumeSession(coordinator, Store())\n\tresult = session.resume_training([1, 2], 5)\n\n\tassert result == \"trained\"\n\tassert coordinator.restored is True\n\tassert coordinator.calls == [([1, 2], 5)]\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_resume_session.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

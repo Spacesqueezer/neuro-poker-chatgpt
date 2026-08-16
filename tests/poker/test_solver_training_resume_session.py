@@ -19,3 +19,26 @@ def test_resume_session_restores_artifact():
 
 	assert result is coordinator
 	assert coordinator.restored is True
+
+
+def test_resume_session_training_delegates_after_restore():
+	class TrainingCoordinator:
+		def __init__(self):
+			self.calls = []
+
+		def train(self, samples, steps):
+			self.calls.append((samples, steps))
+			return "trained"
+
+	coordinator = TrainingCoordinator()
+
+	class Store:
+		def restore_artifact(self, target):
+			target.restored = True
+
+	session = TrainingResumeSession(coordinator, Store())
+	result = session.resume_training([1, 2], 5)
+
+	assert result == "trained"
+	assert coordinator.restored is True
+	assert coordinator.calls == [([1, 2], 5)]
