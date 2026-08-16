@@ -45,11 +45,22 @@ Supported operations must match the current patcher implementation.
 
 Do not invent unsupported operations.
 
-Typical supported operations:
-- create_file
-- replace
-- delete_file
-- modify_file (container for ordered nested replace operations)
+Supported top-level operations in the current `tools/neuropatch.py`:
+- `create_file` with `file` and `content`;
+- `replace` with `file`, `old`, and `new`;
+- `delete_file` with `file`;
+- `modify_file` with `file` and an `operations` list.
+
+Inside `modify_file`, the current patcher supports only nested `replace` operations using `type`, `old`, and `new`.
+
+Explicitly unsupported in the current patcher:
+- nested `append` inside `modify_file`;
+- nested `create_file` or `delete_file` inside `modify_file`;
+- the legacy `changes` field for `modify_file`;
+- `find` / `replace` pairs that are not expressed as nested `replace` operations;
+- any invented operation type not implemented by `tools/neuropatch.py`.
+
+To append text to an existing file, use a normal `replace` operation whose `old` anchor is exact current file content near the insertion point and whose `new` value contains the original anchor plus the appended text. Do not use an `append` operation unless the patcher is explicitly changed to support it.
 
 Every patch must:
 - target existing project state;

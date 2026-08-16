@@ -1,0 +1,40 @@
+{
+  "patch_id": "neuropatch_operation_contract_docs_v1",
+  "goal": "Document the exact supported NeuroPatch operation contract and record the current solver training resume flow.",
+  "allowed_files": [
+    "docs/DEV_RULES.md",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "docs/DEV_RULES.md",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "Typical supported operations:\n- create_file\n- replace\n- delete_file\n- modify_file (container for ordered nested replace operations)\n",
+          "new": "Supported top-level operations in the current `tools/neuropatch.py`:\n- `create_file` with `file` and `content`;\n- `replace` with `file`, `old`, and `new`;\n- `delete_file` with `file`;\n- `modify_file` with `file` and an `operations` list.\n\nInside `modify_file`, the current patcher supports only nested `replace` operations using `type`, `old`, and `new`.\n\nExplicitly unsupported in the current patcher:\n- nested `append` inside `modify_file`;\n- nested `create_file` or `delete_file` inside `modify_file`;\n- the legacy `changes` field for `modify_file`;\n- `find` / `replace` pairs that are not expressed as nested `replace` operations;\n- any invented operation type not implemented by `tools/neuropatch.py`.\n\nTo append text to an existing file, use a normal `replace` operation whose `old` anchor is exact current file content near the insertion point and whose `new` value contains the original anchor plus the appended text. Do not use an `append` operation unless the patcher is explicitly changed to support it.\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "docs/PROJECT_STATE.md",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "Current focus:\n- player statistics foundation;\n- persistent opponent memory architecture;\n- preparation for dataset generation.\n",
+          "new": "Current focus:\n- solver training resume pipeline;\n- checkpoint artifact persistence and restore contracts;\n- next: trainer-specific state persistence for complete training continuation.\n\nCurrent solver training resume state:\n- `TrainingCheckpoint` carries trainer metadata and embedded `TrainingRunState` metadata;\n- `TrainingCheckpointStore` performs atomic artifact writes, validates deserialized payloads, and restores through a coordinator boundary;\n- `TrainingRunCoordinator.restore_checkpoint()` restores both trainer state and embedded `TrainingRunState` when present;\n- `TrainingResumeSession` owns the high-level restore/resume orchestration and can continue training through `resume_training(samples, steps)`;\n- the next implementation step is trainer-specific persistent state beyond orchestration metadata, including model/backend state, optimizer state when introduced, and global training progress.\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_resume_session.py tests/poker/test_solver_training_checkpoint_store_coordinator.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
