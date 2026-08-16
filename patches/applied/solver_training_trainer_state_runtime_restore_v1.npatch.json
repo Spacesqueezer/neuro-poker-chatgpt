@@ -1,0 +1,16 @@
+{
+  "patch_id": "solver_training_trainer_state_runtime_restore_v1",
+  "goal": "Move trainer state persistence from contract coverage toward runtime restore behavior.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_state_runtime_restore.py",
+      "content": "from poker.solver.trainer_state import TrainerState\nfrom poker.solver.training_checkpoint import create_checkpoint, extract_checkpoint_trainer_state\n\n\ndef test_runtime_restore_keeps_training_progress():\n\tstate = TrainerState(\n\t\tglobal_step=250,\n\t\tpayload={\n\t\t\t\"epoch\": 3,\n\t\t\t\"metrics\": {\"loss\": 0.05},\n\t\t},\n\t)\n\n\tcheckpoint = create_checkpoint(\n\t\tstep=250,\n\t\ttrainer_state=state,\n\t)\n\n\trestored = extract_checkpoint_trainer_state(checkpoint)\n\n\tassert restored.global_step == 250\n\tassert restored.payload[\"epoch\"] == 3\n\tassert restored.payload[\"metrics\"][\"loss\"] == 0.05\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_state_runtime_restore.py -q"
+    ]
+  }
+}
