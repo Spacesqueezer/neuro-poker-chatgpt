@@ -1,0 +1,24 @@
+{
+  "patch_id": "solver_training_trainer_state_checkpoint_bridge_v1",
+  "goal": "Add a small bridge contract between TrainerState and checkpoint metadata without coupling trainer backends.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/trainer_state_checkpoint_bridge.py",
+      "content": "from .trainer_state import TrainerState\n\n\nTRAINER_STATE_METADATA_KEY = \"trainer_state\"\n\n\ndef attach_trainer_state(metadata: dict, state: TrainerState) -> dict:\n\tresult = dict(metadata)\n\tresult[TRAINER_STATE_METADATA_KEY] = state.serialize()\n\treturn result\n\n\ndef extract_trainer_state(metadata: dict) -> TrainerState | None:\n\tpayload = metadata.get(TRAINER_STATE_METADATA_KEY)\n\tif payload is None:\n\t\treturn None\n\n\treturn TrainerState.deserialize(payload)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_state_checkpoint_bridge.py",
+      "content": "from poker.solver.trainer_state import TrainerState\nfrom poker.solver.trainer_state_checkpoint_bridge import (\n\textract_trainer_state,\n\tattach_trainer_state,\n)\n\n\ndef test_trainer_state_checkpoint_metadata_round_trip():\n\tstate = TrainerState(global_step=42, payload={\"loss\": 1.5})\n\n\tmetadata = attach_trainer_state({}, state)\n\trestored = extract_trainer_state(metadata)\n\n\tassert restored == state\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_state_checkpoint_bridge.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
