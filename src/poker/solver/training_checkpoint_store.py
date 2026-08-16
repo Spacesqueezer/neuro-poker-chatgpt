@@ -33,3 +33,6 @@ class TrainingCheckpointStore:
 		checkpoint = self.load()
 		coordinator.restore_checkpoint(checkpoint)
 		return checkpoint
+
+	def restore_artifact(self, coordinator):
+		return self.restore_into_coordinator(coordinator)

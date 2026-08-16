@@ -1,0 +1,30 @@
+{
+  "patch_id": "solver_training_checkpoint_artifact_resume_boundary_v1",
+  "goal": "Add a stable artifact-level resume entry point after checkpoint store/coordinator bridge.",
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_checkpoint_store.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tdef restore_into_coordinator(self, coordinator):\n\t\tcheckpoint = self.load()\n\t\tcoordinator.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n",
+          "new": "\tdef restore_into_coordinator(self, coordinator):\n\t\tcheckpoint = self.load()\n\t\tcoordinator.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n\n\tdef restore_artifact(self, coordinator):\n\t\treturn self.restore_into_coordinator(coordinator)\n"
+        }
+      ]
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_artifact_resume.py",
+      "content": "from poker.solver import TrainingCheckpointStore\n\n\ndef test_checkpoint_store_exposes_artifact_resume_boundary(tmp_path):\n\tstore = TrainingCheckpointStore(tmp_path / \"checkpoint.json\")\n\n\tassert hasattr(store, \"restore_artifact\")\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_store_coordinator.py tests/poker/test_solver_training_checkpoint_artifact_resume.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
