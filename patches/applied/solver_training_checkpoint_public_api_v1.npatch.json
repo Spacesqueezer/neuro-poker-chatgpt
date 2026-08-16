@@ -1,0 +1,63 @@
+{
+  "patch_id": "solver_training_checkpoint_public_api_v1",
+  "goal": "Expose SolverTrainer and TrainingCheckpoint through the public poker.solver API and synchronize project documentation after the completed checkpoint state bridge.",
+  "allowed_files": [
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_training_api_surface.py",
+    "docs/PROJECT_STATE.md",
+    "docs/DEV_RULES.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.training_metrics import SolverTrainingMetrics\nfrom poker.solver.training_objective import SolverTrainingObjective\nfrom poker.solver.training_validation import evaluate_solver_predictions\n",
+      "new": "from poker.solver.training_checkpoint import (\n\tTrainingCheckpoint,\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n\trestore_checkpoint,\n\tserialize_checkpoint,\n)\nfrom poker.solver.training_metrics import SolverTrainingMetrics\nfrom poker.solver.training_objective import SolverTrainingObjective\nfrom poker.solver.training_trainer import SolverTrainer, TrainingRunResult\nfrom poker.solver.training_validation import evaluate_solver_predictions\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"SolverTrainingMetrics\",\n\t\"SolverTrainingObjective\",\n\t\"SolverTrainingObjectiveContract\",\n",
+      "new": "\t\"SolverTrainingMetrics\",\n\t\"SolverTrainingObjective\",\n\t\"SolverTrainingObjectiveContract\",\n\t\"SolverTrainer\",\n\t\"TrainingCheckpoint\",\n\t\"TrainingRunResult\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"build_strategy_export\",\n\t\"build_teacher_record_export\",\n",
+      "new": "\t\"build_strategy_export\",\n\t\"build_teacher_record_export\",\n\t\"create_checkpoint\",\n\t\"deserialize_checkpoint\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"load_teacher_record_export\",\n\t\"serialize_information_set\",\n",
+      "new": "\t\"load_teacher_record_export\",\n\t\"restore_checkpoint\",\n\t\"serialize_checkpoint\",\n\t\"serialize_information_set\",\n"
+    },
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_api_surface.py",
+      "old": "from poker.solver.training_batch import SolverTrainingBatch\nfrom poker.solver.training_input import SolverTrainingExample, SolverTrainingInput\nfrom poker.solver.training_metrics import SolverTrainingMetrics\nfrom poker.solver.training_objective import SolverTrainingObjective\n\n\ndef test_solver_training_contract_modules_are_available():\n\tassert SolverTrainingBatch is not None\n\tassert SolverTrainingExample is not None\n\tassert SolverTrainingInput is not None\n\tassert SolverTrainingMetrics is not None\n\tassert SolverTrainingObjective is not None\n",
+      "new": "from poker.solver import (\n\tSolverTrainer,\n\tSolverTrainingBatch,\n\tSolverTrainingExample,\n\tSolverTrainingInput,\n\tSolverTrainingMetrics,\n\tSolverTrainingObjective,\n\tTrainingCheckpoint,\n\tTrainingRunResult,\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n\trestore_checkpoint,\n\tserialize_checkpoint,\n)\n\n\ndef test_solver_training_contract_modules_are_available():\n\tassert SolverTrainingBatch is not None\n\tassert SolverTrainingExample is not None\n\tassert SolverTrainingInput is not None\n\tassert SolverTrainingMetrics is not None\n\tassert SolverTrainingObjective is not None\n\tassert SolverTrainer is not None\n\tassert TrainingCheckpoint is not None\n\tassert TrainingRunResult is not None\n\tassert create_checkpoint is not None\n\tassert restore_checkpoint is not None\n\tassert serialize_checkpoint is not None\n\tassert deserialize_checkpoint is not None\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "A framework-neutral `SolverTrainer` provides the first explicit training-loop boundary, and `TrainingCheckpoint` represents resumable trainer state without importing a concrete ML framework. Training checkpoints now have deterministic JSON serialization/deserialization with strict top-level field validation. The next solver step should connect `SolverTrainer` progress to `TrainingCheckpoint` creation/restoration so resumed runs preserve step semantics before any model/optimizer state is introduced. This remains solver-local, so focused validation is sufficient until a concrete trainer backend or cross-subsystem integration is added.",
+      "new": "A framework-neutral `SolverTrainer` provides the first explicit training-loop boundary, and `TrainingCheckpoint` represents resumable trainer state without importing a concrete ML framework. Training checkpoints have deterministic JSON serialization/deserialization with strict top-level field validation. `SolverTrainer` progress is now connected to checkpoint creation/restoration through the same explicit training-state contract, including step-consistency validation on resume. The trainer/checkpoint contracts and serialization helpers are exported through the public `poker.solver` surface so future training consumers do not depend on internal module paths. The next solver step should define the minimal framework-neutral trainable-backend contract that consumes validated solver batches and can later own model/optimizer state, without selecting Torch yet or wiring policy execution into Arena. This remains solver-local, so focused validation is sufficient until a concrete backend or cross-subsystem integration is added."
+    },
+    {
+      "type": "replace",
+      "file": "docs/DEV_RULES.md",
+      "old": "Typical supported operations:\n- create_file\n- replace\n- delete_file\n",
+      "new": "Typical supported operations:\n- create_file\n- replace\n- delete_file\n- modify_file (container for ordered nested replace operations)\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_api_surface.py tests/poker/test_solver_training_trainer_checkpoint.py tests/poker/test_solver_training_checkpoint_serialization.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}

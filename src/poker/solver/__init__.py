@@ -73,8 +73,16 @@ from poker.solver.training_input import (
 	SolverTrainingInput,
 	SolverTrainingObjectiveContract,
 )
+from poker.solver.training_checkpoint import (
+	TrainingCheckpoint,
+	create_checkpoint,
+	deserialize_checkpoint,
+	restore_checkpoint,
+	serialize_checkpoint,
+)
 from poker.solver.training_metrics import SolverTrainingMetrics
 from poker.solver.training_objective import SolverTrainingObjective
+from poker.solver.training_trainer import SolverTrainer, TrainingRunResult
 from poker.solver.training_validation import evaluate_solver_predictions
 from poker.solver.teacher import (
 	TEACHER_RECORD_FORMAT_VERSION,
@@ -121,6 +129,9 @@ __all__ = [
 	"SolverTrainingMetrics",
 	"SolverTrainingObjective",
 	"SolverTrainingObjectiveContract",
+	"SolverTrainer",
+	"TrainingCheckpoint",
+	"TrainingRunResult",
 	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
 	"TwoPlayerSolverGame",
@@ -135,6 +146,8 @@ __all__ = [
 	"build_solver_training_batch",
 	"build_strategy_export",
 	"build_teacher_record_export",
+	"create_checkpoint",
+	"deserialize_checkpoint",
 	"bridge_record_to_supervised_sample",
 	"chance_space_metadata",
 	"evaluate_restricted_policy",
@@ -142,6 +155,8 @@ __all__ = [
 	"load_learning_bridge_artifact",
 	"load_strategy_export",
 	"load_teacher_record_export",
+	"restore_checkpoint",
+	"serialize_checkpoint",
 	"serialize_information_set",
 	"solver_action_category",
 	"teacher_record_to_learning_target",

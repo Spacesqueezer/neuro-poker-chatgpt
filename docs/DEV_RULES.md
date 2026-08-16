@@ -49,6 +49,7 @@ Typical supported operations:
 - create_file
 - replace
 - delete_file
+- modify_file (container for ordered nested replace operations)
 
 Every patch must:
 - target existing project state;
