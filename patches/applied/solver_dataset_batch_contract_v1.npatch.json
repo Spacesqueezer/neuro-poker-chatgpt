@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_dataset_batch_contract_v1",
+  "goal": "Add a minimal batching contract over solver supervised dataset records without introducing model architecture, optimization, or Arena integration.",
+  "allowed_files": [
+    "src/poker/learning/solver_dataset_batch.py",
+    "tests/poker/test_solver_dataset_batch.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/learning/solver_dataset_batch.py",
+      "content": "from dataclasses import dataclass\n\nfrom poker.learning.solver_dataset_loader import SolverDatasetRecord\n\n\n@dataclass(frozen=True)\nclass SolverDatasetBatch:\n\tobservations: list[list[float]]\n\taction_probabilities: list[list[float]]\n\n\nclass SolverDatasetBatcher:\n\tdef create_batches(self, records: list[SolverDatasetRecord], batch_size: int):\n\t\tif batch_size <= 0:\n\t\t\traise ValueError(\"batch_size must be positive\")\n\n\t\tbatches = []\n\t\tfor index in range(0, len(records), batch_size):\n\t\t\tchunk = records[index:index + batch_size]\n\t\t\tbatches.append(\n\t\t\t\tSolverDatasetBatch(\n\t\t\t\t\tobservations=[record.observation for record in chunk],\n\t\t\t\t\taction_probabilities=[record.action_probabilities for record in chunk],\n\t\t\t\t)\n\t\t\t)\n\t\treturn batches\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_dataset_batch.py",
+      "content": "from poker.learning.solver_dataset_batch import SolverDatasetBatcher\nfrom poker.learning.solver_dataset_loader import SolverDatasetRecord\n\n\ndef test_solver_dataset_batcher_groups_records():\n\trecords = [\n\t\tSolverDatasetRecord([1.0], [1.0]),\n\t\tSolverDatasetRecord([2.0], [1.0]),\n\t\tSolverDatasetRecord([3.0], [1.0]),\n\t]\n\n\tbatches = SolverDatasetBatcher().create_batches(records, 2)\n\n\tassert len(batches) == 2\n\tassert batches[0].observations == [[1.0], [2.0]]\n\tassert batches[1].observations == [[3.0]]\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_dataset_loader.py tests/poker/test_solver_dataset_batch.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
