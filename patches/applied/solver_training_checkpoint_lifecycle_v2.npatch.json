@@ -1,0 +1,43 @@
+{
+  "patch_id": "solver_training_checkpoint_lifecycle_v2",
+  "goal": "Connect TrainingCheckpointStore to SolverTrainer through explicit save and resume entry points without changing the existing training path.",
+  "allowed_files": [
+    "src/poker/solver/training_trainer.py",
+    "tests/poker/test_solver_training_checkpoint_lifecycle.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "class SolverTrainer:\n\tdef __init__(self, objective, backend=None):\n\t\tself.objective = objective\n\t\tself.backend = backend\n\t\tself.current_step = 0\n",
+      "new": "class SolverTrainer:\n\tdef __init__(self, objective, backend=None, checkpoint_store=None):\n\t\tself.objective = objective\n\t\tself.backend = backend\n\t\tself.checkpoint_store = checkpoint_store\n\t\tself.current_step = 0\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\tdef export_checkpoint(self):\n\t\treturn self.create_checkpoint()\n\n\tdef import_checkpoint(self, checkpoint):\n\t\treturn self.restore_checkpoint(checkpoint)\n",
+      "new": "\tdef save_checkpoint(self):\n\t\tif self.checkpoint_store is None:\n\t\t\traise ValueError(\"checkpoint store is not configured\")\n\n\t\tcheckpoint = self.create_checkpoint()\n\t\tself.checkpoint_store.save(checkpoint)\n\t\treturn checkpoint\n\n\tdef load_checkpoint(self):\n\t\tif self.checkpoint_store is None:\n\t\t\traise ValueError(\"checkpoint store is not configured\")\n\n\t\tcheckpoint = self.checkpoint_store.load()\n\t\tself.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n\n\tdef export_checkpoint(self):\n\t\treturn self.create_checkpoint()\n\n\tdef import_checkpoint(self, checkpoint):\n\t\treturn self.restore_checkpoint(checkpoint)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_lifecycle.py",
+      "content": "import pytest\n\nfrom poker.solver import SolverTrainer, TrainingCheckpointStore\n\n\ndef test_trainer_checkpoint_store_save_and_resume(tmp_path):\n\tstore = TrainingCheckpointStore(tmp_path / \"checkpoint.json\")\n\ttrainer = SolverTrainer(lambda samples: None, checkpoint_store=store)\n\ttrainer.train([], steps=3)\n\n\tsaved = trainer.save_checkpoint()\n\ttrainer.current_step = 0\n\tloaded = trainer.load_checkpoint()\n\n\tassert saved == loaded\n\tassert trainer.current_step == 3\n\n\ndef test_trainer_checkpoint_store_must_be_configured():\n\ttrainer = SolverTrainer(lambda samples: None)\n\n\twith pytest.raises(ValueError, match=\"checkpoint store is not configured\"):\n\t\ttrainer.save_checkpoint()\n\n\twith pytest.raises(ValueError, match=\"checkpoint store is not configured\"):\n\t\ttrainer.load_checkpoint()\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "A trainer resume flow restores serialized checkpoint state through the public checkpoint boundary. `TrainingCheckpointStore` now persists and reloads checkpoints through the existing deterministic checkpoint serializer instead of defining a second storage format. The next solver step should connect checkpoint storage lifecycle to trainer orchestration, including explicit save/resume entry points, without wiring policy execution into Arena yet.",
+      "new": "A trainer resume flow restores serialized checkpoint state through the public checkpoint boundary. `TrainingCheckpointStore` persists and reloads checkpoints through the existing deterministic checkpoint serializer instead of defining a second storage format. `SolverTrainer` now accepts an optional checkpoint store and exposes explicit `save_checkpoint()` / `load_checkpoint()` entry points that preserve the existing in-memory checkpoint API while providing a persistent resume lifecycle. The next solver step should introduce a higher-level training-run contract for periodic checkpointing and resumable execution, without wiring policy execution into Arena yet."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_storage.py tests/poker/test_solver_training_trainer_checkpoint.py tests/poker/test_solver_training_trainer_resume.py tests/poker/test_solver_training_checkpoint_lifecycle.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}

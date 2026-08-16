@@ -13,9 +13,10 @@ class TrainingRunResult:
 
 
 class SolverTrainer:
-	def __init__(self, objective, backend=None):
+	def __init__(self, objective, backend=None, checkpoint_store=None):
 		self.objective = objective
 		self.backend = backend
+		self.checkpoint_store = checkpoint_store
 		self.current_step = 0
 
 	def train(self, samples, steps=1):
@@ -53,6 +54,22 @@ class SolverTrainer:
 			raise ValueError("checkpoint state mismatch")
 
 		return self.current_step
+
+	def save_checkpoint(self):
+		if self.checkpoint_store is None:
+			raise ValueError("checkpoint store is not configured")
+
+		checkpoint = self.create_checkpoint()
+		self.checkpoint_store.save(checkpoint)
+		return checkpoint
+
+	def load_checkpoint(self):
+		if self.checkpoint_store is None:
+			raise ValueError("checkpoint store is not configured")
+
+		checkpoint = self.checkpoint_store.load()
+		self.restore_checkpoint(checkpoint)
+		return checkpoint
 
 	def export_checkpoint(self):
 		return self.create_checkpoint()
