@@ -1,0 +1,24 @@
+{
+  "patch_id": "solver_training_trainer_state_boundary_v1",
+  "goal": "Introduce a minimal trainer state persistence contract boundary for future model and optimizer restoration.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/trainer_state.py",
+      "content": "from dataclasses import dataclass\nfrom typing import Any\n\n\n@dataclass(frozen=True)\nclass TrainerState:\n\tglobal_step: int\n\tpayload: dict[str, Any]\n\n\tdef serialize(self) -> dict[str, Any]:\n\t\treturn {\n\t\t\t\"global_step\": self.global_step,\n\t\t\t\"payload\": dict(self.payload),\n\t\t}\n\n\t@classmethod\n\tdef deserialize(cls, data: dict[str, Any]) -> \"TrainerState\":\n\t\treturn cls(\n\t\t\tglobal_step=int(data[\"global_step\"]),\n\t\t\tpayload=dict(data[\"payload\"]),\n\t\t)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_state.py",
+      "content": "from poker.solver.trainer_state import TrainerState\n\n\ndef test_trainer_state_round_trip():\n\tstate = TrainerState(\n\t\tglobal_step=42,\n\t\tpayload={\"model\": \"future\"},\n\t)\n\n\trestored = TrainerState.deserialize(state.serialize())\n\n\tassert restored == state\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_state.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
