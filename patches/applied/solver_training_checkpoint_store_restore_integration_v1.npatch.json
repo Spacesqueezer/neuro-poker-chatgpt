@@ -1,0 +1,16 @@
+{
+  "patch_id": "solver_training_checkpoint_store_restore_integration_v1",
+  "goal": "Add integration contract for restoring TrainerState through checkpoint restore flow.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_store_restore_integration.py",
+      "content": "from poker.solver.trainer_state import TrainerState\nfrom poker.solver.training_checkpoint import TrainingCheckpoint\n\n\ndef test_checkpoint_restore_contract_exposes_trainer_state():\n\tstate = TrainerState(\n\t\tglobal_step=25,\n\t\tpayload={\"backend_state\": {\"model\": {\"weight\": 7}}},\n\t)\n\n\tcheckpoint = TrainingCheckpoint(\n\t\tstep=25,\n\t\tmetadata={\"trainer_state\": state.serialize()},\n\t)\n\n\trestored = TrainerState.deserialize(\n\t\tcheckpoint.metadata[\"trainer_state\"],\n\t)\n\n\tassert restored.global_step == 25\n\tassert restored.payload[\"backend_state\"][\"model\"][\"weight\"] == 7\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_store_restore_integration.py -q"
+    ]
+  }
+}
