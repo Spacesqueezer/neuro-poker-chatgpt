@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_dataset_training_batch_pipeline_bridge_v1",
+  "goal": "Add a small public bridge from streamed solver dataset batches to a training pipeline boundary without modifying existing dataset contracts.",
+  "allowed_files": [
+    "src/poker/learning/solver_dataset_training_pipeline.py",
+    "tests/poker/test_solver_dataset_training_pipeline.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/learning/solver_dataset_training_pipeline.py",
+      "content": "from collections.abc import Iterable, Iterator\n\nfrom poker.learning.solver_dataset_batch import SolverDatasetBatch\n\n\nclass SolverDatasetTrainingPipeline:\n\tdef __init__(self, batch_iterator, trainer):\n\t\tself.batch_iterator = batch_iterator\n\t\tself.trainer = trainer\n\n\tdef run(self, records: Iterable) -> Iterator:\n\t\tfor batch in self.batch_iterator.iterate(records):\n\t\t\tyield self.trainer.train_batch(batch)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_dataset_training_pipeline.py",
+      "content": "from poker.learning.solver_dataset_training_pipeline import SolverDatasetTrainingPipeline\n\n\nclass FakeIterator:\n\tdef iterate(self, records):\n\t\tyield from records\n\n\nclass FakeTrainer:\n\tdef train_batch(self, batch):\n\t\treturn batch\n\n\ndef test_solver_dataset_training_pipeline_forwards_batches():\n\tpipeline = SolverDatasetTrainingPipeline(FakeIterator(), FakeTrainer())\n\n\tresult = list(pipeline.run([1, 2, 3]))\n\n\tassert result == [1, 2, 3]\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_dataset_training_pipeline.py tests/poker/test_solver_dataset_batch_iterator.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
