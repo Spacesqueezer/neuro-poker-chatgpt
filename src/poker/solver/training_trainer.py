@@ -56,3 +56,14 @@ class SolverTrainer:
 			"current_step": self.current_step,
 			"trainer": "SolverTrainer",
 		}
+
+	def restore_training_state(self, state):
+		if not isinstance(state, dict):
+			raise TypeError("invalid training state")
+
+		step = state.get("current_step")
+		if not isinstance(step, int) or step < 0:
+			raise ValueError("invalid current_step")
+
+		self.current_step = step
+		return self.current_step

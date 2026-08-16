@@ -1,0 +1,24 @@
+{
+  "patch_id": "solver_training_checkpoint_state_restore_contract_v1",
+  "goal": "Expose a stable state restore boundary on SolverTrainer without coupling callers to checkpoint internals.",
+  "allowed_files": [
+    "src/poker/solver/training_trainer.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\tdef get_training_state(self):\n\t\treturn {\n\t\t\t\"current_step\": self.current_step,\n\t\t\t\"trainer\": \"SolverTrainer\",\n\t\t}\n",
+      "new": "\tdef get_training_state(self):\n\t\treturn {\n\t\t\t\"current_step\": self.current_step,\n\t\t\t\"trainer\": \"SolverTrainer\",\n\t\t}\n\n\tdef restore_training_state(self, state):\n\t\tif not isinstance(state, dict):\n\t\t\traise TypeError(\"invalid training state\")\n\n\t\tstep = state.get(\"current_step\")\n\t\tif not isinstance(step, int) or step < 0:\n\t\t\traise ValueError(\"invalid current_step\")\n\n\t\tself.current_step = step\n\t\treturn self.current_step\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_checkpoint.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
