@@ -21,3 +21,8 @@ class TrainingCheckpointStore:
 	def load(self):
 		payload = self.path.read_text(encoding="utf-8")
 		return deserialize_checkpoint(payload)
+
+	def restore_into(self, trainer):
+		checkpoint = self.load()
+		trainer.restore_checkpoint(checkpoint)
+		return checkpoint
