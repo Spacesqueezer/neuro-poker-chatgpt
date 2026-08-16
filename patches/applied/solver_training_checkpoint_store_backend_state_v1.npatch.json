@@ -1,0 +1,19 @@
+{
+  "patch_id": "solver_training_checkpoint_store_backend_state_v1",
+  "goal": "Persist TrainerBackendState through TrainingCheckpointStore round-trip.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_store_backend_state.py",
+      "content": "from poker.solver.trainer_backend_state import TrainerBackendState\nfrom poker.solver.training_checkpoint import TrainingCheckpoint\nfrom poker.solver.training_checkpoint_store import TrainingCheckpointStore\n\n\ndef test_checkpoint_store_preserves_backend_state_metadata(tmp_path):\n\tstore = TrainingCheckpointStore(tmp_path / \"checkpoint.json\")\n\n\tstate = TrainerBackendState(\n\t\tglobal_step=50,\n\t\tmodel_state={\"weight\": 1},\n\t)\n\n\tcheckpoint = TrainingCheckpoint(\n\t\tstep=50,\n\t\tmetadata={\"backend_state\": state.to_payload()},\n\t)\n\n\tstore.save(checkpoint)\n\n\trestored = store.load()\n\n\trestored_state = TrainerBackendState.from_payload(\n\t\trestored.metadata[\"backend_state\"]\n\t)\n\n\tassert restored_state.global_step == 50\n\tassert restored_state.model_state[\"weight\"] == 1\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_store_backend_state.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
