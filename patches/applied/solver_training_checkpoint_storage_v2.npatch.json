@@ -1,0 +1,49 @@
+{
+  "patch_id": "solver_training_checkpoint_storage_v2",
+  "goal": "Add persistent file storage for TrainingCheckpoint using the existing checkpoint serialization boundary.",
+  "allowed_files": [
+    "src/poker/solver/training_checkpoint_store.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_training_checkpoint_storage.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/solver/training_checkpoint_store.py",
+      "content": "from pathlib import Path\n\nfrom poker.solver.training_checkpoint import (\n\tdeserialize_checkpoint,\n\tserialize_checkpoint,\n)\n\n\nclass TrainingCheckpointStore:\n\tdef __init__(self, path):\n\t\tself.path = Path(path)\n\n\tdef save(self, checkpoint):\n\t\tself.path.parent.mkdir(parents=True, exist_ok=True)\n\t\tself.path.write_text(\n\t\t\tserialize_checkpoint(checkpoint),\n\t\t\tencoding=\"utf-8\",\n\t\t)\n\t\treturn self.path\n\n\tdef load(self):\n\t\tpayload = self.path.read_text(encoding=\"utf-8\")\n\t\treturn deserialize_checkpoint(payload)\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "from poker.solver.training_checkpoint import (\n\tTrainingCheckpoint,\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n\trestore_checkpoint,\n\tserialize_checkpoint,\n)\n",
+      "new": "from poker.solver.training_checkpoint import (\n\tTrainingCheckpoint,\n\tcreate_checkpoint,\n\tdeserialize_checkpoint,\n\trestore_checkpoint,\n\tserialize_checkpoint,\n)\nfrom poker.solver.training_checkpoint_store import TrainingCheckpointStore\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/__init__.py",
+      "old": "\t\"TrainingCheckpoint\",\n\t\"TrainingRunResult\",\n",
+      "new": "\t\"TrainingCheckpoint\",\n\t\"TrainingCheckpointStore\",\n\t\"TrainingRunResult\",\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_storage.py",
+      "content": "from poker.solver import (\n\tTrainingCheckpointStore,\n\tcreate_checkpoint,\n)\n\n\ndef test_checkpoint_store_round_trip(tmp_path):\n\tcheckpoint = create_checkpoint(\n\t\tstep=7,\n\t\tmetadata={\"trainer\": \"SolverTrainer\"},\n\t)\n\tstore = TrainingCheckpointStore(tmp_path / \"nested\" / \"checkpoint.json\")\n\n\tsaved_path = store.save(checkpoint)\n\trestored = store.load()\n\n\tassert saved_path == store.path\n\tassert restored == checkpoint\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "A trainer resume flow now restores serialized checkpoint state through the public checkpoint boundary. The next solver step should connect persistent checkpoint storage, without wiring policy execution into Arena yet.",
+      "new": "A trainer resume flow restores serialized checkpoint state through the public checkpoint boundary. `TrainingCheckpointStore` now persists and reloads checkpoints through the existing deterministic checkpoint serializer instead of defining a second storage format. The next solver step should connect checkpoint storage lifecycle to trainer orchestration, including explicit save/resume entry points, without wiring policy execution into Arena yet."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_serialization.py tests/poker/test_solver_training_checkpoint_storage.py tests/poker/test_solver_training_trainer_resume.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}

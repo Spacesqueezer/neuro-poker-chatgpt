@@ -85,6 +85,7 @@ from poker.solver.training_checkpoint import (
 	restore_checkpoint,
 	serialize_checkpoint,
 )
+from poker.solver.training_checkpoint_store import TrainingCheckpointStore
 from poker.solver.training_metrics import SolverTrainingMetrics
 from poker.solver.training_objective import SolverTrainingObjective
 from poker.solver.training_trainer import SolverTrainer, TrainingRunResult
@@ -139,6 +140,7 @@ __all__ = [
 	"SolverTrainingObjectiveContract",
 	"SolverTrainer",
 	"TrainingCheckpoint",
+	"TrainingCheckpointStore",
 	"TrainingRunResult",
 	"TEACHER_RECORD_FORMAT_VERSION",
 	"StrategyLookup",
