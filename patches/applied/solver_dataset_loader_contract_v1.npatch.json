@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_dataset_loader_contract_v1",
+  "goal": "Introduce the minimal supervised dataset loading contract over solver-generated JSONL without adding model code or Arena integration.",
+  "allowed_files": [
+    "src/poker/learning/solver_dataset_loader.py",
+    "tests/poker/test_solver_dataset_loader.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/learning/solver_dataset_loader.py",
+      "content": "from dataclasses import dataclass\nimport json\nfrom pathlib import Path\n\n\n@dataclass(frozen=True)\nclass SolverDatasetRecord:\n\tobservation: list[float]\n\taction_probabilities: list[float]\n\n\nclass SolverDatasetLoader:\n\tdef load(self, path: str | Path):\n\t\trecords = []\n\t\twith Path(path).open(\"r\", encoding=\"utf-8\") as file:\n\t\t\tfor line in file:\n\t\t\t\tif not line.strip():\n\t\t\t\t\tcontinue\n\t\t\t\tdata = json.loads(line)\n\t\t\t\trecords.append(\n\t\t\t\t\tSolverDatasetRecord(\n\t\t\t\t\t\tobservation=data[\"observation\"],\n\t\t\t\t\t\taction_probabilities=data[\"action_probabilities\"],\n\t\t\t\t\t)\n\t\t\t\t)\n\t\treturn records\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_dataset_loader.py",
+      "content": "import json\n\nfrom poker.learning.solver_dataset_loader import SolverDatasetLoader\n\n\ndef test_solver_dataset_loader_reads_jsonl(tmp_path):\n\tpath = tmp_path / \"dataset.jsonl\"\n\tpath.write_text(\n\t\tjson.dumps({\"observation\": [1.0], \"action_probabilities\": [0.5, 0.5]}) + \"\\n\",\n\t\tencoding=\"utf-8\",\n\t)\n\n\trecords = SolverDatasetLoader().load(path)\n\n\tassert len(records) == 1\n\tassert records[0].observation == [1.0]\n\tassert records[0].action_probabilities == [0.5, 0.5]\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_dataset_loader.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
