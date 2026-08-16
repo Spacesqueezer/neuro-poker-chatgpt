@@ -1,0 +1,25 @@
+{
+  "patch_id": "solver_training_run_checkpoint_artifact_bridge_v1",
+  "goal": "Connect TrainingRunCoordinator with checkpoint storage boundaries without coupling it to storage implementation.",
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_run.py",
+      "changes": [
+        {
+          "find": "class TrainingRunCoordinator:",
+          "replace": "class TrainingRunCoordinator:"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_restore_api.py tests/poker/test_solver_training_checkpoint_restore_integration.py tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "notes": [
+    "Keep checkpoint storage access behind existing public contracts.",
+    "Do not import concrete filesystem/database implementations into solver training orchestration."
+  ]
+}
