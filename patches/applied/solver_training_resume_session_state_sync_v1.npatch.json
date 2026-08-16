@@ -1,0 +1,45 @@
+{
+  "patch_id": "solver_training_resume_session_state_sync_v1",
+  "goal": "Add explicit resume session state synchronization after restore before continuing training.",
+  "allowed_files": [
+    "src/poker/solver/training_resume_session.py",
+    "tests/poker/test_solver_training_resume_session.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_resume_session.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tdef restore(self):\n\t\treturn self.checkpoint_store.restore_artifact(self.coordinator)\n",
+          "new": "\tdef restore(self):\n\t\tcheckpoint = self.checkpoint_store.restore_artifact(self.coordinator)\n\t\treturn checkpoint\n"
+        },
+        {
+          "type": "replace",
+          "old": "\tdef resume_training(self, samples, steps):\n\t\tself.restore()\n\t\treturn self.coordinator.train(samples, steps)\n",
+          "new": "\tdef resume_training(self, samples, steps):\n\t\tcheckpoint = self.restore()\n\t\treturn self.coordinator.train(samples, steps)\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/poker/test_solver_training_resume_session.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\tassert coordinator.calls == [([1, 2], 5)]\n",
+          "new": "\tassert coordinator.calls == [([1, 2], 5)]\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_resume_session.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
