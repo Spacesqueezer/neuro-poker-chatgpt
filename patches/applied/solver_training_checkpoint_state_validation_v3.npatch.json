@@ -1,0 +1,24 @@
+{
+  "patch_id": "solver_training_checkpoint_state_validation_v3",
+  "goal": "Add training state round-trip coverage using the existing checkpoint test contract.",
+  "allowed_files": [
+    "tests/poker/test_solver_training_trainer_checkpoint.py"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "tests/poker/test_solver_training_trainer_checkpoint.py",
+      "old": "from poker.solver.training_trainer import SolverTrainer\n\n\ndef test_solver_trainer_checkpoint_round_trip():\n\ttrainer = SolverTrainer(lambda samples: None)\n\n\ttrainer.train([], steps=3)\n\tcheckpoint = trainer.create_checkpoint()\n\n\trestored = SolverTrainer(lambda samples: None)\n\trestored.restore_checkpoint(checkpoint)\n\n\tassert checkpoint.step == 3\n\tassert restored.current_step == 3\n",
+      "new": "from poker.solver.training_trainer import SolverTrainer\n\n\ndef test_solver_trainer_checkpoint_round_trip():\n\ttrainer = SolverTrainer(lambda samples: None)\n\n\ttrainer.train([], steps=3)\n\tcheckpoint = trainer.create_checkpoint()\n\n\trestored = SolverTrainer(lambda samples: None)\n\trestored.restore_checkpoint(checkpoint)\n\n\tassert checkpoint.step == 3\n\tassert restored.current_step == 3\n\n\ndef test_solver_trainer_state_round_trip():\n\ttrainer = SolverTrainer(lambda samples: None)\n\n\ttrainer.train([], steps=4)\n\tstate = trainer.get_training_state()\n\n\trestored = SolverTrainer(lambda samples: None)\n\trestored.restore_training_state(state)\n\n\tassert state == {\n\t\t\"current_step\": 4,\n\t\t\"trainer\": \"SolverTrainer\",\n\t}\n\tassert restored.current_step == 4\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_trainer_checkpoint.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
