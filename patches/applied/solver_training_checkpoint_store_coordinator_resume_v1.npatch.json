@@ -1,0 +1,27 @@
+{
+  "patch_id": "solver_training_checkpoint_store_coordinator_resume_v1",
+  "goal": "Connect TrainingCheckpointStore with TrainingRunCoordinator resume flow without moving storage responsibilities.",
+  "allowed_files": [
+    "src/poker/solver/training_checkpoint_store.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_checkpoint_store.py",
+      "changes": [
+        {
+          "find": "\tdef restore_into(self, trainer):\n\t\tcheckpoint = self.load()\n\t\ttrainer.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n",
+          "replace": "\tdef restore_into(self, trainer):\n\t\tcheckpoint = self.load()\n\t\ttrainer.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n\n\tdef restore_into_coordinator(self, coordinator):\n\t\tcheckpoint = self.load()\n\t\tcoordinator.restore_checkpoint(checkpoint)\n\t\treturn checkpoint\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_restore_api.py tests/poker/test_solver_training_checkpoint_restore_integration.py tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "commit_message": "solver_training_checkpoint_store_coordinator_resume_v1"
+  }
+}
