@@ -1,0 +1,27 @@
+{
+  "patch_id": "solver_training_run_restore_metadata_state_v1",
+  "goal": "Restore TrainingRunState from checkpoint metadata during TrainingRunCoordinator.restore_checkpoint.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_run.py",
+      "changes": [
+        {
+          "find": "\t\tresult = self.trainer.restore_checkpoint(checkpoint)\n\n\t\tif self.state is not None:\n\t\t\tself.state = TrainingRunState(\n\t\t\t\trun_id=self.state.run_id,\n\t\t\t\tsteps_completed=checkpoint.step,\n\t\t\t\tcreated_at=self.state.created_at,\n\t\t\t)\n\n\t\treturn result\n",
+          "replace": "\t\tresult = self.trainer.restore_checkpoint(checkpoint)\n\n\t\trestored_state = extract_training_run_state(checkpoint)\n\t\tif restored_state is not None:\n\t\t\tself.state = restored_state\n\t\telif self.state is not None:\n\t\t\tself.state = TrainingRunState(\n\t\t\t\trun_id=self.state.run_id,\n\t\t\t\tsteps_completed=checkpoint.step,\n\t\t\t\tcreated_at=self.state.created_at,\n\t\t\t)\n\n\t\treturn result\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_restore_api.py tests/poker/test_solver_training_checkpoint_restore_integration.py tests/poker/test_solver_training_run_restore_integration.py -q"
+    ]
+  },
+  "git": {
+    "commit_message": "solver_training_run_restore_metadata_state_v1"
+  }
+}
