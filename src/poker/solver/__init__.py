@@ -64,6 +64,10 @@ from poker.solver.supervised_dataset import (
 	bridge_record_to_supervised_sample,
 	build_solver_supervised_samples,
 )
+from poker.solver.training_backend import (
+	NullSolverTrainingBackend,
+	SolverTrainingBackend,
+)
 from poker.solver.training_batch import (
 	SolverTrainingBatch,
 	build_solver_training_batch,
@@ -123,6 +127,8 @@ __all__ = [
 	"SolverSupervisedDatasetAnalyzer",
 	"SolverSupervisedDatasetWriter",
 	"SolverSupervisedSample",
+	"NullSolverTrainingBackend",
+	"SolverTrainingBackend",
 	"SolverTrainingBatch",
 	"SolverTrainingExample",
 	"SolverTrainingInput",
