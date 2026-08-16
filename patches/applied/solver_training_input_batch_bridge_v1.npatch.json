@@ -1,0 +1,32 @@
+{
+  "patch_id": "solver_training_input_batch_bridge_v1",
+  "goal": "Connect SolverTrainingInput examples to SolverTrainingBatch through a public framework-neutral bridge and validate the input to batch boundary.",
+  "allowed_files": [
+    "src/poker/solver/training_input.py",
+    "tests/poker/test_solver_training_input.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_input.py",
+      "old": "\tdef observation_sizes(self):\n\t\treturn {len(example.observation) for example in self.examples}\n",
+      "new": "\tdef observation_sizes(self):\n\t\treturn {len(example.observation) for example in self.examples}\n\n\tdef to_batch(self):\n\t\tfrom poker.solver.training_batch import build_solver_training_batch\n\n\t\treturn build_solver_training_batch(self.examples)\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "`SolverTrainingBatch` now carries legal-action masks as first-class data, validates the canonical six-action binary mask, rejects probability mass on illegal actions, and preserves masks through `build_solver_training_batch()`. The next solver step should connect `SolverTrainingInput` -> `build_solver_training_batch()` -> `evaluate_solver_predictions()` end-to-end and remove duplicated target-validation knowledge between dataset, input, batch and validation layers.",
+      "new": "`SolverTrainingBatch` now carries legal-action masks as first-class data, validates the canonical six-action binary mask, rejects probability mass on illegal actions, and preserves masks through `build_solver_training_batch()`. `SolverTrainingInput` now exposes the input -> batch bridge through `to_batch()`, allowing loaded solver examples to enter the batch validation boundary without consumers manually rebuilding tuples. The next solver step should connect `SolverTrainingInput.to_batch()` -> `evaluate_solver_predictions()` end-to-end and remove duplicated target-validation knowledge between dataset, input, batch and validation layers."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_input.py tests/poker/test_solver_training_batch.py tests/poker/test_solver_training_validation.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

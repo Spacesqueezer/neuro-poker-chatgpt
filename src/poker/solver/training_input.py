@@ -30,6 +30,11 @@ class SolverTrainingInput:
 	def observation_sizes(self):
 		return {len(example.observation) for example in self.examples}
 
+	def to_batch(self):
+		from poker.solver.training_batch import build_solver_training_batch
+
+		return build_solver_training_batch(self.examples)
+
 	def __init__(self, examples):
 		self.examples = tuple(examples)
 		if not self.examples:
