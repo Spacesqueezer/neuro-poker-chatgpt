@@ -1,0 +1,19 @@
+{
+  "patch_id": "solver_training_checkpoint_backend_state_binding_v1",
+  "goal": "Bind TrainerBackendState into checkpoint metadata with a small validated contract test.",
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_checkpoint_backend_state_binding.py",
+      "content": "from poker.solver.trainer_backend_state import TrainerBackendState\nfrom poker.solver.training_checkpoint import TrainingCheckpoint\n\n\ndef test_checkpoint_can_carry_backend_state_payload():\n\tstate = TrainerBackendState(\n\t\tglobal_step=25,\n\t\tmodel_state={\"layer\": \"weights\"},\n\t)\n\n\tcheckpoint = TrainingCheckpoint(\n\t\tstep=25,\n\t\tmetadata={\"backend_state\": state.to_payload()},\n\t)\n\n\trestored = TrainerBackendState.from_payload(\n\t\tcheckpoint.metadata[\"backend_state\"]\n\t)\n\n\tassert restored.global_step == 25\n\tassert restored.model_state[\"layer\"] == \"weights\"\n"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_backend_state_binding.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
