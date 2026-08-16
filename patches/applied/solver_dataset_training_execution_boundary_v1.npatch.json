@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_dataset_training_execution_boundary_v1",
+  "goal": "Add an execution boundary on top of the dataset training pipeline so training runs can be invoked through a small learning subsystem contract without coupling dataset generation and trainer implementations.",
+  "allowed_files": [
+    "src/poker/learning/solver_dataset_training_executor.py",
+    "tests/poker/test_solver_dataset_training_executor.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/learning/solver_dataset_training_executor.py",
+      "content": "class SolverDatasetTrainingExecutor:\n\tdef __init__(self, pipeline):\n\t\tself.pipeline = pipeline\n\n\tdef execute(self, records):\n\t\tresults = []\n\t\tfor result in self.pipeline.run(records):\n\t\t\tresults.append(result)\n\t\treturn results\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_dataset_training_executor.py",
+      "content": "from poker.learning.solver_dataset_training_executor import SolverDatasetTrainingExecutor\n\n\nclass FakePipeline:\n\tdef run(self, records):\n\t\tyield from records\n\n\ndef test_solver_dataset_training_executor_collects_results():\n\texecutor = SolverDatasetTrainingExecutor(FakePipeline())\n\n\tassert executor.execute([1, 2]) == [1, 2]\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_dataset_training_executor.py tests/poker/test_solver_dataset_training_pipeline.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
