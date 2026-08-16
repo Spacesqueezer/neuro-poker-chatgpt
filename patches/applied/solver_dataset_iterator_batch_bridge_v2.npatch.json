@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_dataset_iterator_batch_bridge_v2",
+  "goal": "Add a batch stream helper over solver dataset iterator records without modifying existing contracts.",
+  "allowed_files": [
+    "src/poker/learning/solver_dataset_batch_iterator.py",
+    "tests/poker/test_solver_dataset_batch_iterator.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/learning/solver_dataset_batch_iterator.py",
+      "content": "from collections.abc import Iterable, Iterator\n\nfrom poker.learning.solver_dataset_batch import SolverDatasetBatch, SolverDatasetBatcher\nfrom poker.learning.solver_dataset_loader import SolverDatasetRecord\n\n\nclass SolverDatasetBatchIterator:\n\tdef __init__(self, batch_size: int):\n\t\tself.batcher = SolverDatasetBatcher()\n\t\tself.batch_size = batch_size\n\n\tdef iterate(self, records: Iterable[SolverDatasetRecord]) -> Iterator[SolverDatasetBatch]:\n\t\tbuffer = []\n\t\tfor record in records:\n\t\t\tbuffer.append(record)\n\t\t\tif len(buffer) == self.batch_size:\n\t\t\t\tyield from self.batcher.create_batches(buffer, self.batch_size)\n\t\t\t\tbuffer = []\n\n\t\tif buffer:\n\t\t\tyield from self.batcher.create_batches(buffer, self.batch_size)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_dataset_batch_iterator.py",
+      "content": "from poker.learning.solver_dataset_batch_iterator import SolverDatasetBatchIterator\nfrom poker.learning.solver_dataset_loader import SolverDatasetRecord\n\n\ndef test_solver_dataset_batch_iterator_creates_batches_from_stream():\n\trecords = [\n\t\tSolverDatasetRecord([1.0], [1.0]),\n\t\tSolverDatasetRecord([2.0], [1.0]),\n\t\tSolverDatasetRecord([3.0], [1.0]),\n\t]\n\n\tbatches = list(SolverDatasetBatchIterator(2).iterate(iter(records)))\n\n\tassert len(batches) == 2\n\tassert batches[0].observations == [[1.0], [2.0]]\n\tassert batches[1].observations == [[3.0]]\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_dataset_loader.py tests/poker/test_solver_dataset_batch.py tests/poker/test_solver_dataset_iterator.py tests/poker/test_solver_dataset_batch_iterator.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
