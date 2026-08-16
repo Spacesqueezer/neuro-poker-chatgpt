@@ -12,10 +12,12 @@ class TrainingCheckpointStore:
 
 	def save(self, checkpoint):
 		self.path.parent.mkdir(parents=True, exist_ok=True)
-		self.path.write_text(
+		temporary_path = self.path.with_suffix(self.path.suffix + ".tmp")
+		temporary_path.write_text(
 			serialize_checkpoint(checkpoint),
 			encoding="utf-8",
 		)
+		temporary_path.replace(self.path)
 		return self.path
 
 	def load(self):

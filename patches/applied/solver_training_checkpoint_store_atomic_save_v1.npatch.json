@@ -1,0 +1,33 @@
+{
+  "patch_id": "solver_training_checkpoint_store_atomic_save_v1",
+  "goal": "Make checkpoint persistence safer by writing through a temporary file before replacing the target artifact.",
+  "allowed_files": [
+    "src/poker/solver/training_checkpoint_store.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "src/poker/solver/training_checkpoint_store.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "from pathlib import Path\n\nfrom poker.solver.training_checkpoint import (\n\tdeserialize_checkpoint,\n\tserialize_checkpoint,\n)\n",
+          "new": "from pathlib import Path\n\nfrom poker.solver.training_checkpoint import (\n\tdeserialize_checkpoint,\n\tserialize_checkpoint,\n)\n"
+        },
+        {
+          "type": "replace",
+          "old": "\tdef save(self, checkpoint):\n\t\tself.path.parent.mkdir(parents=True, exist_ok=True)\n\t\tself.path.write_text(\n\t\t\tserialize_checkpoint(checkpoint),\n\t\t\tencoding=\"utf-8\",\n\t\t)\n\t\treturn self.path\n",
+          "new": "\tdef save(self, checkpoint):\n\t\tself.path.parent.mkdir(parents=True, exist_ok=True)\n\t\ttemporary_path = self.path.with_suffix(self.path.suffix + \".tmp\")\n\t\ttemporary_path.write_text(\n\t\t\tserialize_checkpoint(checkpoint),\n\t\t\tencoding=\"utf-8\",\n\t\t)\n\t\ttemporary_path.replace(self.path)\n\t\treturn self.path\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_checkpoint_resume_contract.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
