@@ -1,0 +1,29 @@
+{
+  "patch_id": "solver_dataset_streaming_iterator_v1",
+  "goal": "Add a lazy iteration boundary over solver dataset records without introducing training frameworks or changing dataset storage.",
+  "allowed_files": [
+    "src/poker/learning/solver_dataset_iterator.py",
+    "tests/poker/test_solver_dataset_iterator.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "src/poker/learning/solver_dataset_iterator.py",
+      "content": "from collections.abc import Iterable, Iterator\n\nfrom poker.learning.solver_dataset_loader import SolverDatasetRecord\n\n\nclass SolverDatasetIterator:\n\tdef iterate(self, records: Iterable[SolverDatasetRecord]) -> Iterator[SolverDatasetRecord]:\n\t\tfor record in records:\n\t\t\tyield record\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_dataset_iterator.py",
+      "content": "from poker.learning.solver_dataset_iterator import SolverDatasetIterator\nfrom poker.learning.solver_dataset_loader import SolverDatasetRecord\n\n\ndef test_solver_dataset_iterator_preserves_stream_order():\n\trecords = [\n\t\tSolverDatasetRecord([1.0], [1.0]),\n\t\tSolverDatasetRecord([2.0], [1.0]),\n\t]\n\n\tresult = list(SolverDatasetIterator().iterate(iter(records)))\n\n\tassert result == records\n"
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_dataset_loader.py tests/poker/test_solver_dataset_batch.py tests/poker/test_solver_dataset_iterator.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
