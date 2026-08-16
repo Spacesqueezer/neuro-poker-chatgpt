@@ -13,8 +13,9 @@ class TrainingRunResult:
 
 
 class SolverTrainer:
-	def __init__(self, objective):
+	def __init__(self, objective, backend=None):
 		self.objective = objective
+		self.backend = backend
 		self.current_step = 0
 
 	def train(self, samples, steps=1):
@@ -22,7 +23,10 @@ class SolverTrainer:
 			raise ValueError("steps must be non-negative")
 
 		for _ in range(steps):
-			self.objective(samples)
+			if self.backend is None:
+				self.objective(samples)
+			else:
+				self.backend.train_batch(samples)
 			self.current_step += 1
 
 		return TrainingRunResult(

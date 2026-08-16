@@ -1,0 +1,43 @@
+{
+  "patch_id": "solver_training_trainer_backend_bridge_v2",
+  "goal": "Connect SolverTrainer to the framework-neutral backend boundary while preserving existing objective-only behavior.",
+  "allowed_files": [
+    "src/poker/solver/training_trainer.py",
+    "tests/poker/test_solver_training_trainer_backend_bridge.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "class SolverTrainer:\n\tdef __init__(self, objective):\n\t\tself.objective = objective\n\t\tself.current_step = 0\n",
+      "new": "class SolverTrainer:\n\tdef __init__(self, objective, backend=None):\n\t\tself.objective = objective\n\t\tself.backend = backend\n\t\tself.current_step = 0\n"
+    },
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_trainer.py",
+      "old": "\t\tfor _ in range(steps):\n\t\t\tself.objective(samples)\n\t\t\tself.current_step += 1\n",
+      "new": "\t\tfor _ in range(steps):\n\t\t\tif self.backend is None:\n\t\t\t\tself.objective(samples)\n\t\t\telse:\n\t\t\t\tself.backend.train_batch(samples)\n\t\t\tself.current_step += 1\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_trainer_backend_bridge.py",
+      "content": "from poker.solver import SolverTrainer\n\n\nclass RecordingBackend:\n\tdef __init__(self):\n\t\tself.batches = []\n\n\tdef train_batch(self, batch):\n\t\tself.batches.append(batch)\n\t\treturn {\"status\": \"accepted\"}\n\n\ndef test_solver_trainer_delegates_steps_to_backend():\n\tbackend = RecordingBackend()\n\ttrainer = SolverTrainer(lambda samples: None, backend=backend)\n\tbatch = object()\n\n\tresult = trainer.train(batch, steps=2)\n\n\tassert backend.batches == [batch, batch]\n\tassert result.steps == 2\n\tassert trainer.current_step == 2\n\n\ndef test_solver_trainer_preserves_objective_only_behavior_without_backend():\n\tcalls = []\n\ttrainer = SolverTrainer(lambda samples: calls.append(samples))\n\tbatch = object()\n\n\ttrainer.train(batch, steps=2)\n\n\tassert calls == [batch, batch]\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "The solver training path now defines a minimal framework-neutral trainable-backend contract that consumes validated solver batches and exposes prediction semantics without selecting a concrete ML framework. A null backend verifies the boundary without introducing model dependencies. Backend instances now also expose an explicit framework-neutral state lifecycle through `save_state()`/`load_state()` and immutable `SolverTrainingBackendState`, establishing the ownership boundary for future model/optimizer state without serializing those internals into solver code. The next solver step should connect `SolverTrainer` to a backend instance so training delegates validated batches through that boundary and trainer checkpoints can carry backend-owned state explicitly, without wiring policy execution into Arena yet. This remains solver-local, so focused validation is sufficient until a concrete backend or cross-subsystem integration is added.",
+      "new": "The solver training path now defines a minimal framework-neutral trainable-backend contract that consumes validated solver batches and exposes prediction semantics without selecting a concrete ML framework. A null backend verifies the boundary without introducing model dependencies. Backend instances expose an explicit framework-neutral state lifecycle through `save_state()`/`load_state()` and immutable `SolverTrainingBackendState`, establishing the ownership boundary for future model/optimizer state without serializing those internals into solver code. `SolverTrainer` now accepts an optional backend and delegates each training step through `backend.train_batch()` when present while preserving the historical objective-only path when no backend is configured. The next solver step should extend trainer checkpoint state to carry backend-owned state explicitly and restore it through the backend lifecycle boundary, without wiring policy execution into Arena yet. This remains solver-local, so focused validation is sufficient until a concrete backend or cross-subsystem integration is added."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_backend.py tests/poker/test_solver_training_backend_lifecycle.py tests/poker/test_solver_training_trainer.py tests/poker/test_solver_training_trainer_checkpoint.py tests/poker/test_solver_training_trainer_backend_bridge.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
