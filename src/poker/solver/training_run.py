@@ -8,6 +8,21 @@ class TrainingRunState:
 	steps_completed: int = 0
 	created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
+	def to_dict(self):
+		return {
+			"run_id": self.run_id,
+			"steps_completed": self.steps_completed,
+			"created_at": self.created_at,
+		}
+
+	@classmethod
+	def from_dict(cls, payload):
+		return cls(
+			run_id=payload["run_id"],
+			steps_completed=payload.get("steps_completed", 0),
+			created_at=payload["created_at"],
+		)
+
 
 @dataclass(frozen=True)
 class TrainingRunCheckpointPolicy:

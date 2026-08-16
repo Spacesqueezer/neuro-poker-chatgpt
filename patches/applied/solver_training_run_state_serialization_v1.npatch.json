@@ -1,0 +1,38 @@
+{
+  "patch_id": "solver_training_run_state_serialization_v1",
+  "goal": "Add explicit serialization boundary for training run state so future checkpoint storage can persist orchestration metadata independently from trainer checkpoints.",
+  "allowed_files": [
+    "src/poker/solver/training_run.py",
+    "src/poker/solver/__init__.py",
+    "tests/poker/test_solver_training_run_state_serialization.py",
+    "docs/PROJECT_STATE.md"
+  ],
+  "operations": [
+    {
+      "type": "replace",
+      "file": "src/poker/solver/training_run.py",
+      "old": "class TrainingRunState:\n\trun_id: str\n\tsteps_completed: int = 0\n\tcreated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())\n",
+      "new": "class TrainingRunState:\n\trun_id: str\n\tsteps_completed: int = 0\n\tcreated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())\n\n\tdef to_dict(self):\n\t\treturn {\n\t\t\t\"run_id\": self.run_id,\n\t\t\t\"steps_completed\": self.steps_completed,\n\t\t\t\"created_at\": self.created_at,\n\t\t}\n\n\t@classmethod\n\tdef from_dict(cls, payload):\n\t\treturn cls(\n\t\t\trun_id=payload[\"run_id\"],\n\t\t\tsteps_completed=payload.get(\"steps_completed\", 0),\n\t\t\tcreated_at=payload[\"created_at\"],\n\t\t)\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tests/poker/test_solver_training_run_state_serialization.py",
+      "content": "from poker.solver import TrainingRunState\n\n\ndef test_training_run_state_round_trip():\n\tstate = TrainingRunState(\n\t\trun_id=\"run-1\",\n\t\tsteps_completed=12,\n\t\tcreated_at=\"2026-01-01T00:00:00+00:00\",\n\t)\n\n\trestored = TrainingRunState.from_dict(state.to_dict())\n\n\tassert restored == state\n"
+    },
+    {
+      "type": "replace",
+      "file": "docs/PROJECT_STATE.md",
+      "old": "TrainingRunState` adds immutable run metadata and completed-step tracking, allowing future resumable execution layers to restore orchestration state without mixing it with solver checkpoints.",
+      "new": "TrainingRunState` adds immutable run metadata and completed-step tracking, allowing future resumable execution layers to restore orchestration state without mixing it with solver checkpoints. The state boundary now exposes a deterministic dictionary serialization contract for checkpoint storage layers."
+    }
+  ],
+  "validation": {
+    "profile": "focused",
+    "commands": [
+      "python -m pytest tests/poker/test_solver_training_run_checkpoint_contract.py tests/poker/test_solver_training_run_state.py tests/poker/test_solver_training_run_state_serialization.py -q"
+    ]
+  },
+  "git": {
+    "branch": "ai-development"
+  }
+}
