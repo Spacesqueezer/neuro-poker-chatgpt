@@ -67,3 +67,9 @@ class SolverTrainer:
 
 		self.current_step = step
 		return self.current_step
+
+	def get_resume_summary(self):
+		return {
+			"current_step": self.current_step,
+			"trainer": "SolverTrainer",
+		}
