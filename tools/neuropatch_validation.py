@@ -3,6 +3,7 @@ try:
 except ImportError:
 	from neuropatch_types import PatchError
 
+
 OPERATION_CONTRACTS = {
 	"create_file": {
 		"required": {"file", "content"},
