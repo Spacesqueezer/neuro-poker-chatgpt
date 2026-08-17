@@ -1,5 +1,7 @@
-from .neuropatch_types import PatchError
-
+try:
+	from .neuropatch_types import PatchError
+except ImportError:
+	from neuropatch_types import PatchError
 
 OPERATION_CONTRACTS = {
 	"create_file": {
