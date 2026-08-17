@@ -151,6 +151,24 @@ def test_validate_operations_rejects_unsupported_nested_operation():
 		raise AssertionError("Unsupported nested operation must raise PatchError")
 
 
+def test_validate_operations_rejects_unknown_operation_type():
+	patch = {
+		"operations": [
+			{
+				"type": "append",
+				"file": "sample.txt",
+			},
+		],
+	}
+
+	try:
+		neuropatch.validate_operations(patch)
+	except neuropatch.PatchError as error:
+		assert "Unsupported operation: append" in str(error)
+	else:
+		raise AssertionError("Unknown operation must raise PatchError")
+
+
 def test_replace_mismatch_reports_operation_index_and_preview(
 	tmp_path,
 	monkeypatch,

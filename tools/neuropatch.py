@@ -36,6 +36,20 @@ class PatchError(Exception):
 	pass
 
 
+SUPPORTED_OPERATIONS = {
+	"create_file",
+	"modify_file",
+	"replace",
+	"delete_file",
+}
+
+SUPPORTED_NESTED_OPERATIONS = {
+	"modify_file": {
+		"replace",
+	},
+}
+
+
 def read_json(path):
 	return json.loads(path.read_text(encoding="utf-8"))
 
@@ -333,25 +347,23 @@ def check_allowed_files(patch):
 
 
 def validate_operations(patch):
-	supported_operations = {
-		"create_file",
-		"modify_file",
-		"replace",
-		"delete_file",
-	}
-
 	for operation in patch["operations"]:
-		if operation["type"] not in supported_operations:
+		if operation["type"] not in SUPPORTED_OPERATIONS:
 			raise PatchError(
-				f"Unsupported operation: {operation['type']}"
+				f"Unsupported operation: {operation['type']}. "
+				f"Supported operations: "
+				f"{', '.join(sorted(SUPPORTED_OPERATIONS))}"
 			)
 
 		if operation["type"] == "modify_file":
 			for nested_operation in operation.get("operations", []):
-				if nested_operation["type"] != "replace":
+				allowed = SUPPORTED_NESTED_OPERATIONS["modify_file"]
+
+				if nested_operation["type"] not in allowed:
 					raise PatchError(
 						f"Unsupported nested operation: "
-						f"{nested_operation['type']}"
+						f"{nested_operation['type']}. "
+						f"Allowed: {', '.join(sorted(allowed))}"
 					)
 
 
