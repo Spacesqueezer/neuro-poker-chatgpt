@@ -16,7 +16,7 @@ def main():
 	parser.add_argument("--output", type=str)
 	args = parser.parse_args()
 
-	neural_agent = NeuralAgent(model_path=args.model)
+	neural_agent = NeuralAgent(model_path=args.model, agent_id="benchmark_agent")
 
 	results = []
 

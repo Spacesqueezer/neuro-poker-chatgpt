@@ -22,15 +22,16 @@ def main():
 	pool = ModelPool(args.pool_dir)
 	historical_model_path = pool.sample_model(seed=args.seed)
 
-	current_agent = NeuralAgent(model_path=args.current_model, stochastic=True)
+	# For Self-Play, agents need an ID to track their private memory
+	current_agent = NeuralAgent(model_path=args.current_model, stochastic=True, agent_id="self_play_current")
 
 	if historical_model_path is None:
 		print("No historical models found. Using current model for both players.")
-		opponent_agent = NeuralAgent(model_path=args.current_model, stochastic=True)
+		opponent_agent = NeuralAgent(model_path=args.current_model, stochastic=True, agent_id="self_play_historical")
 		historical_model_path = args.current_model
 	else:
 		print(f"Sampled historical model: {historical_model_path.name}")
-		opponent_agent = NeuralAgent(model_path=str(historical_model_path), stochastic=True)
+		opponent_agent = NeuralAgent(model_path=str(historical_model_path), stochastic=True, agent_id="self_play_historical")
 
 	agents = {
 		"current": current_agent,
@@ -47,6 +48,12 @@ def main():
 		writer=writer,
 		include_players=["current", "historical"]
 	)
+
+	# We might want to persist and track opponent memory.
+	# However, since we're generating self-play datasets, it's optional here.
+	# But to fulfill the integration of the online tracker:
+	# Note: In a production script, we'd initialize the proper SQLAlchemy StatisticsFacade.
+	# For this script, we'll keep it simple, but we'll assign the agent IDs so they use 'private' mode in observations.
 
 	runner = ArenaRunner(
 		agents=agents,
