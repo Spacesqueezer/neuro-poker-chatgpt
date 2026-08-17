@@ -1,0 +1,28 @@
+{
+  "patch_id": "neuropatch_handoff_branch_context_v1",
+  "goal": "Make NeuroPatch success handoff output use the actual execution branch and suppress handoff output during dry-run.",
+  "allowed_files": [
+    "tools/neuropatch.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "tools/neuropatch.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "\t\tif report[\"status\"] == \"SUCCESS\":\n\t\t\tprint(\n\t\t\t\t\"SUCCESS HANDOFF: commit pushed on ai-development. \"\n\t\t\t\t\"Inspect the fresh repository branch ai-development, \"\n\t\t\t\t\"re-read docs/DEV_RULES.md and docs/PROJECT_STATE.md, \"\n\t\t\t\t\"follow the recorded next step, and return the next \"\n\t\t\t\t\".npatch.json file immediately.\"\n\t\t\t)\n",
+          "new": "\t\tif report[\"status\"] == \"SUCCESS\" and not args.dry_run:\n\t\t\tprint(\n\t\t\t\tf\"SUCCESS HANDOFF: commit pushed on {branch}. \"\n\t\t\t\tf\"Inspect the fresh repository branch {branch}, \"\n\t\t\t\t\"re-read docs/DEV_RULES.md and docs/PROJECT_STATE.md, \"\n\t\t\t\t\"follow the recorded next step, and return the next \"\n\t\t\t\t\".npatch.json file immediately.\"\n\t\t\t)\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

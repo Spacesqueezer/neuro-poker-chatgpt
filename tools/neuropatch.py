@@ -498,10 +498,10 @@ def main():
 		save_json(transaction / "report.json", report)
 
 		print(json.dumps(report, indent=2, ensure_ascii=False))
-		if report["status"] == "SUCCESS":
+		if report["status"] == "SUCCESS" and not args.dry_run:
 			print(
-				"SUCCESS HANDOFF: commit pushed on ai-development. "
-				"Inspect the fresh repository branch ai-development, "
+				f"SUCCESS HANDOFF: commit pushed on {branch}. "
+				f"Inspect the fresh repository branch {branch}, "
 				"re-read docs/DEV_RULES.md and docs/PROJECT_STATE.md, "
 				"follow the recorded next step, and return the next "
 				".npatch.json file immediately."
