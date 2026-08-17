@@ -22,7 +22,7 @@ The core prerequisites for Reinforcement Learning have been addressed:
 2. **Value Head:** `PokerPolicyNetwork` includes a Critic/Value head (`value_head`) alongside a strictly bounded `sizing_head` using `Sigmoid`.
 3. **Automated Orchestrator:** `tools/rl_orchestrator.py` successfully automates the continuous Generate -> Train -> Evaluate -> Promote loop.
 
-The final remaining step in Phase 6 is to implement the true Reinforcement Learning algorithms (e.g., PPO or Deep CFR) inside the PyTorch trainer to optimize the policy directly via expected returns instead of Imitation Learning labels.
+The `PolicyGradientTrainer` (REINFORCE with Value Baseline) is now implemented in `poker.learning.rl_trainer`, alongside the `tools/train_rl.py` CLI script. This completely closes out the Core Learning System milestone (Phase 6), enabling the full progression: Solver Teacher -> Imitation Learning -> Self-Play Data Generation -> Reinforcement Learning Training.
 
 A Russian user-facing command manual now lives in `docs/USER_GUIDE_RU.md`; `DEV_RULES.md` requires every future patch that adds or changes CLI commands, arguments, interactive commands, user-visible tools, environment variables or standard operational workflows to update that guide in the same patch. NeuroPatch workflow provenance is also being hardened: successful patch files are retained under tracked `patches/applied/`, while normal AI development moves to the dedicated `ai-development` branch so `main` remains a manual safety branch.
 

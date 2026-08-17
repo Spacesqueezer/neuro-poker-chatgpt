@@ -46,16 +46,15 @@ def main():
 		], "Generate Self-Play Data")
 
 		# 2. Train Network
-		# For true RL we'd use a different trainer, but we map to train_imitation for now as a placeholder
-		# since train_rl.py is not strictly written yet in this step, but the orchestration logic is what matters.
+		# Use Policy Gradient RL trainer to update the network based on the collected rewards.
 		new_model_path = pool_dir / f"policy_v{iteration}.pt"
 		run_command([
-			sys.executable, "tools/train_imitation.py",
+			sys.executable, "tools/train_rl.py",
 			"--train", str(dataset_path),
-			"--validation", str(dataset_path),
+			"--base-model", str(current_model),
 			"--output", str(new_model_path),
 			"--epochs", str(args.epochs)
-		], "Train Network")
+		], "Train Network (RL)")
 
 		# 3. Evaluate vs Baseline
 		benchmark_out = pool_dir.parent / "artifacts" / f"benchmark_iter_{iteration}.json"

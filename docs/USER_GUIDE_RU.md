@@ -717,7 +717,27 @@ python tools/rl_orchestrator.py --pool-dir models/pool --iterations 5 --hands 10
 
 Скрипт автоматически находит последнюю версию `.pt` модели в `pool-dir`, запускает Self-Play сбор данных, прогоняет обучение, тестирует новую сеть против `RandomAgent` и делает новую версию текущей, повторяя этот цикл заданное количество `--iterations`.
 
-## 8.8. Проверка coverage экспортированной solver policy
+## 8.8. Обучение с подкреплением (Reinforcement Learning)
+
+Для дообучения модели на датасетах, сгенерированных в процессе Self-Play (с использованием наград `reward`), используется `Policy Gradient` алгоритм (REINFORCE):
+
+```text
+python tools/train_rl.py --train datasets/self_play_v1.jsonl --base-model models/policy_v1.pt --output models/policy_v2.pt
+```
+
+Дополнительные аргументы:
+
+```text
+--value-weight N
+```
+Вес ошибки головы ценности (Value Loss) в общей функции потерь. По умолчанию 0.5.
+
+```text
+--entropy-weight N
+```
+Вес энтропийного бонуса для поощрения исследования новых стратегий. По умолчанию 0.01.
+
+## 8.9. Проверка coverage экспортированной solver policy
 
 Проверить уже сохранённый strategy artifact без повторного MCCFR training:
 
@@ -761,7 +781,7 @@ max_depth
 
 Эта команда не обучает solver и обычно является дешёвой проверкой совместимости/coverage. Она не запускает production Arena.
 
-## 8.9. End-to-end smoke solver artifact
+## 8.10. End-to-end smoke solver artifact
 
 Быстро проверить весь research pipeline `train → export → reload → coverage` одной командой:
 

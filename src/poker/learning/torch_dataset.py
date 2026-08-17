@@ -39,4 +39,5 @@ class PokerImitationDataset(Dataset):
 			"action_sizing": torch.tensor(payload["action_sizing"], dtype=torch.float32),
 			"action_index": torch.tensor(action_index, dtype=torch.long),
 			"action_amount": torch.tensor(payload.get("action_amount", 0.0), dtype=torch.float32),
+			"reward": torch.tensor(payload.get("reward", 0.0), dtype=torch.float32),
 		}
