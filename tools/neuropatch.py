@@ -346,6 +346,30 @@ def check_allowed_files(patch):
 			raise PatchError(f"File not allowed: {operation['file']}")
 
 
+def validate_operation_schema(operation):
+	operation_type = operation.get("type")
+
+	required_fields = {
+		"create_file": {"file", "content"},
+		"replace": {"file", "old", "new"},
+		"delete_file": {"file"},
+		"modify_file": {"file", "operations"},
+	}
+
+	required = required_fields.get(operation_type, set())
+	missing = sorted(
+		field
+		for field in required
+		if field not in operation
+	)
+
+	if missing:
+		raise PatchError(
+			f"Invalid operation: type={operation_type} "
+			f"missing={', '.join(missing)}"
+		)
+
+
 def validate_operations(patch):
 	for operation in patch["operations"]:
 		if operation["type"] not in SUPPORTED_OPERATIONS:
@@ -354,6 +378,8 @@ def validate_operations(patch):
 				f"Supported operations: "
 				f"{', '.join(sorted(SUPPORTED_OPERATIONS))}"
 			)
+
+		validate_operation_schema(operation)
 
 		if operation["type"] == "modify_file":
 			for nested_operation in operation.get("operations", []):
@@ -365,6 +391,11 @@ def validate_operations(patch):
 						f"{nested_operation['type']}. "
 						f"Allowed: {', '.join(sorted(allowed))}"
 					)
+
+				validate_operation_schema({
+					**nested_operation,
+					"file": operation["file"],
+				})
 
 
 def apply_operation(operation, operation_index=None):

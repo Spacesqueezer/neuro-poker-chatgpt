@@ -1,0 +1,40 @@
+{
+  "patch_id": "neuropatch_operation_schema_validation_v1",
+  "goal": "Validate required fields for supported NeuroPatch operations before applying changes.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "tools/neuropatch.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def validate_operations(patch):\n\tfor operation in patch[\"operations\"]:\n\t\tif operation[\"type\"] not in SUPPORTED_OPERATIONS:\n\t\t\traise PatchError(\n\t\t\t\tf\"Unsupported operation: {operation['type']}. \"\n\t\t\t\tf\"Supported operations: \"\n\t\t\t\tf\"{', '.join(sorted(SUPPORTED_OPERATIONS))}\"\n\t\t\t)\n\n\t\tif operation[\"type\"] == \"modify_file\":\n\t\t\tfor nested_operation in operation.get(\"operations\", []):\n\t\t\t\tallowed = SUPPORTED_NESTED_OPERATIONS[\"modify_file\"]\n\n\t\t\t\tif nested_operation[\"type\"] not in allowed:\n\t\t\t\t\traise PatchError(\n\t\t\t\t\t\tf\"Unsupported nested operation: \"\n\t\t\t\t\t\tf\"{nested_operation['type']}. \"\n\t\t\t\t\t\tf\"Allowed: {', '.join(sorted(allowed))}\"\n\t\t\t\t\t)\n\n\ndef apply_operation(operation, operation_index=None):\n",
+          "new": "def validate_operation_schema(operation):\n\toperation_type = operation.get(\"type\")\n\n\trequired_fields = {\n\t\t\"create_file\": {\"file\", \"content\"},\n\t\t\"replace\": {\"file\", \"old\", \"new\"},\n\t\t\"delete_file\": {\"file\"},\n\t\t\"modify_file\": {\"file\", \"operations\"},\n\t}\n\n\trequired = required_fields.get(operation_type, set())\n\tmissing = sorted(\n\t\tfield\n\t\tfor field in required\n\t\tif field not in operation\n\t)\n\n\tif missing:\n\t\traise PatchError(\n\t\t\tf\"Invalid operation: type={operation_type} \"\n\t\t\tf\"missing={', '.join(missing)}\"\n\t\t)\n\n\ndef validate_operations(patch):\n\tfor operation in patch[\"operations\"]:\n\t\tif operation[\"type\"] not in SUPPORTED_OPERATIONS:\n\t\t\traise PatchError(\n\t\t\t\tf\"Unsupported operation: {operation['type']}. \"\n\t\t\t\tf\"Supported operations: \"\n\t\t\t\tf\"{', '.join(sorted(SUPPORTED_OPERATIONS))}\"\n\t\t\t)\n\n\t\tvalidate_operation_schema(operation)\n\n\t\tif operation[\"type\"] == \"modify_file\":\n\t\t\tfor nested_operation in operation.get(\"operations\", []):\n\t\t\t\tallowed = SUPPORTED_NESTED_OPERATIONS[\"modify_file\"]\n\n\t\t\t\tif nested_operation[\"type\"] not in allowed:\n\t\t\t\t\traise PatchError(\n\t\t\t\t\t\tf\"Unsupported nested operation: \"\n\t\t\t\t\t\tf\"{nested_operation['type']}. \"\n\t\t\t\t\t\tf\"Allowed: {', '.join(sorted(allowed))}\"\n\t\t\t\t\t)\n\n\t\t\t\tvalidate_operation_schema({\n\t\t\t\t\t**nested_operation,\n\t\t\t\t\t\"file\": operation[\"file\"],\n\t\t\t\t})\n\n\ndef apply_operation(operation, operation_index=None):\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/test_neuropatch_workflow.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def test_replace_mismatch_reports_operation_index_and_preview(\n",
+          "new": "def test_validate_operation_schema_rejects_missing_replace_field():\n\toperation = {\n\t\t\"type\": \"replace\",\n\t\t\"file\": \"sample.txt\",\n\t\t\"old\": \"old\",\n\t}\n\n\ttry:\n\t\tneuropatch.validate_operation_schema(operation)\n\texcept neuropatch.PatchError as error:\n\t\tassert \"missing=new\" in str(error)\n\telse:\n\t\traise AssertionError(\"Missing operation field must raise PatchError\")\n\n\ndef test_replace_mismatch_reports_operation_index_and_preview(\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

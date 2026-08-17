@@ -169,6 +169,21 @@ def test_validate_operations_rejects_unknown_operation_type():
 		raise AssertionError("Unknown operation must raise PatchError")
 
 
+def test_validate_operation_schema_rejects_missing_replace_field():
+	operation = {
+		"type": "replace",
+		"file": "sample.txt",
+		"old": "old",
+	}
+
+	try:
+		neuropatch.validate_operation_schema(operation)
+	except neuropatch.PatchError as error:
+		assert "missing=new" in str(error)
+	else:
+		raise AssertionError("Missing operation field must raise PatchError")
+
+
 def test_replace_mismatch_reports_operation_index_and_preview(
 	tmp_path,
 	monkeypatch,
