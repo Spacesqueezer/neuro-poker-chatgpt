@@ -1,0 +1,28 @@
+{
+  "patch_id": "neuropatch_operation_contract_docs_v3",
+  "goal": "Document the NeuroPatch operation contract in the existing user guide section without introducing patch-like examples.",
+  "allowed_files": [
+    "docs/USER_GUIDE_RU.md"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "docs/USER_GUIDE_RU.md",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "`--dry-run` валидирует структуру патча и состояние Git, но не изменяет файлы и не запускает операции патча.",
+          "new": "`--dry-run` валидирует структуру патча и состояние Git, но не изменяет файлы и не запускает операции патча.\n\nКонтракт операций NeuroPatch:\n\nПоддерживаются только следующие операции верхнего уровня:\n\n- `create_file`\n- `modify_file`\n- `replace`\n- `delete_file`\n\n`modify_file` используется для группировки изменений одного файла. Внутри `modify_file` разрешена только операция `replace`.\n\nНовые типы операций нельзя использовать в патчах без предварительного добавления поддержки в NeuroPatch и покрытия тестами."
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
