@@ -169,6 +169,15 @@ def test_validate_operations_rejects_unknown_operation_type():
 		raise AssertionError("Unknown operation must raise PatchError")
 
 
+def test_operation_contract_registry_contains_supported_operations():
+	assert set(neuropatch.OPERATION_CONTRACTS) == {
+		"create_file",
+		"modify_file",
+		"replace",
+		"delete_file",
+	}
+
+
 def test_validate_operation_schema_rejects_missing_replace_field():
 	operation = {
 		"type": "replace",

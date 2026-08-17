@@ -36,16 +36,32 @@ class PatchError(Exception):
 	pass
 
 
-SUPPORTED_OPERATIONS = {
-	"create_file",
-	"modify_file",
-	"replace",
-	"delete_file",
+OPERATION_CONTRACTS = {
+	"create_file": {
+		"required": {"file", "content"},
+		"nested_allowed": False,
+	},
+	"modify_file": {
+		"required": {"file", "operations"},
+		"nested_allowed": True,
+	},
+	"replace": {
+		"required": {"file", "old", "new"},
+		"nested_allowed": True,
+	},
+	"delete_file": {
+		"required": {"file"},
+		"nested_allowed": False,
+	},
 }
+
+SUPPORTED_OPERATIONS = set(OPERATION_CONTRACTS)
 
 SUPPORTED_NESTED_OPERATIONS = {
 	"modify_file": {
-		"replace",
+		operation
+		for operation, contract in OPERATION_CONTRACTS.items()
+		if contract["nested_allowed"]
 	},
 }
 
@@ -348,15 +364,9 @@ def check_allowed_files(patch):
 
 def validate_operation_schema(operation):
 	operation_type = operation.get("type")
+	contract = OPERATION_CONTRACTS.get(operation_type, {})
 
-	required_fields = {
-		"create_file": {"file", "content"},
-		"replace": {"file", "old", "new"},
-		"delete_file": {"file"},
-		"modify_file": {"file", "operations"},
-	}
-
-	required = required_fields.get(operation_type, set())
+	required = contract.get("required", set())
 	missing = sorted(
 		field
 		for field in required

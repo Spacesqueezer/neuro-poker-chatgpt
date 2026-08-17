@@ -1,0 +1,45 @@
+{
+  "patch_id": "neuropatch_operation_contract_registry_v1",
+  "goal": "Unify NeuroPatch operation definitions into a single contract registry used by validation.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "tools/neuropatch.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "SUPPORTED_OPERATIONS = {\n\t\"create_file\",\n\t\"modify_file\",\n\t\"replace\",\n\t\"delete_file\",\n}\n\nSUPPORTED_NESTED_OPERATIONS = {\n\t\"modify_file\": {\n\t\t\"replace\",\n\t},\n}\n",
+          "new": "OPERATION_CONTRACTS = {\n\t\"create_file\": {\n\t\t\"required\": {\"file\", \"content\"},\n\t\t\"nested_allowed\": False,\n\t},\n\t\"modify_file\": {\n\t\t\"required\": {\"file\", \"operations\"},\n\t\t\"nested_allowed\": True,\n\t},\n\t\"replace\": {\n\t\t\"required\": {\"file\", \"old\", \"new\"},\n\t\t\"nested_allowed\": True,\n\t},\n\t\"delete_file\": {\n\t\t\"required\": {\"file\"},\n\t\t\"nested_allowed\": False,\n\t},\n}\n\nSUPPORTED_OPERATIONS = set(OPERATION_CONTRACTS)\n\nSUPPORTED_NESTED_OPERATIONS = {\n\t\"modify_file\": {\n\t\toperation\n\t\tfor operation, contract in OPERATION_CONTRACTS.items()\n\t\tif contract[\"nested_allowed\"]\n\t},\n}\n"
+        },
+        {
+          "type": "replace",
+          "old": "def validate_operation_schema(operation):\n\toperation_type = operation.get(\"type\")\n\n\trequired_fields = {\n\t\t\"create_file\": {\"file\", \"content\"},\n\t\t\"replace\": {\"file\", \"old\", \"new\"},\n\t\t\"delete_file\": {\"file\"},\n\t\t\"modify_file\": {\"file\", \"operations\"},\n\t}\n\n\trequired = required_fields.get(operation_type, set())\n\tmissing = sorted(\n\t\tfield\n\t\tfor field in required\n\t\tif field not in operation\n\t)\n",
+          "new": "def validate_operation_schema(operation):\n\toperation_type = operation.get(\"type\")\n\tcontract = OPERATION_CONTRACTS.get(operation_type, {})\n\n\trequired = contract.get(\"required\", set())\n\tmissing = sorted(\n\t\tfield\n\t\tfor field in required\n\t\tif field not in operation\n\t)\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/test_neuropatch_workflow.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def test_validate_operation_schema_rejects_missing_replace_field():\n",
+          "new": "def test_operation_contract_registry_contains_supported_operations():\n\tassert set(neuropatch.OPERATION_CONTRACTS) == {\n\t\t\"create_file\",\n\t\t\"modify_file\",\n\t\t\"replace\",\n\t\t\"delete_file\",\n\t}\n\n\ndef test_validate_operation_schema_rejects_missing_replace_field():\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
