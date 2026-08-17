@@ -1,0 +1,41 @@
+{
+  "patch_id": "neuropatch_validation_module_v2",
+  "goal": "Extract validation into a dedicated module with shared PatchError type while preserving the existing public imports.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tools/neuropatch_validation.py",
+    "tools/neuropatch_types.py",
+    "tests/test_neuropatch_workflow.py"
+  ],
+  "operations": [
+    {
+      "type": "create_file",
+      "file": "tools/neuropatch_types.py",
+      "content": "class PatchError(Exception):\n\tpass\n"
+    },
+    {
+      "type": "create_file",
+      "file": "tools/neuropatch_validation.py",
+      "content": "from .neuropatch_types import PatchError\n\n\nOPERATION_CONTRACTS = {\n\t\"create_file\": {\n\t\t\"required\": {\"file\", \"content\"},\n\t\t\"nested_allowed\": False,\n\t},\n\t\"modify_file\": {\n\t\t\"required\": {\"file\", \"operations\"},\n\t\t\"nested_allowed\": True,\n\t},\n\t\"replace\": {\n\t\t\"required\": {\"file\", \"old\", \"new\"},\n\t\t\"nested_allowed\": True,\n\t},\n\t\"delete_file\": {\n\t\t\"required\": {\"file\"},\n\t\t\"nested_allowed\": False,\n\t},\n}\n\n\nSUPPORTED_OPERATIONS = set(OPERATION_CONTRACTS)\n\n\nSUPPORTED_NESTED_OPERATIONS = {\n\t\"modify_file\": {\n\t\toperation\n\t\tfor operation, contract in OPERATION_CONTRACTS.items()\n\t\tif contract[\"nested_allowed\"]\n\t},\n}\n\n\ndef validate_patch(patch):\n\tfor key in [\"patch_id\", \"goal\", \"operations\"]:\n\t\tif key not in patch:\n\t\t\traise PatchError(f\"Missing {key}\")\n\n\tif not isinstance(patch[\"operations\"], list):\n\t\traise PatchError(\"Invalid operations: expected list\")\n\n\tif \"validation\" in patch and not isinstance(patch[\"validation\"], dict):\n\t\traise PatchError(\"Invalid validation: expected object\")\n\n\tif \"git\" in patch and not isinstance(patch[\"git\"], dict):\n\t\traise PatchError(\"Invalid git: expected object\")\n\n\ndef validate_operation_schema(operation):\n\toperation_type = operation.get(\"type\")\n\tcontract = OPERATION_CONTRACTS.get(operation_type, {})\n\n\trequired = contract.get(\"required\", set())\n\tmissing = sorted(\n\t\tfield\n\t\tfor field in required\n\t\tif field not in operation\n\t)\n\n\tif missing:\n\t\traise PatchError(\n\t\t\tf\"Invalid operation: type={operation_type} \"\n\t\t\tf\"missing={','.join(missing)}\"\n\t\t)\n\n\ndef validate_operations(patch):\n\tfor operation in patch[\"operations\"]:\n\t\tif operation[\"type\"] not in SUPPORTED_OPERATIONS:\n\t\t\traise PatchError(\n\t\t\t\tf\"Unsupported operation: {operation['type']}. \"\n\t\t\t\tf\"Supported operations: \"\n\t\t\t\tf\"{', '.join(sorted(SUPPORTED_OPERATIONS))}\"\n\t\t\t)\n\n\t\tvalidate_operation_schema(operation)\n\n\t\tif operation[\"type\"] == \"modify_file\":\n\t\t\tfor nested_operation in operation.get(\"operations\", []):\n\t\t\t\tallowed = SUPPORTED_NESTED_OPERATIONS[\"modify_file\"]\n\n\t\t\t\tif nested_operation[\"type\"] not in allowed:\n\t\t\t\t\traise PatchError(\n\t\t\t\t\t\tf\"Unsupported nested operation: \"\n\t\t\t\t\t\tf\"{nested_operation['type']}. \"\n\t\t\t\t\t\tf\"Allowed: {', '.join(sorted(allowed))}\"\n\t\t\t\t\t)\n\n\t\t\t\tvalidate_operation_schema({\n\t\t\t\t\t**nested_operation,\n\t\t\t\t\t\"file\": operation[\"file\"],\n\t\t\t\t})\n"
+    },
+    {
+      "type": "modify_file",
+      "file": "tools/neuropatch.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "class PatchError(Exception):\n\tpass\n\n\nOPERATION_CONTRACTS = {",
+          "new": "from .neuropatch_types import PatchError\nfrom .neuropatch_validation import (\n\tOPERATION_CONTRACTS,\n\tSUPPORTED_OPERATIONS,\n\tSUPPORTED_NESTED_OPERATIONS,\n\tvalidate_patch,\n\tvalidate_operation_schema,\n\tvalidate_operations,\n)\n\n\nclass PatchError(Exception):\n\tpass\n\n\nOPERATION_CONTRACTS = {"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

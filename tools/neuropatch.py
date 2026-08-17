@@ -32,6 +32,17 @@ HISTORY_FILE = NEUROPATCH_HOME / "history.json"
 APPLIED_PATCH_DIR = PROJECT_ROOT / "patches" / "applied"
 
 
+from .neuropatch_types import PatchError
+from .neuropatch_validation import (
+	OPERATION_CONTRACTS,
+	SUPPORTED_OPERATIONS,
+	SUPPORTED_NESTED_OPERATIONS,
+	validate_patch,
+	validate_operation_schema,
+	validate_operations,
+)
+
+
 class PatchError(Exception):
 	pass
 
