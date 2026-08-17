@@ -17,9 +17,10 @@ class LearningSample:
 	action_amount: float
 	acting_player: str
 	opponent_order: tuple[str, ...]
+	reward: float | None = None
 
 	def to_dict(self):
-		return {
+		d = {
 			"version": self.version,
 			"observation": list(self.observation),
 			"action_mask": list(self.action_mask),
@@ -29,6 +30,9 @@ class LearningSample:
 			"acting_player": self.acting_player,
 			"opponent_order": list(self.opponent_order),
 		}
+		if self.reward is not None:
+			d["reward"] = self.reward
+		return d
 
 
 class LearningSampleBuilder:

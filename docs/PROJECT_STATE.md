@@ -13,7 +13,16 @@ A first statistics model, collector, extraction pipeline and storage boundary ex
 
 A `TeacherRecordImporter` is now implemented in `poker.learning` which bridges the gap between solver-local exported teacher records and production `LearningSample`s. `tools/import_teacher_dataset.py` allows converting exported solver JSON files into actual training datasets by simulating `HandStateView` and `LegalActions` from the restricted solver states.
 
-The next step is to implement a neural network policy model in PyTorch and an imitation learning trainer that consumes the generated `LearningSample`s to train an agent policy.
+A PyTorch neural network policy model (`PokerPolicyNetwork`), data loader (`PokerImitationDataset`), and an imitation learning trainer loop (`ImitationTrainer`) have been implemented and now compute both action and sizing losses simultaneously. `tools/train_imitation.py` runs the supervised training over the generated `LearningSample`s to clone the solver's policy. Furthermore, `NeuralAgent` is now available in `poker.agents` to load the `.pt` weights and execute decisions via the engine's standard public API. `tools/benchmark_neural.py` evaluates the performance of the trained neural agent against baseline opponents.
+
+Now that Imitation Learning is fully operational, the next step is to implement a Self-Play training loop. `RLDatasetCapture` now supports capturing trajectories with terminal rewards. `ModelPool` manages sampling of historical model checkpoints. `tools/run_self_play.py` orchestrates Arena sessions between a current NeuralAgent and a historically sampled one, recording the experience to a JSONL file.
+
+The core prerequisites for Reinforcement Learning have been addressed:
+1. **Exploration Mechanism:** `NeuralAgent` now supports stochastic action sampling (`stochastic=True`) for diverse trajectory generation.
+2. **Value Head:** `PokerPolicyNetwork` includes a Critic/Value head (`value_head`) alongside a strictly bounded `sizing_head` using `Sigmoid`.
+3. **Automated Orchestrator:** `tools/rl_orchestrator.py` successfully automates the continuous Generate -> Train -> Evaluate -> Promote loop.
+
+The final remaining step in Phase 6 is to implement the true Reinforcement Learning algorithms (e.g., PPO or Deep CFR) inside the PyTorch trainer to optimize the policy directly via expected returns instead of Imitation Learning labels.
 
 A Russian user-facing command manual now lives in `docs/USER_GUIDE_RU.md`; `DEV_RULES.md` requires every future patch that adds or changes CLI commands, arguments, interactive commands, user-visible tools, environment variables or standard operational workflows to update that guide in the same patch. NeuroPatch workflow provenance is also being hardened: successful patch files are retained under tracked `patches/applied/`, while normal AI development moves to the dedicated `ai-development` branch so `main` remains a manual safety branch.
 
