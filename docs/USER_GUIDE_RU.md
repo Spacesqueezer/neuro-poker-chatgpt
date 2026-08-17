@@ -649,6 +649,14 @@ python tools/export_teacher_records.py --strategy artifacts/mccfr_equal_strategy
 Эта утилита читает экспортированную стратегию, заново создаёт соответствующий benchmark game и обходит дерево для выгрузки всех известных (решённых) information sets, где strategy задана. Формирует JSON, содержащий только совместимые метаданные (benchmark, action_abstraction) и массив решённых состояний (information set, legal actions и нормализованную стратегию).
 Эта команда полезна перед связкой с `poker.learning` для генерации teacher labels без прямого импорта production среды.
 
+Конвертировать solver-local teacher records в формат `LearningSample` для обучения нейросетей:
+
+```text
+python tools/import_teacher_dataset.py --input artifacts/mccfr_equal_teacher_records.json --output datasets/mccfr_equal_teacher_samples.jsonl
+```
+
+Скрипт реконструирует внутреннее состояние игры (похожее на `HandStateView` и `LegalActions`) из сохранённых параметров и конвертирует их в стандартные обучающие векторы наблюдений и целевые метки действий, используя `LearningSampleBuilder`.
+
 ## 8.4. Проверка coverage экспортированной solver policy
 
 Проверить уже сохранённый strategy artifact без повторного MCCFR training:
