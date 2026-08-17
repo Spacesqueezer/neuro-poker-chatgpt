@@ -30,7 +30,6 @@ NEUROPATCH_HOME = Path.home() / ".neuropatch" / PROJECT_ROOT.name
 TRANSACTION_DIR = NEUROPATCH_HOME / "transactions"
 HISTORY_FILE = NEUROPATCH_HOME / "history.json"
 APPLIED_PATCH_DIR = PROJECT_ROOT / "patches" / "applied"
-AI_WORK_BRANCH = "ai-development"
 
 
 class PatchError(Exception):
@@ -167,34 +166,26 @@ def git_branch_has_upstream(branch):
 	return result.returncode == 0
 
 
-def ensure_ai_work_branch():
+def ensure_current_branch_upstream():
 	current = git_current_branch()
 
-	if current != AI_WORK_BRANCH:
-		command = ["git", "switch", AI_WORK_BRANCH]
-		if not git_local_branch_exists(AI_WORK_BRANCH):
-			command = ["git", "switch", "-c", AI_WORK_BRANCH]
+	if not current:
+		raise PatchError("Cannot determine current git branch")
 
-		subprocess.run(
-			command,
-			cwd=PROJECT_ROOT,
-			check=True,
-		)
-
-	if not git_branch_has_upstream(AI_WORK_BRANCH):
+	if not git_branch_has_upstream(current):
 		subprocess.run(
 			[
 				"git",
 				"push",
 				"--set-upstream",
 				"origin",
-				AI_WORK_BRANCH,
+				current,
 			],
 			cwd=PROJECT_ROOT,
 			check=True,
 		)
 
-	return AI_WORK_BRANCH
+	return current
 
 
 def git_commit(message):
@@ -430,7 +421,7 @@ def main():
 
 	branch = git_current_branch()
 	if not args.dry_run:
-		branch = ensure_ai_work_branch()
+		branch = ensure_current_branch_upstream()
 
 	transaction = create_transaction(patch["patch_id"])
 	transaction_patch = stage_patch_transaction_copy(

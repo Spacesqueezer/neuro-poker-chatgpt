@@ -87,7 +87,7 @@ def test_cleanup_downloaded_patch_removes_successful_source(tmp_path):
 	assert not patch_path.exists()
 
 
-def test_ensure_ai_work_branch_creates_and_publishes_new_branch(
+def test_ensure_current_branch_upstream_publishes_current_branch(
 	monkeypatch,
 ):
 	commands = []
@@ -96,11 +96,6 @@ def test_ensure_ai_work_branch_creates_and_publishes_new_branch(
 		neuropatch,
 		"git_current_branch",
 		lambda: "main",
-	)
-	monkeypatch.setattr(
-		neuropatch,
-		"git_local_branch_exists",
-		lambda branch: False,
 	)
 	monkeypatch.setattr(
 		neuropatch,
@@ -118,17 +113,16 @@ def test_ensure_ai_work_branch_creates_and_publishes_new_branch(
 
 	monkeypatch.setattr(neuropatch.subprocess, "run", fake_run)
 
-	branch = neuropatch.ensure_ai_work_branch()
+	branch = neuropatch.ensure_current_branch_upstream()
 
-	assert branch == "ai-development"
+	assert branch == "main"
 	assert commands == [
-		["git", "switch", "-c", "ai-development"],
 		[
 			"git",
 			"push",
 			"--set-upstream",
 			"origin",
-			"ai-development",
+			"main",
 		],
 	]
 
@@ -190,7 +184,7 @@ def test_git_push_pushes_named_branch_to_origin(monkeypatch):
 	]
 
 
-def test_ensure_ai_work_branch_reuses_existing_upstream_branch(
+def test_ensure_current_branch_upstream_reuses_existing_upstream(
 	monkeypatch,
 ):
 	commands = []
@@ -199,11 +193,6 @@ def test_ensure_ai_work_branch_reuses_existing_upstream_branch(
 		neuropatch,
 		"git_current_branch",
 		lambda: "main",
-	)
-	monkeypatch.setattr(
-		neuropatch,
-		"git_local_branch_exists",
-		lambda branch: True,
 	)
 	monkeypatch.setattr(
 		neuropatch,
@@ -221,9 +210,7 @@ def test_ensure_ai_work_branch_reuses_existing_upstream_branch(
 
 	monkeypatch.setattr(neuropatch.subprocess, "run", fake_run)
 
-	branch = neuropatch.ensure_ai_work_branch()
+	branch = neuropatch.ensure_current_branch_upstream()
 
-	assert branch == "ai-development"
-	assert commands == [
-		["git", "switch", "ai-development"],
-	]
+	assert branch == "main"
+	assert commands == []
