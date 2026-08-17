@@ -1,0 +1,102 @@
+{
+  "patch_id": "neuropatch_git_branch_context_docs_v2",
+  "goal": "Update documentation references from fixed ai-development workflow to active branch context while preserving snapshot as an optional archive tool.",
+  "allowed_files": [
+    "docs/DEV_RULES.md",
+    "docs/PROJECT_STATE.md",
+    "docs/USER_GUIDE_RU.md"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "docs/DEV_RULES.md",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "Verify assumptions against the current snapshot.",
+          "new": "Verify assumptions against the current repository state."
+        },
+        {
+          "type": "replace",
+          "old": "A patch must be generated for the current snapshot.",
+          "new": "A patch must be generated for the current repository state."
+        },
+        {
+          "type": "replace",
+          "old": "Before delivering any `.npatch.json` to the user, the AI MUST test the patch against the fresh `ai-development` state on its own side.",
+          "new": "Before delivering any `.npatch.json` to the user, the AI MUST test the patch against the current repository state on its own side."
+        },
+        {
+          "type": "replace",
+          "old": "be pushed automatically to `origin/ai-development` before the patch is reported as `SUCCESS`.",
+          "new": "be pushed automatically to the upstream of the active working branch before the patch is reported as `SUCCESS`."
+        },
+        {
+          "type": "replace",
+          "old": "AI-assisted development uses the dedicated `ai-development` branch. NeuroPatch automatically switches to that branch before applying a non-dry-run patch, creates it from the current clean HEAD when it does not yet exist, and establishes `origin/ai-development` as its upstream before modifying project files. `main` remains the human-controlled safety branch until changes are deliberately merged.",
+          "new": "AI-assisted development uses the active Git branch context. NeuroPatch applies patches on the current working branch, reports that branch in the transaction result, and pushes to its configured upstream after successful validation. `main` remains a human-controlled safety branch by workflow convention."
+        },
+        {
+          "type": "replace",
+          "old": "the reported successful commit has been pushed to `ai-development`;",
+          "new": "the reported successful commit has been pushed to the active working branch upstream;"
+        },
+        {
+          "type": "replace",
+          "old": "the AI must inspect the freshly pushed `ai-development` branch;",
+          "new": "the AI must inspect the freshly pushed working branch;"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "docs/PROJECT_STATE.md",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "NeuroPatch workflow provenance is also being hardened: successful patch files are retained under tracked `patches/applied/`, while normal AI development moves to the dedicated `ai-development` branch so `main` remains a manual safety branch.",
+          "new": "NeuroPatch workflow provenance is also being hardened: successful patch files are retained under tracked `patches/applied/`, while normal AI development follows the active Git branch context so `main` remains a manual safety branch."
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "docs/USER_GUIDE_RU.md",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "при обычном запуске автоматически переходит в рабочую ветку `ai-development`;",
+          "new": "при обычном запуске работает с текущей активной Git-веткой;"
+        },
+        {
+          "type": "replace",
+          "old": "при первом использовании создаёт `ai-development` от текущего чистого HEAD и публикует `origin/ai-development` как upstream до изменения файлов;",
+          "new": "проверяет активную Git-ветку и использует её upstream перед изменением файлов;"
+        },
+        {
+          "type": "replace",
+          "old": "автоматически выполняет `git push origin ai-development`;",
+          "new": "автоматически выполняет push в upstream активной Git-ветки;"
+        },
+        {
+          "type": "replace",
+          "old": "`main` остаётся страховочной веткой. NeuroPatch сам не мержит `ai-development` обратно в `main`.",
+          "new": "`main` остаётся страховочной веткой. NeuroPatch сам не выполняет merge между рабочими ветками."
+        },
+        {
+          "type": "replace",
+          "old": "После JSON-отчёта NeuroPatch печатает строку `SUCCESS HANDOFF` только когда автоматический push в `origin/ai-development` действительно завершился успешно.",
+          "new": "После JSON-отчёта NeuroPatch печатает строку `SUCCESS HANDOFF` только когда автоматический push в upstream активной Git-ветки действительно завершился успешно."
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

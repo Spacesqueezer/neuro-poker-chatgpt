@@ -15,7 +15,7 @@ Before creating a patch:
 1. Read docs/DEV_RULES.md.
 2. Read docs/PROJECT_STATE.md.
 3. Inspect the current source tree.
-4. Verify assumptions against the current snapshot.
+4. Verify assumptions against the current repository state.
 
 ## NeuroPatch format
 
@@ -34,7 +34,7 @@ Supported operations must be verified against tools/neuropatch.py.
 
 Never invent unsupported operations.
 
-A patch must be generated for the current snapshot.
+A patch must be generated for the current repository state.
 Never generate patches based only on memory.
 
 ## NeuroPatch rules
@@ -72,7 +72,7 @@ For `replace` operations, a mismatch report must identify the operation index, t
 
 ## Mandatory AI-side patch preflight
 
-Before delivering any `.npatch.json` to the user, the AI MUST test the patch against the fresh `ai-development` state on its own side.
+Before delivering any `.npatch.json` to the user, the AI MUST test the patch against the current repository state on its own side.
 
 At minimum, preflight must:
 - start from the current remote `ai-development` source, never from a failed transaction or old patch;
@@ -169,21 +169,21 @@ Every successful patch commit must:
 - include only changes from the current patch;
 - use an automatic commit message identifying the patch;
 - report the created commit hash in the patch result;
-- be pushed automatically to `origin/ai-development` before the patch is reported as `SUCCESS`.
+- be pushed automatically to the upstream of the active working branch before the patch is reported as `SUCCESS`.
 
 A local commit with a failed push is not a successful handoff. NeuroPatch must report the failure, preserve the local commit and archived patch, avoid pretending that rollback occurred after commit creation, and must not print `SUCCESS HANDOFF` until the push succeeds.
 
 The next patch must start from a clean git working tree created by the previous successful patch.
 
-AI-assisted development uses the dedicated `ai-development` branch. NeuroPatch automatically switches to that branch before applying a non-dry-run patch, creates it from the current clean HEAD when it does not yet exist, and establishes `origin/ai-development` as its upstream before modifying project files. `main` remains the human-controlled safety branch until changes are deliberately merged.
+AI-assisted development uses the active Git branch context. NeuroPatch applies patches on the current working branch, reports that branch in the transaction result, and pushes to its configured upstream after successful validation. `main` remains a human-controlled safety branch by workflow convention.
 
 Every loaded patch is copied into its external NeuroPatch transaction directory immediately after transaction creation. Validation, archival and commit workflow must not depend on the original Downloads file remaining present during a long run. Every successfully committed patch file is archived in the tracked repository path `patches/applied/<patch_id>.npatch.json` from the transaction-local copy and the original Downloads file is removed only after the commit and push succeed. Failed patches remain in Downloads when still present for diagnosis or retry; the transaction-local copy is also retained with the transaction. Archived patches are provenance records; they do not replace the current repository state, `PROJECT_STATE.md` or source inspection as sources of truth.
 
 After a successful patch, NeuroPatch prints a self-contained `SUCCESS HANDOFF` command addressed to the AI, not instructions for the user. The handoff text assumes the successful commit has already been pushed.
 
 When the user sends that final `SUCCESS HANDOFF` line back to the AI, it means:
-- the reported successful commit has been pushed to `ai-development`;
-- the AI must inspect the freshly pushed `ai-development` branch;
+- the reported successful commit has been pushed to the active working branch upstream;
+- the AI must inspect the freshly pushed working branch;
 - the AI must re-read `DEV_RULES.md` and `PROJECT_STATE.md`;
 - the AI must continue from the recorded next step;
 - the AI must generate and attach the next `.npatch.json` file in the same response rather than merely describing what it plans to do.
