@@ -332,6 +332,29 @@ def check_allowed_files(patch):
 			raise PatchError(f"File not allowed: {operation['file']}")
 
 
+def validate_operations(patch):
+	supported_operations = {
+		"create_file",
+		"modify_file",
+		"replace",
+		"delete_file",
+	}
+
+	for operation in patch["operations"]:
+		if operation["type"] not in supported_operations:
+			raise PatchError(
+				f"Unsupported operation: {operation['type']}"
+			)
+
+		if operation["type"] == "modify_file":
+			for nested_operation in operation.get("operations", []):
+				if nested_operation["type"] != "replace":
+					raise PatchError(
+						f"Unsupported nested operation: "
+						f"{nested_operation['type']}"
+					)
+
+
 def apply_operation(operation, operation_index=None):
 	target = PROJECT_ROOT / operation["file"]
 
@@ -414,6 +437,7 @@ def main():
 	patch = read_json(patch_path)
 
 	validate_patch(patch)
+	validate_operations(patch)
 	check_allowed_files(patch)
 
 	if git_status() and not args.force:

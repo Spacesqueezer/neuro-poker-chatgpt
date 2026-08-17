@@ -1,0 +1,45 @@
+{
+  "patch_id": "neuropatch_operation_validation_v1",
+  "goal": "Validate patch operation types before creating transactions or applying changes.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "tools/neuropatch.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def check_allowed_files(patch):\n\tallowed = patch.get(\"allowed_files\")\n\n\tif not allowed:\n\t\treturn\n\n\tfor operation in patch[\"operations\"]:\n\t\tif operation[\"file\"] not in allowed:\n\t\t\traise PatchError(f\"File not allowed: {operation['file']}\")\n\n\ndef apply_operation(operation, operation_index=None):\n",
+          "new": "def check_allowed_files(patch):\n\tallowed = patch.get(\"allowed_files\")\n\n\tif not allowed:\n\t\treturn\n\n\tfor operation in patch[\"operations\"]:\n\t\tif operation[\"file\"] not in allowed:\n\t\t\traise PatchError(f\"File not allowed: {operation['file']}\")\n\n\ndef validate_operations(patch):\n\tsupported_operations = {\n\t\t\"create_file\",\n\t\t\"modify_file\",\n\t\t\"replace\",\n\t\t\"delete_file\",\n\t}\n\n\tfor operation in patch[\"operations\"]:\n\t\tif operation[\"type\"] not in supported_operations:\n\t\t\traise PatchError(\n\t\t\t\tf\"Unsupported operation: {operation['type']}\"\n\t\t\t)\n\n\t\tif operation[\"type\"] == \"modify_file\":\n\t\t\tfor nested_operation in operation.get(\"operations\", []):\n\t\t\t\tif nested_operation[\"type\"] != \"replace\":\n\t\t\t\t\traise PatchError(\n\t\t\t\t\t\tf\"Unsupported nested operation: \"\n\t\t\t\t\t\tf\"{nested_operation['type']}\"\n\t\t\t\t\t)\n\n\ndef apply_operation(operation, operation_index=None):\n"
+        },
+        {
+          "type": "replace",
+          "old": "\tvalidate_patch(patch)\n\tcheck_allowed_files(patch)\n\n\tif git_status() and not args.force:\n",
+          "new": "\tvalidate_patch(patch)\n\tvalidate_operations(patch)\n\tcheck_allowed_files(patch)\n\n\tif git_status() and not args.force:\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/test_neuropatch_workflow.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def test_replace_mismatch_reports_operation_index_and_preview(\n",
+          "new": "def test_validate_operations_rejects_unsupported_nested_operation():\n\tpatch = {\n\t\t\"operations\": [\n\t\t\t{\n\t\t\t\t\"type\": \"modify_file\",\n\t\t\t\t\"file\": \"sample.txt\",\n\t\t\t\t\"operations\": [\n\t\t\t\t\t{\n\t\t\t\t\t\t\"type\": \"append\",\n\t\t\t\t\t\t\"content\": \"invalid\",\n\t\t\t\t\t},\n\t\t\t\t],\n\t\t\t},\n\t\t],\n\t}\n\n\ttry:\n\t\tneuropatch.validate_operations(patch)\n\texcept neuropatch.PatchError as error:\n\t\tassert \"Unsupported nested operation: append\" in str(error)\n\telse:\n\t\traise AssertionError(\"Unsupported nested operation must raise PatchError\")\n\n\ndef test_replace_mismatch_reports_operation_index_and_preview(\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

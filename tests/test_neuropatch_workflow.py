@@ -127,6 +127,30 @@ def test_ensure_current_branch_upstream_publishes_current_branch(
 	]
 
 
+def test_validate_operations_rejects_unsupported_nested_operation():
+	patch = {
+		"operations": [
+			{
+				"type": "modify_file",
+				"file": "sample.txt",
+				"operations": [
+					{
+						"type": "append",
+						"content": "invalid",
+					},
+				],
+			},
+		],
+	}
+
+	try:
+		neuropatch.validate_operations(patch)
+	except neuropatch.PatchError as error:
+		assert "Unsupported nested operation: append" in str(error)
+	else:
+		raise AssertionError("Unsupported nested operation must raise PatchError")
+
+
 def test_replace_mismatch_reports_operation_index_and_preview(
 	tmp_path,
 	monkeypatch,
