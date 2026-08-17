@@ -184,6 +184,21 @@ def test_validate_operation_schema_rejects_missing_replace_field():
 		raise AssertionError("Missing operation field must raise PatchError")
 
 
+def test_apply_operation_rejects_invalid_schema_before_execution():
+	operation = {
+		"type": "replace",
+		"file": "sample.txt",
+		"old": "old",
+	}
+
+	try:
+		neuropatch.apply_operation(operation)
+	except neuropatch.PatchError as error:
+		assert "missing=new" in str(error)
+	else:
+		raise AssertionError("apply_operation must validate schema")
+
+
 def test_replace_mismatch_reports_operation_index_and_preview(
 	tmp_path,
 	monkeypatch,

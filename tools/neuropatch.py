@@ -399,6 +399,8 @@ def validate_operations(patch):
 
 
 def apply_operation(operation, operation_index=None):
+	validate_operation_schema(operation)
+
 	target = PROJECT_ROOT / operation["file"]
 
 	if operation["type"] == "create_file":

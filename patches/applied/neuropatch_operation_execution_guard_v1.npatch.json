@@ -1,0 +1,40 @@
+{
+  "patch_id": "neuropatch_operation_execution_guard_v1",
+  "goal": "Ensure direct apply_operation calls also enforce operation schema validation.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "tools/neuropatch.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def apply_operation(operation, operation_index=None):\n\ttarget = PROJECT_ROOT / operation[\"file\"]\n",
+          "new": "def apply_operation(operation, operation_index=None):\n\tvalidate_operation_schema(operation)\n\n\ttarget = PROJECT_ROOT / operation[\"file\"]\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/test_neuropatch_workflow.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def test_replace_mismatch_reports_operation_index_and_preview(\n",
+          "new": "def test_apply_operation_rejects_invalid_schema_before_execution():\n\toperation = {\n\t\t\"type\": \"replace\",\n\t\t\"file\": \"sample.txt\",\n\t\t\"old\": \"old\",\n\t}\n\n\ttry:\n\t\tneuropatch.apply_operation(operation)\n\texcept neuropatch.PatchError as error:\n\t\tassert \"missing=new\" in str(error)\n\telse:\n\t\traise AssertionError(\"apply_operation must validate schema\")\n\n\ndef test_replace_mismatch_reports_operation_index_and_preview(\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}
