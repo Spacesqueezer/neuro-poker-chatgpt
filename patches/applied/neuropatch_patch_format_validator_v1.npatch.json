@@ -1,0 +1,40 @@
+{
+  "patch_id": "neuropatch_patch_format_validator_v1",
+  "goal": "Add early validation for patch file structure before transaction and file modification steps.",
+  "allowed_files": [
+    "tools/neuropatch.py",
+    "tests/test_neuropatch_workflow.py"
+  ],
+  "operations": [
+    {
+      "type": "modify_file",
+      "file": "tools/neuropatch.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def validate_patch(patch):\n\tfor key in [\"patch_id\", \"goal\", \"operations\"]:\n\t\tif key not in patch:\n\t\t\traise PatchError(f\"Missing {key}\")\n\n\ndef check_allowed_files(patch):\n",
+          "new": "def validate_patch(patch):\n\tfor key in [\"patch_id\", \"goal\", \"operations\"]:\n\t\tif key not in patch:\n\t\t\traise PatchError(f\"Missing {key}\")\n\n\tif not isinstance(patch[\"operations\"], list):\n\t\traise PatchError(\"Invalid operations: expected list\")\n\n\tif \"validation\" in patch and not isinstance(\n\t\tpatch[\"validation\"],\n\t\tdict,\n\t):\n\t\traise PatchError(\"Invalid validation: expected object\")\n\n\tif \"git\" in patch and not isinstance(\n\t\tpatch[\"git\"],\n\t\tdict,\n\t):\n\t\traise PatchError(\"Invalid git: expected object\")\n\n\ndef check_allowed_files(patch):\n"
+        }
+      ]
+    },
+    {
+      "type": "modify_file",
+      "file": "tests/test_neuropatch_workflow.py",
+      "operations": [
+        {
+          "type": "replace",
+          "old": "def test_operation_contract_registry_contains_supported_operations():\n\tassert set(neuropatch.OPERATION_CONTRACTS) == {\n\t\t\"create_file\",\n\t\t\"modify_file\",\n\t\t\"replace\",\n\t\t\"delete_file\",\n\t}\n\n\ndef test_validate_operation_schema_rejects_missing_replace_field():\n",
+          "new": "def test_operation_contract_registry_contains_supported_operations():\n\tassert set(neuropatch.OPERATION_CONTRACTS) == {\n\t\t\"create_file\",\n\t\t\"modify_file\",\n\t\t\"replace\",\n\t\t\"delete_file\",\n\t}\n\n\ndef test_validate_patch_rejects_non_list_operations():\n\tpatch = {\n\t\t\"patch_id\": \"example\",\n\t\t\"goal\": \"example\",\n\t\t\"operations\": {},\n\t}\n\n\ttry:\n\t\tneuropatch.validate_patch(patch)\n\texcept neuropatch.PatchError as error:\n\t\tassert \"Invalid operations\" in str(error)\n\telse:\n\t\traise AssertionError(\"Invalid operations must raise PatchError\")\n\n\ndef test_validate_operation_schema_rejects_missing_replace_field():\n"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m pytest tests/test_neuropatch_workflow.py -q"
+    ]
+  },
+  "git": {
+    "auto_commit": true
+  }
+}

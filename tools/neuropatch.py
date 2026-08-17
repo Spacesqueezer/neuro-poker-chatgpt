@@ -350,6 +350,21 @@ def validate_patch(patch):
 		if key not in patch:
 			raise PatchError(f"Missing {key}")
 
+	if not isinstance(patch["operations"], list):
+		raise PatchError("Invalid operations: expected list")
+
+	if "validation" in patch and not isinstance(
+		patch["validation"],
+		dict,
+	):
+		raise PatchError("Invalid validation: expected object")
+
+	if "git" in patch and not isinstance(
+		patch["git"],
+		dict,
+	):
+		raise PatchError("Invalid git: expected object")
+
 
 def check_allowed_files(patch):
 	allowed = patch.get("allowed_files")

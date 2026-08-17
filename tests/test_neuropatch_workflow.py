@@ -178,6 +178,21 @@ def test_operation_contract_registry_contains_supported_operations():
 	}
 
 
+def test_validate_patch_rejects_non_list_operations():
+	patch = {
+		"patch_id": "example",
+		"goal": "example",
+		"operations": {},
+	}
+
+	try:
+		neuropatch.validate_patch(patch)
+	except neuropatch.PatchError as error:
+		assert "Invalid operations" in str(error)
+	else:
+		raise AssertionError("Invalid operations must raise PatchError")
+
+
 def test_validate_operation_schema_rejects_missing_replace_field():
 	operation = {
 		"type": "replace",
