@@ -80,7 +80,7 @@ class TeacherRecordImporter:
 			action_history=(), # Restricted solver info set doesn't track public action history exactly matching production
 		)
 
-		legal_actions_list = []
+		legal_actions_set = set()
 		call_amount = 0
 		min_bet = None
 		max_bet = None
@@ -89,28 +89,28 @@ class TeacherRecordImporter:
 
 		for act in record["legal_actions"]:
 			if act == "fold":
-				legal_actions_list.append(PlayerAction.FOLD)
+				legal_actions_set.add(PlayerAction.FOLD)
 			elif act == "check":
-				legal_actions_list.append(PlayerAction.CHECK)
+				legal_actions_set.add(PlayerAction.CHECK)
 			elif act == "call":
-				legal_actions_list.append(PlayerAction.CALL)
+				legal_actions_set.add(PlayerAction.CALL)
 				call_amount = target_bet - commitments[info["player"]]
 			elif act == "all_in":
-				legal_actions_list.append(PlayerAction.ALL_IN)
+				legal_actions_set.add(PlayerAction.ALL_IN)
 			elif act.startswith("bet_") or act == "bet":
-				legal_actions_list.append(PlayerAction.BET)
+				legal_actions_set.add(PlayerAction.BET)
 				# Abstract
 				min_bet = self.big_blind
 				max_bet = starting_stacks[info["player"]]
 			elif act.startswith("raise_") or act == "raise":
-				legal_actions_list.append(PlayerAction.RAISE)
+				legal_actions_set.add(PlayerAction.RAISE)
 				min_raise_to = target_bet + self.big_blind
 				max_raise_to = starting_stacks[info["player"]]
 			elif act == "shove":
-				legal_actions_list.append(PlayerAction.ALL_IN)
+				legal_actions_set.add(PlayerAction.ALL_IN)
 
 		legal_actions = LegalActions(
-			actions=tuple(legal_actions_list),
+			actions=tuple(legal_actions_set),
 			call_amount=call_amount,
 			min_bet=min_bet,
 			max_bet=max_bet,

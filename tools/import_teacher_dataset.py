@@ -30,12 +30,12 @@ def main():
 		big_blind=big_blind,
 		action_abstraction=action_abstraction,
 	)
-	writer = LearningDatasetWriter(output_path)
 
 	# Clear output file if it exists
 	if output_path.exists():
 		output_path.unlink()
 
+	writer = LearningDatasetWriter(output_path)
 	records = payload.get("records", [])
 	imported_count = 0
 
