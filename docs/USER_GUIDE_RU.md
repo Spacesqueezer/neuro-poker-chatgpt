@@ -638,7 +638,18 @@ average_strategy
 
 Команда сама выполняет MCCFR training, поэтому большие значения `--iterations` являются opt-in тяжёлой операцией и не входят в обычный pytest/NeuroPatch validation.
 
-## 8.3. Проверка coverage экспортированной solver policy
+## 8.3. Экспорт обучающих данных (teacher records) из solver artifact
+
+Создать solver-local teacher-record export на основе экспортированного strategy artifact:
+
+```text
+python tools/export_teacher_records.py --strategy artifacts/mccfr_equal_strategy.json --output artifacts/mccfr_equal_teacher_records.json
+```
+
+Эта утилита читает экспортированную стратегию, заново создаёт соответствующий benchmark game и обходит дерево для выгрузки всех известных (решённых) information sets, где strategy задана. Формирует JSON, содержащий только совместимые метаданные (benchmark, action_abstraction) и массив решённых состояний (information set, legal actions и нормализованную стратегию).
+Эта команда полезна перед связкой с `poker.learning` для генерации teacher labels без прямого импорта production среды.
+
+## 8.4. Проверка coverage экспортированной solver policy
 
 Проверить уже сохранённый strategy artifact без повторного MCCFR training:
 
@@ -682,7 +693,7 @@ max_depth
 
 Эта команда не обучает solver и обычно является дешёвой проверкой совместимости/coverage. Она не запускает production Arena.
 
-## 8.4. End-to-end smoke solver artifact
+## 8.5. End-to-end smoke solver artifact
 
 Быстро проверить весь research pipeline `train → export → reload → coverage` одной командой:
 

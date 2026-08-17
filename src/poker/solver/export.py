@@ -423,3 +423,87 @@ def _validate_strategy(strategy):
 		raise ValueError(
 			"strategy export probabilities must sum to 1"
 		)
+
+TEACHER_RECORD_VERSION = 1
+
+
+def build_teacher_export(strategy_payload, game):
+	validate_strategy_export(strategy_payload)
+	from poker.solver.evaluation import validate_policy_game_compatibility
+	validate_policy_game_compatibility(strategy_payload, game)
+
+	lookup = StrategyLookup(strategy_payload)
+	records = []
+	seen = set()
+	def walk(state):
+		if game.is_terminal_node(state):
+			return
+
+		player = game.player_to_act(state)
+		if player == -1: # Chance node
+			for action, _ in game.chance_actions(state):
+				walk(game.next_node(state, action))
+			return
+
+		info_set = game.information_set_for_node(state, player)
+		legal_actions = game.legal_actions(state)
+		strategy = lookup.lookup(info_set)
+		if strategy is not None:
+			overlap = {
+				a: p
+				for a, p in strategy.items()
+				if a in legal_actions
+			}
+			if overlap:
+				overlap_sum = sum(overlap.values())
+				if overlap_sum > 0:
+					renormalized = {
+						a: p / overlap_sum
+						for a, p in overlap.items()
+					}
+
+					serialized_info_set = serialize_information_set(info_set)
+					key = information_set_key(serialized_info_set)
+					if key not in seen:
+						seen.add(key)
+						record = {
+							"information_set": serialized_info_set,
+							"legal_actions": sorted(legal_actions),
+							"strategy": {
+								a: renormalized[a]
+								for a in sorted(renormalized)
+							}
+						}
+						records.append(record)
+
+		for action in legal_actions:
+			walk(game.next_node(state, action))
+
+	for initial_node in game.initial_nodes():
+		walk(initial_node.state)
+
+	records.sort(
+		key=lambda record: information_set_key(
+			record["information_set"]
+		)
+	)
+
+	return {
+		"format_version": TEACHER_RECORD_VERSION,
+		"benchmark": strategy_payload["benchmark"],
+		"action_abstraction": strategy_payload["action_abstraction"],
+		"record_count": len(records),
+		"records": records,
+	}
+
+def write_teacher_export(payload, output):
+	path = Path(output)
+	path.parent.mkdir(parents=True, exist_ok=True)
+	path.write_text(
+		json.dumps(
+			payload,
+			indent=2,
+			sort_keys=True,
+		) + "\n",
+		encoding="utf-8",
+	)
