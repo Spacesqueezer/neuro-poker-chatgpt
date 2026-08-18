@@ -8,29 +8,46 @@
 
 Вся статистика игроков и приватная память агентов (Opponent Memory) хранится в БД.
 
-**1. Настройка URL БД:**
-Установите переменную окружения `POKER_DATABASE_URL` (и `POKER_TEST_DATABASE_URL` для тестов).
+**1. Установка PostgreSQL под Windows:**
+Если у вас ещё нет базы данных:
+1. Скачайте установщик с официального сайта: https://www.postgresql.org/download/windows/
+2. При установке запомните пароль, который вы задаёте для суперпользователя `postgres`.
+3. Оставьте стандартный порт `5432`.
+4. В конце установки вы можете открыть **pgAdmin 4** (идет в комплекте).
+
+**2. Создание базы данных:**
+1. Откройте **pgAdmin 4**, подключитесь к серверу (введя пароль от `postgres`).
+2. Нажмите правой кнопкой мыши на `Databases` -> `Create` -> `Database...`
+3. Введите название: `neuro_poker` и нажмите `Save`.
+
+**3. Настройка URL БД:**
+Теперь нужно сообщить нашему коду, как подключиться к базе. В адресе подключения замените `password` на тот пароль, который вы придумали при установке.
+
+Установите переменную окружения `POKER_DATABASE_URL`.
 
 ```powershell
 # Для Windows (PowerShell)
-$env:POKER_DATABASE_URL="postgresql+psycopg://user:password@localhost:5432/neuro_poker"
+$env:POKER_DATABASE_URL="postgresql+psycopg://postgres:ВАШ_ПАРОЛЬ@localhost:5432/neuro_poker"
 ```
 
 ```cmd
 # Для Windows (CMD)
-set POKER_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/neuro_poker
+set POKER_DATABASE_URL=postgresql+psycopg://postgres:ВАШ_ПАРОЛЬ@localhost:5432/neuro_poker
 ```
 
 ```bash
 # Для Linux/macOS
-export POKER_DATABASE_URL="postgresql+psycopg://user:password@localhost:5432/neuro_poker"
+export POKER_DATABASE_URL="postgresql+psycopg://postgres:ВАШ_ПАРОЛЬ@localhost:5432/neuro_poker"
 ```
 
-**2. Инициализация схемы (Миграции):**
-Проект использует Alembic. Чтобы создать все таблицы, выполните:
+*(Опционально: если хотите гонять тесты, создайте в pgAdmin базу `neuro_poker_test` и задайте аналогичную переменную `POKER_TEST_DATABASE_URL`)*.
+
+**4. Инициализация схемы (Миграции Alembic):**
+Проект использует систему миграций Alembic для управления таблицами. Чтобы создать все необходимые таблицы в вашей свежей базе `neuro_poker`, выполните в терминале (где установлена переменная среды):
 ```bash
 python -m alembic -c alembic.ini upgrade head
 ```
+Если команда отработала без ошибок, база данных готова к сбору памяти об оппонентах!
 
 ---
 
@@ -38,18 +55,25 @@ python -m alembic -c alembic.ini upgrade head
 
 Перед тем как сеть начнёт играть сама, ей нужна базовая стратегия. Мы клонируем логику солвера (MCCFR).
 
-**1. Генерация данных учителя (Solver Artifacts):**
+**1. Генерация стратегии солвера (Solver Artifacts):**
+Сначала мы обучаем солвер находить оптимальную стратегию и экспортируем её.
 ```bash
 python tools/export_mccfr_strategy.py --scenario equal --iterations 100 --seed 42 --output artifacts/mccfr_equal_strategy.json
 ```
 
-**2. Конвертация стратегии в обучающий датасет:**
-Этот скрипт переводит узлы дерева игры в векторы `LearningSample`.
+**2. Конвертация стратегии в записи учителя (Teacher Records):**
+Сырая стратегия солвера содержит много внутренней информации. Этот шаг извлекает только решённые вероятности действий и переводит их в промежуточный формат записей учителя.
 ```bash
-python tools/import_teacher_dataset.py --input artifacts/mccfr_equal_strategy.json --output datasets/teacher_samples.jsonl
+python tools/export_teacher_records.py --strategy artifacts/mccfr_equal_strategy.json --output artifacts/mccfr_equal_teacher_records.json
 ```
 
-**3. Обучение сети (Supervised Learning):**
+**3. Создание обучающего датасета:**
+Этот скрипт берёт записи учителя и переводит узлы дерева игры в векторы наблюдений (тензоры) `LearningSample`, готовые для нейросети.
+```bash
+python tools/import_teacher_dataset.py --input artifacts/mccfr_equal_teacher_records.json --output datasets/teacher_samples.jsonl
+```
+
+**4. Обучение сети (Supervised Learning):**
 Скрипт создаёт PyTorch модель (`PokerPolicyNetwork`) и обучает её попадать в предсказания солвера.
 ```bash
 python tools/train_imitation.py --train datasets/teacher_samples.jsonl --validation datasets/teacher_samples.jsonl --output models/policy_v1.pt --epochs 10 --learning-rate 1e-3

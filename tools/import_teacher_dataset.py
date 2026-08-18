@@ -21,6 +21,12 @@ def main():
 
 	payload = json.loads(input_path.read_text(encoding="utf-8"))
 
+	if "average_strategy" in payload and "records" not in payload:
+		raise ValueError(
+			f"Input file {args.input} appears to be a raw MCCFR strategy artifact, not a teacher records file.\n"
+			"Please run `python tools/export_teacher_records.py` first to convert the strategy into teacher records."
+		)
+
 	small_blind = payload.get("benchmark", {}).get("small_blind", 1)
 	big_blind = payload.get("benchmark", {}).get("big_blind", 2)
 	action_abstraction = payload.get("action_abstraction")
