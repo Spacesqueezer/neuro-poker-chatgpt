@@ -50,6 +50,9 @@ class NeuralAgent:
 		if self.stochastic:
 			dist = torch.distributions.Categorical(logits=action_logits[0])
 			action_index = dist.sample().item()
+			# Sample continuous sizing around the predicted mean
+			sizing_dist = torch.distributions.Normal(sizing_val, 0.1)
+			sizing_val = torch.clamp(sizing_dist.sample(), 0.0, 1.0).item()
 		else:
 			action_index = action_logits.argmax(dim=-1).item()
 

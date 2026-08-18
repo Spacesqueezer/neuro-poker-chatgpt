@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from pathlib import Path
 
 from poker.agents.neural import NeuralAgent
@@ -7,6 +8,34 @@ from poker.arena.runner import ArenaRunner
 from poker.learning.dataset import LearningDatasetWriter
 from poker.learning.rl_dataset import RLDatasetCapture
 from poker.learning.self_play import ModelPool
+
+def setup_statistics():
+	from sqlalchemy import create_engine
+	from sqlalchemy.orm import sessionmaker
+	from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+	from poker.statistics.database.postgres_repositories import (
+		PostgresPlayerRepository,
+		PostgresStatisticsRepository,
+		PostgresMemoryRepository,
+	)
+	from poker.statistics.database.services import StatisticsService
+	from poker.statistics.database.facade import StatisticsFacade
+
+	db_url = os.getenv("POKER_DATABASE_URL")
+	if not db_url:
+		return None, None
+
+	engine = create_engine(db_url)
+	DeclarativeBase.metadata.create_all(engine)
+	Session = sessionmaker(engine)
+	session = Session()
+
+	service = StatisticsService(
+		player_repository=PostgresPlayerRepository(session),
+		statistics_repository=PostgresStatisticsRepository(session),
+		memory_repository=PostgresMemoryRepository(session),
+	)
+	return session, StatisticsFacade(service)
 
 def main():
 	parser = argparse.ArgumentParser(description="Run Self-Play data generation using RLDatasetCapture")
@@ -19,19 +48,42 @@ def main():
 
 	args = parser.parse_args()
 
+	session, facade = setup_statistics()
+
+	from poker.learning.observation import LearningObservationEncoder
+	from poker.statistics.opponent_profile import OpponentProfileProvider
+
+	provider = OpponentProfileProvider(facade) if facade else None
+	obs_encoder = LearningObservationEncoder(profile_provider=provider)
+
 	pool = ModelPool(args.pool_dir)
 	historical_model_path = pool.sample_model(seed=args.seed)
 
 	# For Self-Play, agents need an ID to track their private memory
-	current_agent = NeuralAgent(model_path=args.current_model, stochastic=True, agent_id="self_play_current")
+	current_agent = NeuralAgent(
+		model_path=args.current_model,
+		stochastic=True,
+		agent_id="current", # Must match the dictionary key used in ArenaRunner
+		observation_encoder=obs_encoder
+	)
 
 	if historical_model_path is None:
 		print("No historical models found. Using current model for both players.")
-		opponent_agent = NeuralAgent(model_path=args.current_model, stochastic=True, agent_id="self_play_historical")
+		opponent_agent = NeuralAgent(
+			model_path=args.current_model,
+			stochastic=True,
+			agent_id="historical", # Must match the dictionary key
+			observation_encoder=obs_encoder
+		)
 		historical_model_path = args.current_model
 	else:
 		print(f"Sampled historical model: {historical_model_path.name}")
-		opponent_agent = NeuralAgent(model_path=str(historical_model_path), stochastic=True, agent_id="self_play_historical")
+		opponent_agent = NeuralAgent(
+			model_path=str(historical_model_path),
+			stochastic=True,
+			agent_id="historical", # Must match the dictionary key
+			observation_encoder=obs_encoder
+		)
 
 	agents = {
 		"current": current_agent,
@@ -49,17 +101,20 @@ def main():
 		include_players=["current", "historical"]
 	)
 
-	# We might want to persist and track opponent memory.
-	# However, since we're generating self-play datasets, it's optional here.
-	# But to fulfill the integration of the online tracker:
-	# Note: In a production script, we'd initialize the proper SQLAlchemy StatisticsFacade.
-	# For this script, we'll keep it simple, but we'll assign the agent IDs so they use 'private' mode in observations.
+	from poker.statistics.online_tracker import OnlineMemoryTracker
+	tracker = OnlineMemoryTracker(statistics_facade=facade) if facade else None
+
+	def composite_hand_observer(history):
+		capture.hand_observer(history)
+		if tracker:
+			tracker.process_hand(history)
 
 	runner = ArenaRunner(
 		agents=agents,
 		starting_stack=args.starting_stack,
+		statistics_service=facade.service if facade else None,
 		decision_observer=capture.decision_observer,
-		hand_observer=capture.hand_observer
+		hand_observer=composite_hand_observer
 	)
 
 	print(f"Starting Self-Play Arena for {args.hands} hands...")
@@ -73,6 +128,8 @@ def main():
 		"output": args.output,
 	}, indent=2))
 
+	if session:
+		session.close()
 
 if __name__ == "__main__":
 	main()

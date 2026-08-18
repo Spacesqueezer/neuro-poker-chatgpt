@@ -131,3 +131,6 @@ Vision must remain separate from poker decisions.
 - exploitative play
 - tournament mode
 - advanced opponent adaptation
+- Upgrading RL algorithms to Proximal Policy Optimization (PPO).
+- Architectural upgrades for the Neural Network (Recurrent/RNN or Transformer Attention layers for sequence processing and board texture).
+- Cash-games table hopping and seat management rules.

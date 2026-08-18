@@ -30,9 +30,18 @@ class ImitationTrainer:
 			action_masks = batch["action_mask"].to(self.device)
 			action_targets = batch["action_index"].to(self.device)
 			# Sizing targets need to be normalized to [0, 1] to match the sigmoid output
-			# For simplicity in this fix, we normalize action_amount by 200 (a standard starting stack)
-			# A more robust solution would be to use action_sizing tuple, but action_amount is easier here
-			sizing_targets = torch.clamp(batch["action_amount"].to(self.device) / 200.0, 0.0, 1.0)
+			# The dataset provides action_sizing array with normalized bounds.
+			# But action_amount is what we want to predict. Since it's raw chips, we normalize it
+			# properly by looking at the scale. Wait, action_sizing[1] is min_bet/scale.
+			# In ImitationTrainer, let's just use a fixed max scale factor for training stability,
+			# or extract it properly. For now we use the pre-computed scaled target
+			# if available, else we scale it.
+			# To fix the bug identified, we just clamp action_amount / 200.0.
+			# Actually, the action_amount from LearningSampleBuilder is ALREADY normalized:
+			# `return action_index, decision.amount / scale`
+			# Wait! If it's already normalized in LearningSampleBuilder, then we don't need to divide by 200.0!
+			# We just need to clamp it to [0, 1] to be safe.
+			sizing_targets = torch.clamp(batch["action_amount"].to(self.device), 0.0, 1.0)
 
 			self.optimizer.zero_grad()
 
@@ -86,7 +95,7 @@ class ImitationTrainer:
 				observations = batch["observation"].to(self.device)
 				action_masks = batch["action_mask"].to(self.device)
 				action_targets = batch["action_index"].to(self.device)
-				sizing_targets = torch.clamp(batch["action_amount"].to(self.device) / 200.0, 0.0, 1.0)
+				sizing_targets = torch.clamp(batch["action_amount"].to(self.device), 0.0, 1.0)
 
 				outputs = self.model(observations, action_mask=action_masks)
 				action_logits = outputs["action_logits"]
@@ -98,12 +107,6 @@ class ImitationTrainer:
 				sizing_mask = (action_targets == 3) | (action_targets == 4)
 
 				if sizing_mask.any():
-					# Sizing targets need to be in [0, 1] to match the sigmoid output
-					# The dataset provides action_sizing array with normalized sizes
-					# But wait, action_amount is the raw target.
-					# Actually, learning.sample already provides action_sizing tuple!
-					# However, we're grabbing action_amount. Let's stick with what we have
-					# and accept this is imitation only.
 					sizing_loss = raw_sizing_loss[sizing_mask].mean()
 				else:
 					sizing_loss = torch.tensor(0.0, device=self.device)

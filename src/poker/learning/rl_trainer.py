@@ -30,12 +30,14 @@ class PolicyGradientTrainer:
 			observations = batch["observation"].to(self.device)
 			action_masks = batch["action_mask"].to(self.device)
 			action_targets = batch["action_index"].to(self.device) # The action actually taken
+			sizing_targets = torch.clamp(batch["action_amount"].to(self.device), 0.0, 1.0)
 			rewards = batch["reward"].to(self.device)
 
 			self.optimizer.zero_grad()
 
 			outputs = self.model(observations, action_mask=action_masks)
 			action_logits = outputs["action_logits"]
+			sizing_preds = outputs["sizing"]
 			value_preds = outputs["value"]
 
 			# Value Loss: MSE(value_prediction, true_reward)
@@ -45,16 +47,29 @@ class PolicyGradientTrainer:
 			# Advantage = Reward - Value Prediction (baseline)
 			advantages = (rewards - value_preds.detach()) # detach so we don't backprop value head from policy loss
 
-			# Get log probabilities of actions
+			# Get log probabilities of discrete actions
 			log_probs = F.log_softmax(action_logits, dim=-1)
 
 			# Gather the log prob of the action actually taken
-			# log_probs shape: [batch, num_actions]
-			# action_targets shape: [batch]
 			action_log_probs = log_probs.gather(dim=-1, index=action_targets.unsqueeze(-1)).squeeze(-1)
 
+			# For sizing, we treat the output as the mean of a Normal distribution with fixed variance
+			# This allows gradients to flow into the sizing head during RL
+			# We only compute sizing log prob if the chosen action was BET (3) or RAISE (4)
+			sizing_mask = (action_targets == 3) | (action_targets == 4)
+			sizing_log_probs = torch.zeros_like(action_log_probs)
+
+			if sizing_mask.any():
+				# Normal distribution around predicted sizing with std=0.1 (exploration parameter)
+				sizing_dist = torch.distributions.Normal(sizing_preds[sizing_mask], 0.1)
+				# Log prob of the actual sizing chosen during self play
+				sizing_log_probs[sizing_mask] = sizing_dist.log_prob(sizing_targets[sizing_mask])
+
+			# Combined log prob (assuming conditional independence)
+			total_log_probs = action_log_probs + sizing_log_probs
+
 			# REINFORCE objective
-			pg_loss = -(action_log_probs * advantages).mean()
+			pg_loss = -(total_log_probs * advantages).mean()
 
 			# Entropy bonus to encourage exploration
 			probs = F.softmax(action_logits, dim=-1)
