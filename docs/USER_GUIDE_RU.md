@@ -321,6 +321,9 @@ python tools/benchmark_expert.py
 random
 calling_station
 nit
+maniac
+tag
+lag
 ```
 
 Аргументы:
@@ -369,6 +372,9 @@ nit
 random
 calling_station
 nit
+maniac
+tag
+lag
 ```
 
 Пример:
@@ -687,7 +693,7 @@ python tools/train_imitation.py --train datasets/mccfr_equal_teacher_samples.jso
 Для оценки производительности (winrate, bb/100) обученной модели против базовых агентов используется скрипт:
 
 ```text
-python tools/benchmark_neural.py --model models/policy_v1.pt --opponents random calling_station nit
+python tools/benchmark_neural.py --model models/policy_v1.pt --opponents random calling_station nit maniac tag lag
 ```
 
 Скрипт загружает PyTorch веса и запускает Arena сессии. Результат выводится в JSON формате.

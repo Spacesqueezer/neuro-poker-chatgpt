@@ -46,11 +46,12 @@ Implemented baseline agents:
 - Random Agent
 - Calling Station
 - Nit
-
-Still planned:
 - TAG
 - LAG
 - Maniac
+
+Still planned:
+- None
 
 Arena v1 currently provides:
 - deterministic seeds;

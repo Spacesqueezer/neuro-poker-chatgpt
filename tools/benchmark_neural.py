@@ -2,14 +2,14 @@ import argparse
 import json
 from pathlib import Path
 
-from poker.agents import CallingStationAgent, NitAgent, RandomAgent, NeuralAgent
+from poker.agents import CallingStationAgent, NitAgent, RandomAgent, NeuralAgent, ManiacAgent, TAGAgent, LAGAgent
 from poker.arena.runner import ArenaRunner
 
 
 def main():
 	parser = argparse.ArgumentParser(description="Benchmark NeuralAgent against baselines")
 	parser.add_argument("--model", required=True, help="Path to NeuralAgent .pt weights")
-	parser.add_argument("--opponents", nargs="+", choices=["random", "calling_station", "nit"], default=["random"])
+	parser.add_argument("--opponents", nargs="+", choices=["random", "calling_station", "nit", "maniac", "tag", "lag"], default=["random"])
 	parser.add_argument("--hands", type=int, default=1000)
 	parser.add_argument("--seed", type=int, default=42)
 	parser.add_argument("--starting-stack", type=int, default=200)
@@ -29,6 +29,12 @@ def main():
 			opponent = CallingStationAgent()
 		elif opponent_name == "nit":
 			opponent = NitAgent()
+		elif opponent_name == "maniac":
+			opponent = ManiacAgent(seed=args.seed)
+		elif opponent_name == "tag":
+			opponent = TAGAgent(seed=args.seed)
+		elif opponent_name == "lag":
+			opponent = LAGAgent(seed=args.seed)
 
 		agents = {
 			"neural": neural_agent,

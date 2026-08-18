@@ -5,6 +5,9 @@ from poker.agents import (
 	ExpertAgent,
 	NitAgent,
 	RandomAgent,
+	ManiacAgent,
+	TAGAgent,
+	LAGAgent,
 )
 from poker.arena.runner import ArenaRunner
 
@@ -20,6 +23,9 @@ class ExpertBenchmarkConfig:
 		"random",
 		"calling_station",
 		"nit",
+		"maniac",
+		"tag",
+		"lag",
 	)
 
 	def validate(self):
@@ -193,6 +199,12 @@ class ExpertBenchmarkRunner:
 			return CallingStationAgent()
 		if opponent == "nit":
 			return NitAgent()
+		if opponent == "maniac":
+			return ManiacAgent(seed=seed)
+		if opponent == "tag":
+			return TAGAgent(seed=seed)
+		if opponent == "lag":
+			return LAGAgent(seed=seed)
 
 		raise ValueError(
 			f"Unsupported benchmark opponent: {opponent}"

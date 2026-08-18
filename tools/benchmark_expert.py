@@ -19,8 +19,8 @@ def main():
 	parser.add_argument(
 		"--opponents",
 		nargs="+",
-		default=["random", "calling_station", "nit"],
-		choices=["random", "calling_station", "nit"],
+		default=["random", "calling_station", "nit", "maniac", "tag", "lag"],
+		choices=["random", "calling_station", "nit", "maniac", "tag", "lag"],
 	)
 	parser.add_argument("--output")
 	args = parser.parse_args()

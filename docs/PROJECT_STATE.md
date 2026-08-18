@@ -98,7 +98,7 @@ The poker engine does not import or depend on agents. Agent code depends only on
 
 ## Known gaps
 
-- Baseline strategy agents are implemented: RandomAgent, CallingStationAgent, NitAgent.
+- Baseline strategy agents are implemented: RandomAgent, CallingStationAgent, NitAgent, ManiacAgent, TAGAgent, LAGAgent.
 - Arena v1 execution exists and now has baseline opponents for evaluation.
 - Arena reporting is being expanded with aggregated session statistics.
 - Arena v1 accounting tracks session stacks, player profit and bb/100 evaluation foundations.
