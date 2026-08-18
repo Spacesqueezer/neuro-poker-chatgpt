@@ -10,8 +10,19 @@
 
 **1. Настройка URL БД:**
 Установите переменную окружения `POKER_DATABASE_URL` (и `POKER_TEST_DATABASE_URL` для тестов).
+
+```powershell
+# Для Windows (PowerShell)
+$env:POKER_DATABASE_URL="postgresql+psycopg://user:password@localhost:5432/neuro_poker"
+```
+
+```cmd
+# Для Windows (CMD)
+set POKER_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/neuro_poker
+```
+
 ```bash
-# Пример для Linux/macOS
+# Для Linux/macOS
 export POKER_DATABASE_URL="postgresql+psycopg://user:password@localhost:5432/neuro_poker"
 ```
 
@@ -76,7 +87,32 @@ python tools/rl_orchestrator.py --pool-dir models/pool --iterations 10 --hands 1
 
 ---
 
-## 5. Оценка качества (Benchmarking)
+## 5. Обучение на видеокартах NVIDIA (CUDA) под Windows
+
+В проекте используется PyTorch, который по умолчанию может установиться в версии только для CPU. Если у вас установлена видеокарта NVIDIA (например, GeForce RTX 3060/4060/5060 Ti), вы можете значительно ускорить процесс обучения сетей (RL и Imitation).
+
+**1. Проверка поддержки CUDA:**
+Сначала убедитесь, что PyTorch видит вашу видеокарту. Запустите в терминале:
+```text
+python -c "import torch; print(torch.cuda.is_available())"
+```
+Если выводит `False`, значит у вас установлена версия PyTorch без поддержки GPU.
+
+**2. Установка PyTorch с CUDA под Windows:**
+Чтобы установить PyTorch с поддержкой CUDA 12.1 (самая стабильная версия для актуальных драйверов NVIDIA), выполните команду:
+```powershell
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```
+После завершения установки снова выполните команду проверки. Если выводится `True` — всё настроено верно.
+
+**3. Использование CUDA в скриптах:**
+Все скрипты обучения (`tools/train_imitation.py` и `tools/train_rl.py`) написаны так, что они автоматически определяют доступность видеокарты. Никаких дополнительных флагов передавать не нужно.
+При запуске вы увидите сообщение:
+`Using device: cuda` (если всё хорошо) или `Using device: cpu` (если видеокарта не найдена).
+
+---
+
+## 6. Оценка качества (Benchmarking)
 
 Чтобы понять, насколько сильна стала нейросеть, мы стравливаем её с базовыми жестко-запрограммированными ботами (`random`, `nit`, `calling_station`).
 
