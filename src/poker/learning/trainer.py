@@ -29,7 +29,10 @@ class ImitationTrainer:
 			observations = batch["observation"].to(self.device)
 			action_masks = batch["action_mask"].to(self.device)
 			action_targets = batch["action_index"].to(self.device)
-			sizing_targets = batch["action_amount"].to(self.device)
+			# Sizing targets need to be normalized to [0, 1] to match the sigmoid output
+			# For simplicity in this fix, we normalize action_amount by 200 (a standard starting stack)
+			# A more robust solution would be to use action_sizing tuple, but action_amount is easier here
+			sizing_targets = torch.clamp(batch["action_amount"].to(self.device) / 200.0, 0.0, 1.0)
 
 			self.optimizer.zero_grad()
 
@@ -83,7 +86,7 @@ class ImitationTrainer:
 				observations = batch["observation"].to(self.device)
 				action_masks = batch["action_mask"].to(self.device)
 				action_targets = batch["action_index"].to(self.device)
-				sizing_targets = batch["action_amount"].to(self.device)
+				sizing_targets = torch.clamp(batch["action_amount"].to(self.device) / 200.0, 0.0, 1.0)
 
 				outputs = self.model(observations, action_mask=action_masks)
 				action_logits = outputs["action_logits"]

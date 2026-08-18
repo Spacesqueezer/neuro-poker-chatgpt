@@ -24,7 +24,7 @@ The core prerequisites for Reinforcement Learning have been addressed:
 
 The `PolicyGradientTrainer` (REINFORCE with Value Baseline) is now implemented in `poker.learning.rl_trainer`, alongside the `tools/train_rl.py` CLI script. This completely closes out the Core Learning System milestone (Phase 6), enabling the full progression: Solver Teacher -> Imitation Learning -> Self-Play Data Generation -> Reinforcement Learning Training.
 
-A Russian user-facing command manual now lives in `docs/USER_GUIDE_RU.md`; `DEV_RULES.md` requires every future patch that adds or changes CLI commands, arguments, interactive commands, user-visible tools, environment variables or standard operational workflows to update that guide in the same patch. NeuroPatch workflow provenance is also being hardened: successful patch files are retained under tracked `patches/applied/`, while normal AI development moves to the dedicated `ai-development` branch so `main` remains a manual safety branch.
+A Russian user-facing command manual lives in `docs/USER_GUIDE_RU.md`, and a dedicated guide for neural network training and database usage lives in `docs/NEURO_USAGE.md`; `DEV_RULES.md` requires every future patch that adds or changes CLI commands, arguments, interactive commands, user-visible tools, environment variables or standard operational workflows to update that guide in the same patch. NeuroPatch workflow provenance is also being hardened: successful patch files are retained under tracked `patches/applied/`, while normal AI development moves to the dedicated `ai-development` branch so `main` remains a manual safety branch.
 
 ## Current capabilities
 
