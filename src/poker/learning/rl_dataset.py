@@ -47,7 +47,9 @@ class RLDatasetCapture:
 			self.hand_buffer.clear()
 			return
 
-		initial_stacks = history.events[0].data["stacks"]
+		initial_stacks = {
+			p["name"]: p.get("starting_chips", 0) for p in history.players
+		}
 
 		# Compute rewards
 		# Normalize reward by total chips in the pot maybe? Or just big blinds.

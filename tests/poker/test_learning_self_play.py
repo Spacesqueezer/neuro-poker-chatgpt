@@ -68,7 +68,10 @@ def test_rl_dataset_capture_buffers_and_assigns_reward():
 
 	class MockHistory:
 		final_stacks = {"player_1": 150, "player_2": 50}
-		events = [type("Event", (), {"data": {"stacks": {"player_1": 100, "player_2": 100}}})]
+		players = [
+			{"name": "player_1", "starting_chips": 100},
+			{"name": "player_2", "starting_chips": 100}
+		]
 
 	hand_state = MockHandState()
 	legal = MockLegalActions()
