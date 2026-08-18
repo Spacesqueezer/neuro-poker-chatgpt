@@ -94,14 +94,15 @@ def main():
 		stats = runner.run(hands=args.hands, seed=args.seed)
 
 		# Simplistic evaluation
-		neural_profit = sum(stats.player_profit.get("neural", []))
+		neural_profit = stats.players["neural"].profit if "neural" in stats.players else 0
+		bb_100 = stats.summary().get("bb_per_100", {}).get("neural", 0.0)
 
 		results.append({
 			"opponent": opponent_name,
 			"hands": stats.hands,
 			"failed_hands": stats.failed_hands,
 			"neural_profit": neural_profit,
-			"bb_per_100": (neural_profit / 2) / (stats.hands / 100) if stats.hands > 0 else 0,
+			"bb_per_100": bb_100,
 		})
 
 	print("\nBenchmark Results:")
