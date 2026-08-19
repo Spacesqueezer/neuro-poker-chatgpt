@@ -8,6 +8,9 @@ from poker.agents import (
 	ExpertAgent,
 	NitAgent,
 	RandomAgent,
+	ManiacAgent,
+	TAGAgent,
+	LAGAgent,
 )
 from poker.arena.runner import ArenaRunner
 from poker.learning.dataset import (
@@ -169,6 +172,12 @@ class LearningDatasetGenerator:
 				agent = CallingStationAgent()
 			elif spec == "nit":
 				agent = NitAgent()
+			elif spec == "maniac":
+				agent = ManiacAgent(seed=seed + 300000 + index)
+			elif spec == "tag":
+				agent = TAGAgent(seed=seed + 400000 + index)
+			elif spec == "lag":
+				agent = LAGAgent(seed=seed + 500000 + index)
 			else:
 				raise ValueError(f"Unsupported dataset agent: {spec}")
 

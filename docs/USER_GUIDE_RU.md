@@ -321,6 +321,9 @@ python tools/benchmark_expert.py
 random
 calling_station
 nit
+maniac
+tag
+lag
 ```
 
 Аргументы:
@@ -369,6 +372,9 @@ nit
 random
 calling_station
 nit
+maniac
+tag
+lag
 ```
 
 Пример:
@@ -638,7 +644,106 @@ average_strategy
 
 Команда сама выполняет MCCFR training, поэтому большие значения `--iterations` являются opt-in тяжёлой операцией и не входят в обычный pytest/NeuroPatch validation.
 
-## 8.3. Проверка coverage экспортированной solver policy
+## 8.3. Экспорт обучающих данных (teacher records) из solver artifact
+
+Создать solver-local teacher-record export на основе экспортированного strategy artifact:
+
+```text
+python tools/export_teacher_records.py --strategy artifacts/mccfr_equal_strategy.json --output artifacts/mccfr_equal_teacher_records.json
+```
+
+Эта утилита читает экспортированную стратегию, заново создаёт соответствующий benchmark game и обходит дерево для выгрузки всех известных (решённых) information sets, где strategy задана. Формирует JSON, содержащий только совместимые метаданные (benchmark, action_abstraction) и массив решённых состояний (information set, legal actions и нормализованную стратегию).
+Эта команда полезна перед связкой с `poker.learning` для генерации teacher labels без прямого импорта production среды.
+
+Конвертировать solver-local teacher records в формат `LearningSample` для обучения нейросетей:
+
+```text
+python tools/import_teacher_dataset.py --input artifacts/mccfr_equal_teacher_records.json --output datasets/mccfr_equal_teacher_samples.jsonl
+```
+
+Скрипт реконструирует внутреннее состояние игры (похожее на `HandStateView` и `LegalActions`) из сохранённых параметров и конвертирует их в стандартные обучающие векторы наблюдений и целевые метки действий, используя `LearningSampleBuilder`.
+
+## 8.4. Обучение нейронной сети (Imitation Learning)
+
+Для запуска процесса обучения (поведенческого клонирования) на основе сгенерированных `LearningSample` используется следующий инструмент:
+
+```text
+python tools/train_imitation.py --train datasets/mccfr_equal_teacher_samples.jsonl --validation datasets/mccfr_equal_teacher_samples_val.jsonl --output models/policy_v1.pt
+```
+
+Дополнительные аргументы:
+
+```text
+--epochs N
+```
+Количество эпох обучения. По умолчанию 10.
+
+```text
+--batch-size N
+```
+Размер батча. По умолчанию 32.
+
+```text
+--learning-rate N
+```
+Скорость обучения (learning rate) для оптимизатора Adam. По умолчанию 1e-3.
+
+## 8.5. Benchmark нейросетевого агента (NeuralAgent)
+
+Для оценки производительности (winrate, bb/100) обученной модели против базовых агентов используется скрипт:
+
+```text
+python tools/benchmark_neural.py --model models/policy_v1.pt --opponents random calling_station nit maniac tag lag
+```
+
+Скрипт загружает PyTorch веса и запускает Arena сессии. Результат выводится в JSON формате.
+Для сохранения результатов в файл можно добавить `--output`:
+
+```text
+python tools/benchmark_neural.py --model models/policy_v1.pt --opponents nit --hands 5000 --output artifacts/neural_vs_nit.json
+```
+
+## 8.6. Обучение в режиме Self-Play
+
+Для запуска процесса Self-Play (создания новых датасетов на основе игры агента с самим собой или своими прошлыми версиями) используется скрипт:
+
+```text
+python tools/run_self_play.py --current-model models/policy_v1.pt --pool-dir models/pool --output datasets/self_play_v1.jsonl --hands 1000
+```
+
+Скрипт загружает текущую модель, случайно выбирает историческую модель из указанной папки (pool-dir) и запускает матчи на Арене. В процессе игры он записывает траектории решений и итоговые изменения стеков (reward), формируя JSONL-датасет, готовый для последующего обучения с подкреплением (Reinforcement Learning).
+
+## 8.7. Оркестратор цикла обучения (RL Orchestrator)
+
+Для автоматизации всего цикла (генерация Self-Play датасета -> обучение сети -> тестирование -> обновление модели) написан скрипт-оркестратор:
+
+```text
+python tools/rl_orchestrator.py --pool-dir models/pool --iterations 5 --hands 1000 --epochs 5
+```
+
+Скрипт автоматически находит последнюю версию `.pt` модели в `pool-dir`, запускает Self-Play сбор данных, прогоняет обучение, тестирует новую сеть против `RandomAgent` и делает новую версию текущей, повторяя этот цикл заданное количество `--iterations`.
+
+## 8.8. Обучение с подкреплением (Reinforcement Learning)
+
+Для дообучения модели на датасетах, сгенерированных в процессе Self-Play (с использованием наград `reward`), используется `Policy Gradient` алгоритм (REINFORCE):
+
+```text
+python tools/train_rl.py --train datasets/self_play_v1.jsonl --base-model models/policy_v1.pt --output models/policy_v2.pt
+```
+
+Дополнительные аргументы:
+
+```text
+--value-weight N
+```
+Вес ошибки головы ценности (Value Loss) в общей функции потерь. По умолчанию 0.5.
+
+```text
+--entropy-weight N
+```
+Вес энтропийного бонуса для поощрения исследования новых стратегий. По умолчанию 0.01.
+
+## 8.9. Проверка coverage экспортированной solver policy
 
 Проверить уже сохранённый strategy artifact без повторного MCCFR training:
 
@@ -682,7 +787,7 @@ max_depth
 
 Эта команда не обучает solver и обычно является дешёвой проверкой совместимости/coverage. Она не запускает production Arena.
 
-## 8.4. End-to-end smoke solver artifact
+## 8.10. End-to-end smoke solver artifact
 
 Быстро проверить весь research pipeline `train → export → reload → coverage` одной командой:
 

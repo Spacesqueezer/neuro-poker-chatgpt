@@ -3,12 +3,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class PlayerArenaResult:
-	starting_stack: int
-	ending_stack: int
-
-	@property
-	def profit(self):
-		return self.ending_stack - self.starting_stack
+	profit: int = 0
 
 
 @dataclass
@@ -36,9 +31,17 @@ class ArenaStats:
 		if getattr(result, "final_pot", None) is not None:
 			self.pots.append(result.final_pot)
 
+	def add_profit(self, name, profit_delta):
+		if name not in self.players:
+			self.players[name] = PlayerArenaResult()
+		self.players[name].profit += profit_delta
+
 	def update_players(self, stacks, starting_stack):
+		# DEPRECATED: Do not use for accumulated multi-session stats
 		for name, stack in stacks.items():
-			self.players[name] = PlayerArenaResult(starting_stack, stack)
+			if name not in self.players:
+				self.players[name] = PlayerArenaResult()
+			self.players[name].profit = stack - starting_stack
 
 	def summary(self):
 		average_pot = (

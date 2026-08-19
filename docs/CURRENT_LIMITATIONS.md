@@ -72,7 +72,7 @@ Still not modeled:
 - rebuy/top-up during an Arena session;
 - adding/removing players mid-session;
 - persistent physical Table/Seat reuse across Arena hands;
-- tournament blind schedules and elimination orchestration.
+- tournament blind schedules, ICM modeling, and elimination orchestration.
 
 ## Player statistics
 

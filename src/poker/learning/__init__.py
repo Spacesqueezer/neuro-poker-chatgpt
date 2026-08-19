@@ -16,6 +16,7 @@ from poker.learning.observation import (
 	LearningObservation,
 	LearningObservationEncoder,
 )
+from poker.learning.import_teacher import TeacherRecordImporter
 from poker.learning.sample import LearningSample, LearningSampleBuilder
 
 
@@ -32,4 +33,5 @@ __all__ = [
 	"LearningObservationEncoder",
 	"LearningSample",
 	"LearningSampleBuilder",
+	"TeacherRecordImporter",
 ]

@@ -66,6 +66,8 @@ class LegalActions:
 				and self.max_raise_to is not None
 				and self.min_raise_to <= amount <= self.max_raise_to
 			)
+		if action == PlayerAction.CALL:
+			return amount == 0 or amount == self.call_amount
 		return amount == 0
 
 

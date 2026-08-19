@@ -170,7 +170,8 @@ MUST update docs/PROJECT_STATE.md.
 
 PROJECT_STATE.md synchronization is a mandatory development step.
 
-`docs/USER_GUIDE_RU.md` is the user-facing command and workflow reference.
+`docs/USER_GUIDE_RU.md` is the general user-facing command reference.
+`docs/NEURO_USAGE.md` is the dedicated guide for neural network training and database operations.
 
 Any patch that adds or changes:
 - a CLI command;
