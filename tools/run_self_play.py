@@ -45,6 +45,7 @@ def main():
 	parser.add_argument("--hands", type=int, default=1000, help="Number of hands to play")
 	parser.add_argument("--seed", type=int, default=42, help="Random seed")
 	parser.add_argument("--starting-stack", type=int, default=200, help="Starting stack for each player")
+	parser.add_argument("--profile-scope", choices=["private", "global", "combined"], default="private", help="Scope of the opponent profiles given to the NeuralAgent")
 
 	args = parser.parse_args()
 
@@ -64,7 +65,8 @@ def main():
 		model_path=args.current_model,
 		stochastic=True,
 		agent_id="current", # Must match the dictionary key used in ArenaRunner
-		observation_encoder=obs_encoder
+		observation_encoder=obs_encoder,
+		profile_scope=args.profile_scope
 	)
 
 	if historical_model_path is None:
@@ -73,7 +75,8 @@ def main():
 			model_path=args.current_model,
 			stochastic=True,
 			agent_id="historical", # Must match the dictionary key
-			observation_encoder=obs_encoder
+			observation_encoder=obs_encoder,
+			profile_scope=args.profile_scope
 		)
 		historical_model_path = args.current_model
 	else:
@@ -82,7 +85,8 @@ def main():
 			model_path=str(historical_model_path),
 			stochastic=True,
 			agent_id="historical", # Must match the dictionary key
-			observation_encoder=obs_encoder
+			observation_encoder=obs_encoder,
+			profile_scope=args.profile_scope
 		)
 
 	agents = {
@@ -98,7 +102,9 @@ def main():
 
 	capture = RLDatasetCapture(
 		writer=writer,
-		include_players=["current", "historical"]
+		include_players=["current", "historical"],
+		agent_ids={"current": "current", "historical": "historical"},
+		profile_scope=args.profile_scope
 	)
 
 	from poker.statistics.online_tracker import OnlineMemoryTracker

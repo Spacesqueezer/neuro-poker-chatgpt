@@ -41,6 +41,7 @@ def main():
 	parser.add_argument("--hands", type=int, default=1000)
 	parser.add_argument("--seed", type=int, default=42)
 	parser.add_argument("--starting-stack", type=int, default=200)
+	parser.add_argument("--profile-scope", choices=["private", "global", "combined"], default="private", help="Scope of the opponent profiles given to the NeuralAgent")
 	parser.add_argument("--output", type=str)
 	args = parser.parse_args()
 
@@ -56,7 +57,8 @@ def main():
 	neural_agent = NeuralAgent(
 		model_path=args.model,
 		agent_id="neural", # Must match the dictionary key used in ArenaRunner
-		observation_encoder=obs_encoder
+		observation_encoder=obs_encoder,
+		profile_scope=args.profile_scope
 	)
 
 	results = []

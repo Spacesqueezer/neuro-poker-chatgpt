@@ -62,7 +62,8 @@ def main():
             "--current-model", str(current_model),
             "--pool-dir", str(pool_dir),
             "--output", str(dataset_path),
-            "--hands", str(args.hands)
+            "--hands", str(args.hands),
+            "--profile-scope", "combined"
         ], "Генерация раздач (Self-Play)")
 
         # 2. Обучение (RL Policy Gradient)
@@ -83,6 +84,7 @@ def main():
             "--model", str(new_model_path),
             "--opponents", "tag", "maniac", "random",
             "--hands", str(args.eval_hands),
+            "--profile-scope", "combined",
             "--output", str(benchmark_out)
         ], "Бенчмарк против оппонентов")
 
