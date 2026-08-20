@@ -20,6 +20,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=5, help="Количество эпох обучения RL за итерацию")
     parser.add_argument("--eval-hands", type=int, default=1000, help="Дистанция (кол-во раздач) для бенчмарка")
     parser.add_argument("--patience", type=int, default=5, help="Сколько итераций без улучшений ждать до остановки (Early Stopping)")
+    parser.add_argument("--table-size", type=int, default=6, choices=[2, 6], help="Размер стола: 2 (Heads-Up) или 6 (6-max)")
     args = parser.parse_args()
 
     pool_dir = Path(args.pool_dir)
@@ -63,7 +64,8 @@ def main():
             "--pool-dir", str(pool_dir),
             "--output", str(dataset_path),
             "--hands", str(args.hands),
-            "--profile-scope", "combined"
+            "--profile-scope", "combined",
+            "--table-size", str(args.table_size)
         ], "Генерация раздач (Self-Play)")
 
         # 2. Обучение (RL Policy Gradient)
@@ -85,6 +87,7 @@ def main():
             "--opponents", "tag", "maniac", "random",
             "--hands", str(args.eval_hands),
             "--profile-scope", "combined",
+            "--table-size", str(args.table_size),
             "--output", str(benchmark_out)
         ], "Бенчмарк против оппонентов")
 
