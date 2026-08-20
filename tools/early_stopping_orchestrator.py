@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 import shutil
+import time
 
 def run_command(cmd, description):
     print(f"\n[{description}] Выполняется: {' '.join(cmd)}")
@@ -52,8 +53,12 @@ def main():
     print(" Запуск умного оркестратора обучения (Early Stopping Tracker)")
     print("================================================================\n")
 
+    base_seed = int(time.time())
+    print(f"Базовый Seed для этой сессии: {base_seed}")
+
     for iteration in range(1, args.max_iterations + 1):
         print(f"\n========== ИТЕРАЦИЯ {iteration} ==========")
+        current_seed = base_seed + iteration * 1000
 
         # 1. Генерация данных (Self-Play)
         dataset_path = pool_dir.parent / "datasets" / f"self_play_iter_{iteration}.jsonl"
@@ -65,8 +70,9 @@ def main():
             "--output", str(dataset_path),
             "--hands", str(args.hands),
             "--profile-scope", "combined",
-            "--table-size", str(args.table_size)
-        ], "Генерация раздач (Self-Play)")
+            "--table-size", str(args.table_size),
+            "--seed", str(current_seed)
+        ], f"Генерация раздач (Self-Play, Seed: {current_seed})")
 
         # 2. Обучение (RL Policy Gradient)
         new_model_path = pool_dir / f"policy_v{iteration}.pt"
@@ -88,8 +94,9 @@ def main():
             "--hands", str(args.eval_hands),
             "--profile-scope", "combined",
             "--table-size", str(args.table_size),
+            "--seed", str(current_seed + 1),
             "--output", str(benchmark_out)
-        ], "Бенчмарк против оппонентов")
+        ], f"Бенчмарк против оппонентов (Seed: {current_seed + 1})")
 
         # 4. Анализ результатов (Early Stopping)
         try:
@@ -152,6 +159,9 @@ def main():
     if iterations_without_improvement < args.patience:
         print("\nОбучение завершилось по достижении максимального числа итераций.")
         print(f"Лучшая модель и ее статистика лежат в {ready_agents_dir}")
+
+    print("\n========== ЗАПУСК ДИАГНОСТИКИ ==========")
+    run_command([sys.executable, "tools/pipeline_diagnostics.py"], "Сбор и анализ статистики обучения")
 
 if __name__ == "__main__":
     main()
