@@ -12,6 +12,7 @@ class ArenaRunner:
 		player_ids=None,
 		decision_observer=None,
 		hand_observer=None,
+		tournament_mode=False,
 	):
 		if len(agents) < 2:
 			raise ValueError("Arena requires at least two agents")
@@ -21,6 +22,7 @@ class ArenaRunner:
 		self.player_ids = dict(player_ids or {})
 		self.decision_observer = decision_observer
 		self.hand_observer = hand_observer
+		self.tournament_mode = tournament_mode
 		self.last_statistics_collector = None
 
 	def run(self, hands, seed=42):
@@ -37,7 +39,7 @@ class ArenaRunner:
 		current_seed = seed
 
 		while hands_played < hands:
-			session = ArenaSession.create(players, self.starting_stack)
+			session = ArenaSession.create(players, self.starting_stack, tournament_mode=self.tournament_mode)
 			remaining_hands = hands - hands_played
 
 			session.run(
@@ -58,6 +60,9 @@ class ArenaRunner:
 			advance = actual_played if actual_played > 0 else remaining_hands
 			hands_played += advance
 			current_seed += advance
+
+			if self.tournament_mode:
+				break
 
 		self.last_statistics_collector = statistics_adapter.collector
 

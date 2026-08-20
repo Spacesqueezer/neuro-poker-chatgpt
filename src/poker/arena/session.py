@@ -8,18 +8,23 @@ class ArenaSession:
 	starting_stack: int
 	stacks: dict[str, int] = field(default_factory=dict)
 	completed_hands: int = 0
+	tournament_mode: bool = False
 
 	def current_stacks(self):
 		return dict(self.stacks)
 
 	def is_finished(self):
+		if self.tournament_mode:
+			active_players = sum(1 for stack in self.stacks.values() if stack > 0)
+			return active_players <= 1
 		return any(stack <= 0 for stack in self.stacks.values())
 
 	@classmethod
-	def create(cls, players, starting_stack):
+	def create(cls, players, starting_stack, tournament_mode=False):
 		return cls(
 			starting_stack=starting_stack,
 			stacks={name: starting_stack for name in players},
+			tournament_mode=tournament_mode,
 		)
 
 	def apply_hand_result(self, history):
