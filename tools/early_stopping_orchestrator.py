@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import shutil
 import time
+import re
 
 def run_command(cmd, description):
     print(f"\n[{description}] Выполняется: {' '.join(cmd)}")
@@ -37,26 +38,45 @@ def main():
             f.write("Этот файл содержит подробные комментарии о моделях, которые показали наивысший винрейт на этапе оценки.\n\n")
 
     # Ищем базовую модель в пуле
-    models = sorted(pool_dir.glob("*.pt"))
+    models = sorted(pool_dir.glob("*.pt"), key=lambda x: x.stat().st_mtime)
     if not models:
         print(f"Ошибка: Не найдено ни одной модели в {pool_dir}. Сначала нужно добавить базовую модель (например, policy_v0.pt).")
         sys.exit(1)
 
     current_model = models[-1]
 
+    # Определяем с какой итерации продолжить (ищем цифру в policy_vX.pt)
+    start_iteration = 1
+    match = re.search(r'policy_v(\d+)\.pt', current_model.name)
+    if match:
+        start_iteration = int(match.group(1)) + 1
+
     best_winrate = -float('inf')
+    # Пытаемся восстановить старый рекорд из лога, если он есть
+    if log_file.exists():
+        try:
+            content = log_file.read_text(encoding="utf-8")
+            winrates = [float(v) for v in re.findall(r'\*\*Средний винрейт \(bb/100\):\*\* (-?\d+\.\d+)', content)]
+            if winrates:
+                best_winrate = max(winrates)
+                print(f"[Инфо] Найден прошлый рекорд винрейта: {best_winrate:.2f} bb/100")
+        except Exception as e:
+            print(f"[Предупреждение] Не удалось прочитать старые рекорды из лога: {e}")
+
     iterations_without_improvement = 0
 
     opponents_to_eval = "tag maniac random"
 
     print("================================================================")
     print(" Запуск умного оркестратора обучения (Early Stopping Tracker)")
+    print(f" Режим: Resume Training (старт с итерации {start_iteration})")
     print("================================================================\n")
 
     base_seed = int(time.time())
     print(f"Базовый Seed для этой сессии: {base_seed}")
 
-    for iteration in range(1, args.max_iterations + 1):
+    end_iteration = start_iteration + args.max_iterations
+    for iteration in range(start_iteration, end_iteration):
         print(f"\n========== ИТЕРАЦИЯ {iteration} ==========")
         current_seed = base_seed + iteration * 1000
 
