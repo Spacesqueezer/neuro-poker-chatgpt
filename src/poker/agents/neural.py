@@ -12,6 +12,7 @@ class NeuralAgent:
 		device="cpu",
 		stochastic=False,
 		agent_id=None,
+		profile_scope="private",
 	):
 		from poker.learning.actions import LearningActionEncoder
 		from poker.learning.model import PokerPolicyNetwork
@@ -22,6 +23,7 @@ class NeuralAgent:
 		self.action_encoder = action_encoder or LearningActionEncoder()
 		self.stochastic = stochastic
 		self.agent_id = agent_id
+		self.profile_scope = profile_scope
 
 		state_dict = torch.load(model_path, map_location=device, weights_only=True)
 		input_size = state_dict["feature_extractor.0.weight"].size(1)
@@ -35,7 +37,7 @@ class NeuralAgent:
 		observation = self.observation_encoder.encode(
 			state,
 			agent_id=self.agent_id,
-			profile_scope="private"
+			profile_scope=self.profile_scope
 		)
 		action_space = self.action_encoder.encode(legal, state)
 
