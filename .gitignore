@@ -60,6 +60,7 @@ htmlcov/
 # Datasets
 # =========================
 
+datasets/
 data/datasets/*.jsonl
 data/datasets/**/*.jsonl
 
@@ -72,6 +73,7 @@ data/datasets/**/*.i64
 *.dataset
 *.bin
 *.dat
+*.jsonl
 
 # =========================
 # Training artifacts
@@ -82,6 +84,9 @@ models/
 *.pth
 *.onnx
 *.ckpt
+
+# Разрешаем сохранять лучших агентов (в папке ready_agents можно хранить .pt и .md)
+!ready_agents/
 
 checkpoints/
 
@@ -143,4 +148,4 @@ tools/neuropatch_data/
 tools/snapshots/
 config/simulation.json
 .neuropatch/
-sound/
+sound/*.db
