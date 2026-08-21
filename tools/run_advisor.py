@@ -86,7 +86,7 @@ def main():
             # 5. Вывод рекомендации (Advisor Mode)
             print("==================================================")
             print(f"РАЗДАЧА: Стрит={screen_state.street_name}, Банк={screen_state.total_pot}, Карты={screen_state.hero_hole_cards}")
-            print(f"ДОСТУПНЫЕ ДЕЙСТВИЯ: {[act.action_type.name for act in legal_actions.allowed_actions]}")
+            print(f"ДОСТУПНЫЕ ДЕЙСТВИЯ: {[act.name for act in legal_actions.actions]}")
             print(f"РЕКОМЕНДАЦИЯ НЕЙРОСЕТИ: *** {decision.action.name} {decision.amount if decision.amount > 0 else ''} ***")
             print("==================================================\n")
 
