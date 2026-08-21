@@ -194,6 +194,17 @@ def main():
                 decision_observer=interactive_decision_observer
             )
 
+            # Показываем шоудаун, если он был
+            if result.events and result.events[-1].type == "showdown":
+                print("\n--- ШОУДАУН ---")
+                board = result.events[-1].data.get("board", [])
+                print(f"Борд: {' '.join(board)}")
+                results = result.events[-1].data.get("results", {})
+                for player_name, res in results.items():
+                    cards = res.get("cards", [])
+                    rank = res.get("rank", "")
+                    print(f"{player_name} открывает {cards} (Комбинация: {rank})")
+
             # Показываем результаты раздачи
             print("\n--- Итоги раздачи ---")
             for player, stack in result.final_stacks.items():
@@ -206,6 +217,9 @@ def main():
 
         except (EOFError, KeyboardInterrupt):
             print("\nИгра прервана пользователем.")
+            break
+        except Exception as e:
+            print(f"\n[ОШИБКА ДВИЖКА] Произошел сбой в раздаче: {e}")
             break
 
     if session:
