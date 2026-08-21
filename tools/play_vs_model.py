@@ -187,6 +187,9 @@ def main():
         dealer_name = players_list[(hand_number - 1) % len(players_list)]
 
         try:
+            # Запоминаем стеки ДО раздачи, чтобы правильно посчитать выигрыш
+            stacks_before = dict(arena_session.stacks)
+
             result = arena_session.play_next_hand(
                 agents,
                 seed=random.randint(0, 1000000),
@@ -208,7 +211,7 @@ def main():
             # Показываем результаты раздачи
             print("\n--- Итоги раздачи ---")
             for player, stack in result.final_stacks.items():
-                diff = stack - arena_session.stacks[player] # Note: session stacks are updated inside play_next_hand
+                diff = stack - stacks_before[player]
                 diff_str = f"+{diff}" if diff > 0 else str(diff)
                 print(f"{player}: {stack} ({diff_str})")
 
