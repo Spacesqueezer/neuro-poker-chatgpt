@@ -87,7 +87,7 @@ def setup_statistics():
     if not db_url:
         return None, None
 
-    engine = create_engine(db_url)
+    engine = create_engine(db_url, pool_pre_ping=True, pool_recycle=3600)
     DeclarativeBase.metadata.create_all(engine)
     Session = sessionmaker(engine)
     session = Session()
