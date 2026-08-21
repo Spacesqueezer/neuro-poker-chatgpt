@@ -44,6 +44,8 @@ class HumanAgent:
         self.name = name
 
     def choose_action(self, state, legal_actions):
+        print_state_for_human(state, legal_actions)
+
         print(f"\n--- Твой ход, {self.name}! ---")
         print(f"Доступные действия: {[a.value for a in legal_actions.actions]}")
 
@@ -167,10 +169,6 @@ def main():
     from poker.api.hand_state import build_hand_state_view
 
     def interactive_decision_observer(hand_state, legal_actions, decision):
-        # Если сейчас ходит человек, печатаем состояние стола до его хода
-        if hand_state.acting_player == "Human":
-            print_state_for_human(hand_state, legal_actions)
-
         # Печатаем действие ВСЕХ игроков
         print(f">>> {hand_state.acting_player} совершает действие: {decision.action.value} {decision.amount if decision.amount > 0 else ''}")
 
