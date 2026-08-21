@@ -165,3 +165,28 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 python tools/benchmark_neural.py --model models/policy_v2.pt --opponents nit calling_station --hands 5000 --output artifacts/neural_benchmark.json
 ```
 Результатом будет JSON с подробной статистикой (включая винрейт `bb/100`). Чем выше винрейт, тем успешнее прошло обучение.
+
+## 7. Турнир Чемпионов (Tournament of Champions)
+
+Когда у вас скопится несколько хороших моделей в папке `ready_agents/`, вы можете выявить абсолютного победителя с помощью Турнира:
+```bash
+python tools/run_tournament.py --tournaments 100 --starting-stack 2000
+```
+Скрипт проведет 100 турниров (Freezeout) между вашими сетями и эвристическими ботами. Абсолютный чемпион будет сохранен в папку `tournament_winner/`.
+
+---
+
+## 8. Сыграть против нейросети (Интерактивный режим)
+
+Вы можете лично бросить вызов обученной нейросети и сыграть против нее в консоли:
+
+**Сыграть 1 на 1:**
+```bash
+python tools/play_vs_model.py --model ready_agents/ИМЯ_МОДЕЛИ.pt
+```
+
+**Сыграть за полным столом (вы, нейросеть и 4 скриптовых бота):**
+```bash
+python tools/play_vs_model.py --model ready_agents/ИМЯ_МОДЕЛИ.pt --opponents maniac tag lag nit
+```
+Во время игры вам будут показываться ваши карты, размер банка и действия оппонентов. Для хода вводите команды (например: `fold`, `check`, `call`, `raise 50`, `all-in`).
