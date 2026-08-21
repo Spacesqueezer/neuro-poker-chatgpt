@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from itertools import combinations
 
-
 _POSITION_EXPONENT = {
 	"UTG": 4.5,
 	"UTG+1": 4.0,

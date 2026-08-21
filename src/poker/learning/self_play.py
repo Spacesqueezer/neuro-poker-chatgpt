@@ -1,6 +1,7 @@
 import random
 from pathlib import Path
 
+
 class ModelPool:
 	def __init__(self, directory):
 		self.directory = Path(directory)

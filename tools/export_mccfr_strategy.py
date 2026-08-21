@@ -1,5 +1,6 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import argparse
 import json
@@ -13,7 +14,6 @@ from tools.benchmark_mccfr import (
 	BENCHMARK_SCENARIOS,
 	create_benchmark_game,
 )
-
 
 BENCHMARK_VERSION = 2
 

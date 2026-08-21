@@ -9,7 +9,6 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from poker.game.hand_history import HandHistoryStore
 
-
 DEFAULT_HISTORY = PROJECT_ROOT / "artifacts" / "hand_history.jsonl"
 
 

@@ -1,11 +1,12 @@
 import argparse
-import json
 from pathlib import Path
+
 import torch
 
-from poker.learning.torch_dataset import PokerImitationDataset
 from poker.learning.model import PokerPolicyNetwork
 from poker.learning.rl_trainer import PolicyGradientTrainer
+from poker.learning.torch_dataset import PokerImitationDataset
+
 
 def main():
 	parser = argparse.ArgumentParser(description="Train model using Reinforcement Learning (Policy Gradient)")

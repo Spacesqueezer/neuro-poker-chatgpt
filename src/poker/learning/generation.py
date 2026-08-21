@@ -6,11 +6,11 @@ from pathlib import Path
 from poker.agents import (
 	CallingStationAgent,
 	ExpertAgent,
+	LAGAgent,
+	ManiacAgent,
 	NitAgent,
 	RandomAgent,
-	ManiacAgent,
 	TAGAgent,
-	LAGAgent,
 )
 from poker.arena.runner import ArenaRunner
 from poker.learning.dataset import (

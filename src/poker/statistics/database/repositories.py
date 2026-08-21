@@ -1,7 +1,7 @@
 from poker.statistics.database.models import (
+	AgentMemoryRecord,
 	PlayerRecord,
 	PlayerStatisticsRecord,
-	AgentMemoryRecord,
 )
 
 

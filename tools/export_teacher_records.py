@@ -1,9 +1,9 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import argparse
 import json
-from pathlib import Path
 
 from poker.solver import (
 	build_teacher_export,

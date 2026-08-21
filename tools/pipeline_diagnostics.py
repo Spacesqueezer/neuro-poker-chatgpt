@@ -3,8 +3,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from collections import Counter
-from textwrap import dedent
 
 # Подключаем пути
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
@@ -24,7 +22,7 @@ def analyze_datasets(datasets_dir):
     for file in files:
         lines = 0
         rewards = []
-        with open(file, "r", encoding="utf-8") as f:
+        with open(file, encoding="utf-8") as f:
             for line in f:
                 lines += 1
                 try:
@@ -59,7 +57,7 @@ def analyze_benchmarks(artifacts_dir):
 
     all_bb_100 = []
     for file in files:
-        with open(file, "r", encoding="utf-8") as f:
+        with open(file, encoding="utf-8") as f:
             try:
                 data = json.load(f)
                 if isinstance(data, list) and data:
@@ -95,6 +93,7 @@ def analyze_database():
     try:
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
+
         from poker.statistics.database.sqlalchemy_models import PlayerModel, PlayerStatisticsModel
 
         engine = create_engine(db_url)

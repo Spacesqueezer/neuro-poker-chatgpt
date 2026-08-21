@@ -117,9 +117,7 @@ class RestrictedHeadsUpHoldemGame:
 				return 1
 		elif state.street_history == ():
 			return 1
-		elif state.street_history == ("check",):
-			return 0
-		elif (
+		elif state.street_history == ("check",) or (
 			len(state.street_history) == 1
 			and self._is_postflop_bet_action(
 				state.street_history[0]

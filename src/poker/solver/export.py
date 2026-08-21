@@ -2,7 +2,6 @@ import hashlib
 import json
 from pathlib import Path
 
-
 STRATEGY_EXPORT_VERSION = 2
 CHANCE_SPACE_VERSION = 1
 SUPPORTED_SOLVER = "external_sampling_mccfr"

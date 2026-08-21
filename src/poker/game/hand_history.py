@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
 import json
-from pathlib import Path
 import uuid
+from dataclasses import dataclass, field
+from pathlib import Path
 
 
 @dataclass(frozen=True)

@@ -1,5 +1,6 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 #!/usr/bin/env python3
 
@@ -12,10 +13,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from poker.game.actions import PlayerAction
-from poker.game.round_manager import GameStreet
 from poker.game.hand_history import HandHistoryStore
+from poker.game.round_manager import GameStreet
 from tools.manual_scenarios import create_scenario, get_scenario, scenario_names
-
 
 ACTION_COMMANDS = {
 	"fold": PlayerAction.FOLD,

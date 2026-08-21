@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from poker.enums import Rank, Suit
 
-
 SUIT_SYMBOLS = {
 	Suit.CLUBS: "♣",
 	Suit.DIAMONDS: "♦",

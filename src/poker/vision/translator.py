@@ -2,6 +2,7 @@ from poker.api.hand_state import HandStateView, LegalActions, PublicPlayerView
 from poker.game.actions import PlayerAction
 from poker.vision.state import ScreenState
 
+
 class ScreenTranslator:
     """
     Транслятор преобразует "сырые" данные с экрана (ScreenState)

@@ -1,11 +1,12 @@
 import argparse
-import subprocess
 import json
-from pathlib import Path
-import sys
-import shutil
-import time
 import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
 
 def run_command(cmd, description):
     print(f"\n[{description}] Выполняется: {' '.join(cmd)}")
@@ -120,7 +121,7 @@ def main():
 
         # 4. Анализ результатов (Early Stopping)
         try:
-            with open(benchmark_out, "r", encoding="utf-8") as f:
+            with open(benchmark_out, encoding="utf-8") as f:
                 results = json.load(f)
         except Exception as e:
             print(f"Ошибка при чтении результатов бенчмарка: {e}")
@@ -170,7 +171,7 @@ def main():
             print("\n" + "="*60)
             print("🛑 СРАБОТАЛА РАННЯЯ ОСТАНОВКА (EARLY STOPPING) 🛑")
             print(f"Винрейт не растет уже {args.patience} итераций подряд.")
-            print(f"Сеть, скорее всего, достигла своего максимума (потолка) при текущей архитектуре.")
+            print("Сеть, скорее всего, достигла своего максимума (потолка) при текущей архитектуре.")
             print(f"Лучшая модель сохранена в папке {ready_agents_dir}")
             print("Рекомендуется протестировать лучшую модель из папки ready_agents в бою!")
             print("="*60 + "\n")

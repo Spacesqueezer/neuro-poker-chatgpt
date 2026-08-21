@@ -2,6 +2,7 @@ from poker.api import ActionDecision, HandStateView, LegalActions, PublicPlayerV
 from poker.game.actions import PlayerAction
 from poker.learning.sample import LearningSampleBuilder
 
+
 class TeacherRecordImporter:
 	def __init__(self, small_blind=1, big_blind=2, action_abstraction=None):
 		self.small_blind = small_blind

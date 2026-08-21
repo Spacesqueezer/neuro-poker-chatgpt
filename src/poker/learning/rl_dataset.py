@@ -1,6 +1,7 @@
 from dataclasses import replace
-from poker.learning.dataset import LearningDatasetWriter
+
 from poker.learning.sample import LearningSampleBuilder
+
 
 class RLDatasetCapture:
 	def __init__(

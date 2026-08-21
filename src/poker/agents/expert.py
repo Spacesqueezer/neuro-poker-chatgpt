@@ -7,7 +7,6 @@ from poker.evaluation.seven_card import evaluate_seven_cards
 from poker.game.actions import PlayerAction
 from poker.strategy.ranges import PositionRangeModel
 
-
 RANK_BY_SYMBOL = {str(rank.value): rank for rank in Rank}
 RANK_BY_SYMBOL.update({
 	"J": Rank.JACK,

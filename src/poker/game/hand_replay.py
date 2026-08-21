@@ -108,9 +108,7 @@ class HandReplayVerifier:
 		for player in history.players:
 			cards.extend(player.get("cards", []))
 		for event in history.events:
-			if event.type == "street":
-				cards.extend(event.data.get("board", []))
-			elif event.type == "showdown":
+			if event.type == "street" or event.type == "showdown":
 				cards.extend(event.data.get("board", []))
 		# Street events contain cumulative boards, so only duplicate hole cards are checked here.
 		hole_cards = [card for player in history.players for card in player.get("cards", [])]

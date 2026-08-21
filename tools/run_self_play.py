@@ -9,17 +9,19 @@ from poker.learning.dataset import LearningDatasetWriter
 from poker.learning.rl_dataset import RLDatasetCapture
 from poker.learning.self_play import ModelPool
 
+
 def setup_statistics():
 	from sqlalchemy import create_engine
 	from sqlalchemy.orm import sessionmaker
-	from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+
+	from poker.statistics.database.facade import StatisticsFacade
 	from poker.statistics.database.postgres_repositories import (
+		PostgresMemoryRepository,
 		PostgresPlayerRepository,
 		PostgresStatisticsRepository,
-		PostgresMemoryRepository,
 	)
 	from poker.statistics.database.services import StatisticsService
-	from poker.statistics.database.facade import StatisticsFacade
+	from poker.statistics.database.sqlalchemy_models import DeclarativeBase
 
 	db_url = os.getenv("POKER_DATABASE_URL")
 	if not db_url:
@@ -52,10 +54,18 @@ def main():
 
 	session, facade = setup_statistics()
 
+	import random
+
+	from poker.agents import (
+		CallingStationAgent,
+		LAGAgent,
+		ManiacAgent,
+		NitAgent,
+		RandomAgent,
+		TAGAgent,
+	)
 	from poker.learning.observation import LearningObservationEncoder
 	from poker.statistics.opponent_profile import OpponentProfileProvider
-	from poker.agents import RandomAgent, CallingStationAgent, NitAgent, ManiacAgent, TAGAgent, LAGAgent
-	import random
 
 	provider = OpponentProfileProvider(facade) if facade else None
 	obs_encoder = LearningObservationEncoder(profile_provider=provider)

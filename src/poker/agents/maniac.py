@@ -1,6 +1,8 @@
 import random
+
 from poker.api import ActionDecision
 from poker.game.actions import PlayerAction
+
 
 class ManiacAgent:
 	"""An extremely aggressive agent that always tries to bet, raise, or go all-in."""

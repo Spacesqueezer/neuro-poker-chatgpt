@@ -1,3 +1,5 @@
+from sqlalchemy import func, select
+
 from poker.statistics.database.models import (
 	AgentMemoryRecord,
 	PlayerPositionStatisticsRecord,
@@ -9,8 +11,6 @@ from poker.statistics.database.repositories import (
 	PlayerRepository,
 	StatisticsRepository,
 )
-from sqlalchemy import func, select
-
 from poker.statistics.database.sqlalchemy_models import (
 	AgentMemoryModel,
 	PlayerModel,

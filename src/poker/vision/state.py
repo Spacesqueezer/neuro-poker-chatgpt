@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict
+
 
 @dataclass(frozen=True)
 class ScreenPlayer:
@@ -19,15 +19,15 @@ class ScreenState:
     """
     is_my_turn: bool
     street_name: str # "preflop", "flop", "turn", "river"
-    board_cards: List[str] # e.g. ["A♠", "K♥", "2♦"]
-    hero_hole_cards: List[str] # e.g. ["7♣", "8♣"]
+    board_cards: list[str] # e.g. ["A♠", "K♥", "2♦"]
+    hero_hole_cards: list[str] # e.g. ["7♣", "8♣"]
 
     total_pot: float
     call_amount_needed: float
     min_raise_amount: float
     max_raise_amount: float
 
-    players: List[ScreenPlayer] = field(default_factory=list)
+    players: list[ScreenPlayer] = field(default_factory=list)
 
     # Доступные кнопки на экране (чтобы не нажать то, чего нет)
     can_fold: bool = False

@@ -3,11 +3,11 @@ from dataclasses import asdict, dataclass
 from poker.agents import (
 	CallingStationAgent,
 	ExpertAgent,
+	LAGAgent,
+	ManiacAgent,
 	NitAgent,
 	RandomAgent,
-	ManiacAgent,
 	TAGAgent,
-	LAGAgent,
 )
 from poker.arena.runner import ArenaRunner
 
