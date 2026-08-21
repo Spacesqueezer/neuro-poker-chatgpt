@@ -109,22 +109,25 @@ Current direction:
 - **Completed**: End-to-end continuous ML training (Imitation -> Self-Play -> Reinforcement Learning).
 - **Completed**: Implementation of Early Stopping logic (`tools/early_stopping_orchestrator.py`) to detect winrate plateau and save production-ready models.
 
-## Phase 7 — Advanced Opponent Memory
+## Phase 7 — Advanced Opponent Memory ✅
 
-- persistent player profiles
-- agent-specific opponent statistics
-- tendencies and statistics
-- adaptive strategy inputs
-- confidence-weighted observations
+- **Completed**: Persistent player profiles and heuristics pool (100 bots via `tools/db_manager.py`).
+- **Completed**: Population-Based Training on 6-max tables using `--table-size 6`.
+- **Completed**: Real-time DB extraction of VPIP/PFR tendencies directly into NeuralNetwork observation vector.
+- **Completed**: Tournament of Champions engine for model evaluation.
+- **Completed**: Interactive human vs AI console tool (`tools/play_vs_model.py`).
 
-## Phase 8 — External State Extraction
+## Phase 8 — External State Extraction 🟡 active
 
 Only after the internal simulation/agent stack is stable:
-- card recognition
-- stacks
-- actions
-- positions
-- pot size
+- [x] Base architecture and interfaces (`src/poker/vision`, `src/poker/automation`).
+- [x] Translator mapping raw screen data to internal `HandStateView` and `LegalActions`.
+- [x] Automation Executor dummy (PyAutoGUI abstraction).
+- [x] Main screen bot loop (`tools/run_screen_bot.py`).
+- [ ] Implement OCR / Template Matching for card recognition.
+- [ ] Implement OCR for pot size and stacks.
+- [ ] Screen coordinate mappings for action buttons (Fold, Call, Raise).
+- [ ] Input sizing box automation.
 
 Vision must remain separate from poker decisions.
 
