@@ -125,6 +125,7 @@ def main():
     parser.add_argument("--model", required=True, help="Путь к .pt модели (например, ready_agents/best_model.pt)")
     parser.add_argument("--opponents", nargs="*", choices=["tag", "maniac", "nit", "calling_station", "lag", "random"], default=[], help="Дополнительные скриптовые боты за столом")
     parser.add_argument("--starting-stack", type=int, default=200, help="Стартовый стек")
+    parser.add_argument("--stochastic", action="store_true", help="Включить случайный выбор действий у нейросети (по умолчанию отключено)")
     args = parser.parse_args()
 
     session, facade = setup_statistics()
@@ -143,7 +144,7 @@ def main():
         agent_id="NeuralBot",
         observation_encoder=obs_encoder,
         profile_scope="combined",
-        stochastic=True # Делаем её чуть более непредсказуемой (как в self-play)
+        stochastic=args.stochastic
     )
 
     # 3. Эвристика
