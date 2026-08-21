@@ -17,7 +17,7 @@ def setup_db():
         print("Пример: postgresql+psycopg://postgres:password@localhost:5432/neuro_poker")
         sys.exit(1)
 
-    engine = create_engine(db_url)
+    engine = create_engine(db_url, pool_pre_ping=True, pool_recycle=3600)
     DeclarativeBase.metadata.create_all(engine)
     Session = sessionmaker(engine)
     return Session(), engine

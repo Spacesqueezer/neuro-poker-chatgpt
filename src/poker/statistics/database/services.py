@@ -1,9 +1,13 @@
+import time
+import logging
+from sqlalchemy.exc import OperationalError
 from poker.statistics.database.models import (
 	PlayerPositionStatisticsRecord,
 	PlayerRecord,
 	PlayerStatisticsRecord,
 )
 
+logger = logging.getLogger(__name__)
 
 class StatisticsService:
 	_COUNTER_FIELDS = (
@@ -52,8 +56,19 @@ class StatisticsService:
 	def get_agent_memory(self, agent_id, player_id):
 		return self.memory_repository.get(agent_id, player_id)
 
-	def save_agent_memory(self, memory):
-		self.memory_repository.save(memory)
+	def save_agent_memory(self, memory, retries=3):
+		for attempt in range(retries):
+			try:
+				self.memory_repository.save(memory)
+				return memory
+			except OperationalError as e:
+				if attempt == retries - 1:
+					logger.error(f"Failed to save agent memory after {retries} attempts: {e}")
+					# Don't crash the simulation, just drop the memory update
+					return memory
+				if hasattr(self.memory_repository, "session"):
+					self.memory_repository.session.rollback()
+				time.sleep(0.5 * (attempt + 1))
 		return memory
 
 	def resolve_players(self, player_names):
@@ -73,36 +88,47 @@ class StatisticsService:
 
 		return resolved
 
-	def persist_collector(self, collector, player_ids=None):
-		records = []
-		resolved_ids = (
-			dict(player_ids)
-			if player_ids is not None
-			else self.resolve_players(collector.players)
-		)
-
-		for player_name, stats in collector.players.items():
-			if player_name not in resolved_ids:
-				raise KeyError(
-					f"Missing persistent player id for {player_name}"
+	def persist_collector(self, collector, player_ids=None, retries=3):
+		for attempt in range(retries):
+			try:
+				records = []
+				resolved_ids = (
+					dict(player_ids)
+					if player_ids is not None
+					else self.resolve_players(collector.players)
 				)
 
-			player_id = resolved_ids[player_name]
-			incoming = self._record_from_statistics(
-				player_id,
-				stats,
-			)
-			existing = self.statistics_repository.get(player_id)
-			record = self._merge_records(existing, incoming)
+				for player_name, stats in collector.players.items():
+					if player_name not in resolved_ids:
+						raise KeyError(
+							f"Missing persistent player id for {player_name}"
+						)
 
-			self.statistics_repository.save(record)
-			self._persist_positions(
-				player_id,
-				stats.positions,
-			)
-			records.append(record)
+					player_id = resolved_ids[player_name]
+					incoming = self._record_from_statistics(
+						player_id,
+						stats,
+					)
+					existing = self.statistics_repository.get(player_id)
+					record = self._merge_records(existing, incoming)
 
-		return records
+					self.statistics_repository.save(record)
+					self._persist_positions(
+						player_id,
+						stats.positions,
+					)
+					records.append(record)
+
+				return records
+			except OperationalError as e:
+				if attempt == retries - 1:
+					logger.error(f"Failed to persist collector after {retries} attempts: {e}")
+					return [] # Don't crash the simulation
+				# rollback the session to clear the failed transaction state
+				if hasattr(self.statistics_repository, "session"):
+					self.statistics_repository.session.rollback()
+				time.sleep(0.5 * (attempt + 1))
+		return []
 
 	def _persist_positions(self, player_id, positions):
 		for position, stats in positions.items():
