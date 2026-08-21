@@ -1,4 +1,3 @@
-from poker.statistics.player_stats import PlayerStatistics
 
 
 class StatisticsStorage:

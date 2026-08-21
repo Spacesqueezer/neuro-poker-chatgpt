@@ -8,8 +8,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from poker.agents.neural import NeuralAgent
 from poker.learning.observation import LearningObservationEncoder
-from poker.vision.state import ScreenState, ScreenPlayer
+from poker.vision.state import ScreenPlayer, ScreenState
 from poker.vision.translator import ScreenTranslator
+
 
 def get_dummy_screen_state() -> ScreenState:
     """
@@ -44,7 +45,7 @@ def main():
     parser.add_argument("--model", required=True, help="Путь к .pt модели (лучшему агенту)")
     args = parser.parse_args()
 
-    print(f"Инициализация Режима Советника (Advisor Mode)...")
+    print("Инициализация Режима Советника (Advisor Mode)...")
     print(f"Загрузка модели {args.model}...")
 
     # Для реального стола профили оппонентов из нашей БД не сработают (ведь имена случайные в руме),

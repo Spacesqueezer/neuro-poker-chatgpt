@@ -1,6 +1,5 @@
 from poker.players.profile import PlayerProfile
 
-
 STYLE_PRESETS = {
 	"nit": (0.16, 0.12, 0.3, 0.05),
 	"tag": (0.24, 0.20, 0.6, 0.12),

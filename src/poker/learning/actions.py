@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from poker.game.actions import PlayerAction
 
-
 ACTION_ORDER = (
 	PlayerAction.FOLD,
 	PlayerAction.CHECK,

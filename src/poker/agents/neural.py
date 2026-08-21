@@ -3,6 +3,7 @@ import torch
 from poker.api import ActionDecision
 from poker.game.actions import PlayerAction
 
+
 class NeuralAgent:
 	def __init__(
 		self,

@@ -1,6 +1,8 @@
 import random
+
 from poker.api import ActionDecision
 from poker.game.actions import PlayerAction
+
 
 class TAGAgent:
 	"""Tight-Aggressive agent. Plays tight preflop, aggressive postflop if holding a pair or better."""

@@ -16,9 +16,7 @@ def evaluate_seven_cards(cards):
 			best_result = result
 			continue
 
-		if result.rank > best_result.rank:
-			best_result = result
-		elif result.rank == best_result.rank and result.tiebreaker > best_result.tiebreaker:
+		if result.rank > best_result.rank or result.rank == best_result.rank and result.tiebreaker > best_result.tiebreaker:
 			best_result = result
 
 	return best_result

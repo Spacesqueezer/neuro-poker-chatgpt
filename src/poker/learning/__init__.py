@@ -12,13 +12,12 @@ from poker.learning.generation import (
 	DatasetGenerationResult,
 	LearningDatasetGenerator,
 )
+from poker.learning.import_teacher import TeacherRecordImporter
 from poker.learning.observation import (
 	LearningObservation,
 	LearningObservationEncoder,
 )
-from poker.learning.import_teacher import TeacherRecordImporter
 from poker.learning.sample import LearningSample, LearningSampleBuilder
-
 
 __all__ = [
 	"LearningActionEncoder",

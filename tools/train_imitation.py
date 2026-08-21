@@ -1,11 +1,12 @@
 import argparse
-import json
 from pathlib import Path
+
 import torch
 
-from poker.learning.torch_dataset import PokerImitationDataset
 from poker.learning.model import PokerPolicyNetwork
+from poker.learning.torch_dataset import PokerImitationDataset
 from poker.learning.trainer import ImitationTrainer
+
 
 def main():
 	parser = argparse.ArgumentParser(description="Train an imitation learning model.")

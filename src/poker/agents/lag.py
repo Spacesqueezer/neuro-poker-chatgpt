@@ -1,6 +1,8 @@
 import random
+
 from poker.api import ActionDecision
 from poker.game.actions import PlayerAction
+
 
 class LAGAgent:
 	"""Loose-Aggressive agent. Plays many hands, frequently bluffs."""

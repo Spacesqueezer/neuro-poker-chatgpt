@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset
 
+
 class PokerImitationDataset(Dataset):
 	def __init__(self, path):
 		self.path = Path(path)

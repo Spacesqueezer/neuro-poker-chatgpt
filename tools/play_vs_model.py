@@ -1,31 +1,29 @@
 import argparse
 import os
-import sys
 import random
-from pathlib import Path
+import sys
 
 # Подключаем пути
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from poker.agents.neural import NeuralAgent
-from poker.agents import RandomAgent, CallingStationAgent, NitAgent, ManiacAgent, TAGAgent, LAGAgent
-from poker.arena.session import ArenaSession
-from poker.api import ActionDecision, play_hand
-from poker.game.actions import PlayerAction
-from poker.learning.observation import LearningObservationEncoder
-from poker.statistics.opponent_profile import OpponentProfileProvider
-from poker.game.round_manager import GameStreet
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+
+from poker.agents import CallingStationAgent, LAGAgent, ManiacAgent, NitAgent, RandomAgent, TAGAgent
+from poker.agents.neural import NeuralAgent
+from poker.api import ActionDecision
+from poker.arena.session import ArenaSession
+from poker.game.actions import PlayerAction
+from poker.learning.observation import LearningObservationEncoder
+from poker.statistics.database.facade import StatisticsFacade
 from poker.statistics.database.postgres_repositories import (
+    PostgresMemoryRepository,
     PostgresPlayerRepository,
     PostgresStatisticsRepository,
-    PostgresMemoryRepository,
 )
 from poker.statistics.database.services import StatisticsService
-from poker.statistics.database.facade import StatisticsFacade
+from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+from poker.statistics.opponent_profile import OpponentProfileProvider
 
 ACTION_COMMANDS = {
 	"fold": PlayerAction.FOLD,
@@ -164,10 +162,9 @@ def main():
             agents[name] = RandomAgent()
 
     print(f"\nСтол сформирован. Игроков: {len(agents)}")
-    print("Твои оппоненты:", ", ".join([k for k in agents.keys() if k != "Human"]))
+    print("Твои оппоненты:", ", ".join([k for k in agents if k != "Human"]))
 
     # Чтобы движок мог передавать state в decision_observer, мы создадим враппер
-    from poker.api.hand_state import build_hand_state_view
 
     def interactive_decision_observer(hand_state, legal_actions, decision):
         # Печатаем действие ВСЕХ игроков

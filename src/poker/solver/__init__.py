@@ -33,7 +33,6 @@ from poker.solver.holdem import (
 from poker.solver.mccfr import ExternalSamplingMCCFR, MCCFRResult
 from poker.solver.policy import RestrictedSolverPolicy
 
-
 __all__ = [
 	"CFRResult",
 	"CFRTrainer",

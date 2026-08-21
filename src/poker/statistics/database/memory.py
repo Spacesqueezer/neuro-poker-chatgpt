@@ -1,7 +1,7 @@
 from poker.statistics.database.repositories import (
+	AgentMemoryRepository,
 	PlayerRepository,
 	StatisticsRepository,
-	AgentMemoryRepository,
 )
 
 

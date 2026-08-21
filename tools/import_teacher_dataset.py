@@ -2,8 +2,9 @@ import argparse
 import json
 from pathlib import Path
 
-from poker.learning.dataset import LearningDatasetWriter
 from poker.learning import TeacherRecordImporter
+from poker.learning.dataset import LearningDatasetWriter
+
 
 def main():
 	parser = argparse.ArgumentParser(

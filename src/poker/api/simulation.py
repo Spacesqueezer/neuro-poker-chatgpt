@@ -1,10 +1,9 @@
+from poker.api.hand_state import ActionDecision, build_hand_state_view, get_legal_actions
 from poker.game.dealer import Dealer
 from poker.game.game_state import GameState
 from poker.game.hand_controller import HandController
 from poker.game.round_manager import GameStreet
 from poker.player.player import Player
-from poker.api.hand_state import ActionDecision, build_hand_state_view, get_legal_actions
-
 
 TERMINAL_STREETS = {GameStreet.SHOWDOWN, GameStreet.COMPLETE}
 

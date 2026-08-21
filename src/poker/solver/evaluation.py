@@ -6,7 +6,6 @@ from poker.solver.export import (
 	serialize_information_set,
 )
 
-
 POLICY_EVALUATION_VERSION = 1
 
 

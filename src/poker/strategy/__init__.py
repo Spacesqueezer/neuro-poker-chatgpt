@@ -4,7 +4,6 @@ from poker.strategy.ranges import (
 	UniformRangeModel,
 )
 
-
 __all__ = [
 	"OpponentRangeState",
 	"PositionRangeModel",

@@ -1,5 +1,6 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import argparse
 import json
@@ -13,7 +14,6 @@ from poker.solver import (
 )
 from tools.benchmark_mccfr import BENCHMARK_SCENARIOS, create_benchmark_game
 from tools.export_mccfr_strategy import export_strategy
-
 
 SMOKE_REPORT_VERSION = 1
 DEFAULT_SCENARIOS = tuple(BENCHMARK_SCENARIOS)

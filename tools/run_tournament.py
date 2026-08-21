@@ -1,29 +1,30 @@
 import argparse
 import os
-import sys
-import random
-from pathlib import Path
-from collections import defaultdict
 import shutil
+import sys
+from collections import defaultdict
+from pathlib import Path
 
 # Подключаем пути
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from poker.agents.neural import NeuralAgent
-from poker.agents import RandomAgent, CallingStationAgent, NitAgent, ManiacAgent, TAGAgent, LAGAgent
-from poker.arena.runner import ArenaRunner
-from poker.learning.observation import LearningObservationEncoder
-from poker.statistics.opponent_profile import OpponentProfileProvider
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+
+from poker.agents import CallingStationAgent, LAGAgent, ManiacAgent, NitAgent, RandomAgent, TAGAgent
+from poker.agents.neural import NeuralAgent
+from poker.arena.runner import ArenaRunner
+from poker.learning.observation import LearningObservationEncoder
+from poker.statistics.database.facade import StatisticsFacade
 from poker.statistics.database.postgres_repositories import (
+    PostgresMemoryRepository,
     PostgresPlayerRepository,
     PostgresStatisticsRepository,
-    PostgresMemoryRepository,
 )
 from poker.statistics.database.services import StatisticsService
-from poker.statistics.database.facade import StatisticsFacade
+from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+from poker.statistics.opponent_profile import OpponentProfileProvider
+
 
 def setup_statistics():
     db_url = os.getenv("POKER_DATABASE_URL")

@@ -3,20 +3,30 @@ import json
 import os
 from pathlib import Path
 
-from poker.agents import CallingStationAgent, NitAgent, RandomAgent, NeuralAgent, ManiacAgent, TAGAgent, LAGAgent
+from poker.agents import (
+	CallingStationAgent,
+	LAGAgent,
+	ManiacAgent,
+	NeuralAgent,
+	NitAgent,
+	RandomAgent,
+	TAGAgent,
+)
 from poker.arena.runner import ArenaRunner
+
 
 def setup_statistics():
 	from sqlalchemy import create_engine
 	from sqlalchemy.orm import sessionmaker
-	from poker.statistics.database.sqlalchemy_models import DeclarativeBase
+
+	from poker.statistics.database.facade import StatisticsFacade
 	from poker.statistics.database.postgres_repositories import (
+		PostgresMemoryRepository,
 		PostgresPlayerRepository,
 		PostgresStatisticsRepository,
-		PostgresMemoryRepository,
 	)
 	from poker.statistics.database.services import StatisticsService
-	from poker.statistics.database.facade import StatisticsFacade
+	from poker.statistics.database.sqlalchemy_models import DeclarativeBase
 
 	db_url = os.getenv("POKER_DATABASE_URL")
 	if not db_url:

@@ -1,6 +1,8 @@
-import time
 import logging
+import time
+
 from sqlalchemy.exc import OperationalError
+
 from poker.statistics.database.models import (
 	PlayerPositionStatisticsRecord,
 	PlayerRecord,

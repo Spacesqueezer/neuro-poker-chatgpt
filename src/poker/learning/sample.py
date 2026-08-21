@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from poker.learning.actions import LearningActionEncoder
 from poker.learning.observation import LearningObservationEncoder
 
-
 LEARNING_SAMPLE_VERSION = 1
 
 

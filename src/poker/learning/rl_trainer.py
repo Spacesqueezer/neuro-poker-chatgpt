@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
+import torch.optim as optim
 from torch.utils.data import DataLoader
+
 
 class PolicyGradientTrainer:
 	def __init__(self, model, train_dataset, learning_rate=1e-4, batch_size=32, value_weight=0.5, entropy_weight=0.01, device="cpu"):

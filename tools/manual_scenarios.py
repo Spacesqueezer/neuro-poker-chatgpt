@@ -7,7 +7,6 @@ from poker.game.game_state import GameState
 from poker.game.hand_controller import HandController
 from poker.player.player import Player
 
-
 RANKS = {
 	"2": Rank.TWO,
 	"3": Rank.THREE,

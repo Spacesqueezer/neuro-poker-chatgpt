@@ -1,14 +1,22 @@
 import argparse
 import os
 import sys
+from textwrap import dedent
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from textwrap import dedent
 
 # Подключаем пути
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from poker.statistics.database.sqlalchemy_models import DeclarativeBase, PlayerModel, PlayerStatisticsModel, AgentMemoryModel, PlayerPositionStatisticsModel
+from poker.statistics.database.sqlalchemy_models import (
+    AgentMemoryModel,
+    DeclarativeBase,
+    PlayerModel,
+    PlayerPositionStatisticsModel,
+    PlayerStatisticsModel,
+)
+
 
 def setup_db():
     db_url = os.getenv("POKER_DATABASE_URL")
