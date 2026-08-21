@@ -148,7 +148,7 @@ def get_legal_actions(game_state, controller, player=None):
 	target = game_state.betting.current_bet
 	facing = max(0, target - player.current_bet)
 	max_target = player.current_bet + player.chips
-	available = [PlayerAction.FOLD]
+	available = []
 	call_amount = 0
 	min_bet = None
 	max_bet = None
@@ -156,6 +156,7 @@ def get_legal_actions(game_state, controller, player=None):
 	max_raise_to = None
 
 	if facing > 0:
+		available.append(PlayerAction.FOLD)
 		available.append(PlayerAction.CALL)
 		call_amount = min(facing, player.chips)
 	else:
