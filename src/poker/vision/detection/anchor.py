@@ -4,33 +4,56 @@ import cv2
 
 
 class AnchorDetector:
-	def __init__(self, template_path, threshold=0.75):
+	def __init__(self, folder_path, threshold=0.75):
 		self.threshold = threshold
-		template = cv2.imread(str(template_path), cv2.IMREAD_GRAYSCALE)
+		self.templates = []
 
-		if template is None:
-			raise FileNotFoundError(template_path)
+		folder = Path(folder_path)
 
-		self.template = template
+		for image_path in sorted(folder.glob("*.png")):
+			image = cv2.imread(
+				str(image_path),
+				cv2.IMREAD_GRAYSCALE,
+			)
 
-	def find(self, frame):
-		gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+			if image is not None:
+				self.templates.append(
+					{
+						"name": image_path.name,
+						"image": image,
+					}
+				)
 
-		result = cv2.matchTemplate(
-			gray,
-			self.template,
-			cv2.TM_CCOEFF_NORMED,
+		print(
+			f"[ANCHOR] Templates loaded: {len(self.templates)}"
 		)
 
-		_, score, _, location = cv2.minMaxLoc(result)
+	def find(self, frame):
+		gray = cv2.cvtColor(
+			frame,
+			cv2.COLOR_BGR2GRAY,
+		)
 
-		if score < self.threshold:
-			return None
+		best = None
 
-		return {
-			"score": float(score),
-			"left": location[0],
-			"top": location[1],
-			"width": self.template.shape[1],
-			"height": self.template.shape[0],
-		}
+		for template in self.templates:
+			result = cv2.matchTemplate(
+				gray,
+				template["image"],
+				cv2.TM_CCOEFF_NORMED,
+			)
+
+			_, score, _, location = cv2.minMaxLoc(result)
+
+			if best is None or score > best["score"]:
+				best = {
+					"score": float(score),
+					"x": location[0],
+					"y": location[1],
+					"name": template["name"],
+				}
+
+		if best and best["score"] >= self.threshold:
+			return best
+
+		return None
