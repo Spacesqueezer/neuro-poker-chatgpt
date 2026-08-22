@@ -1,5 +1,28 @@
-# Neuro Poker (poker-ai)
+# Vision Anchor v1
 
-An autonomous Texas Hold'em AI system built with Python >=3.12, FastAPI, SQLAlchemy 2.x, Alembic, and PyTorch.
+Добавляет первый реальный этап зрения.
 
-See `docs/` for usage instructions. 
+## Что есть
+
+- захват экрана через mss;
+- поиск PokerDom anchor через OpenCV template matching;
+- консольный вывод состояния.
+
+Пример:
+
+[VISION] Started
+[CONFIG] Hero: spacesqueezer
+[SEARCH] Anchor not found
+[ANCHOR] Found score=0.91 x=412 y=183
+
+## Установка
+
+pip install opencv-python mss numpy
+
+## Требование
+
+Нужен файл:
+
+assets/pokerdom_anchor.png
+
+Это небольшой шаблон элемента интерфейса PokerDom.

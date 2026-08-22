@@ -1,0 +1,13 @@
+{
+	"hero_name": "spacesqueezer",
+	"table_client": "PokerDom",
+	"debug_console": true,
+	"capture": {
+		"monitor": 1,
+		"fps_limit": 10
+	},
+	"anchor": {
+		"enabled": true,
+		"threshold": 0.75
+	}
+}
