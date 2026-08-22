@@ -8,6 +8,7 @@ from poker.vision.roi_config import HERO_NAME, HERO_STACK, MAIN_POT, BOARD_CARDS
 
 class GameStateExtractor:
     def __init__(self, tesseract_cmd=None):
+        self.tessdata_dir = None
         if tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
         elif sys.platform == "win32":
@@ -18,12 +19,19 @@ class GameStateExtractor:
                 r"D:\Program Files\Tesseract-OCR\tesseract.exe"
             ]
 
+            import shutil
+            found_path = shutil.which("tesseract")
+            if found_path:
+                standard_paths.insert(0, found_path)
+
             # Check for tesseract.exe
             for path in standard_paths:
                 if os.path.exists(path):
                     pytesseract.pytesseract.tesseract_cmd = path
                     tessdata_path = os.path.join(os.path.dirname(path), "tessdata")
-                    if os.path.exists(tessdata_path) and "TESSDATA_PREFIX" not in os.environ:
+                    if os.path.exists(tessdata_path):
+                        self.tessdata_dir = tessdata_path
+                        # Force overwrite the environment variable, in case the user has it set incorrectly
                         os.environ["TESSDATA_PREFIX"] = tessdata_path
                     break
 
@@ -32,6 +40,8 @@ class GameStateExtractor:
         return image[y:y+h, x:x+w]
 
     def _ocr_text(self, image, config="--psm 7"):
+        if self.tessdata_dir:
+            config += f' --tessdata-dir "{self.tessdata_dir}"'
         return pytesseract.image_to_string(image, config=config).strip()
 
     def _clean_number(self, text):
