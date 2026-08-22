@@ -40,8 +40,6 @@ class GameStateExtractor:
         return image[y:y+h, x:x+w]
 
     def _ocr_text(self, image, config="--psm 7"):
-        if self.tessdata_dir:
-            config += f' --tessdata-dir "{self.tessdata_dir}"'
         return pytesseract.image_to_string(image, config=config).strip()
 
     def _clean_number(self, text):
