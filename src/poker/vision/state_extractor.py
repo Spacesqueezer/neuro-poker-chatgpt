@@ -4,11 +4,13 @@ import re
 import os
 import sys
 
-from poker.vision.roi_config import HERO_NAME, HERO_STACK, MAIN_POT, BOARD_CARDS, OPPONENT_BOXES
+from poker.vision.roi_config import HERO_NAME, HERO_STACK, HERO_CARDS, MAIN_POT, BOARD_CARDS, OPPONENT_BOXES
+from poker.vision.card_parser import CardParser
 
 class GameStateExtractor:
     def __init__(self, tesseract_cmd=None):
         self.tessdata_dir = None
+        self.card_parser = CardParser()
         if tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
         elif sys.platform == "win32":
@@ -52,12 +54,50 @@ class GameStateExtractor:
         except ValueError:
             return None
 
+    def is_table_present(self, img_gray):
+        # Quick heuristic to determine if poker table is actually on screen
+        # We can check if we can read the Hero name or Pot text
+        hero_name_img = self._crop(img_gray, HERO_NAME)
+        name_text = self._ocr_text(hero_name_img)
+        if len(name_text) > 3:
+            return True
+        return False
+
+    def draw_debug_rois(self, img):
+        debug_img = img.copy()
+        color = (0, 255, 0)
+        thickness = 2
+
+        # Hero
+        hx, hy, hw, hh = HERO_NAME
+        cv2.rectangle(debug_img, (hx, hy), (hx+hw, hy+hh), color, thickness)
+        hx, hy, hw, hh = HERO_STACK
+        cv2.rectangle(debug_img, (hx, hy), (hx+hw, hy+hh), color, thickness)
+        hx, hy, hw, hh = HERO_CARDS
+        cv2.rectangle(debug_img, (hx, hy), (hx+hw, hy+hh), (255, 0, 0), thickness)
+
+        # Pot and Board
+        px, py, pw, ph = MAIN_POT
+        cv2.rectangle(debug_img, (px, py), (px+pw, py+ph), color, thickness)
+        bx, by, bw, bh = BOARD_CARDS
+        cv2.rectangle(debug_img, (bx, by), (bx+bw, by+bh), (0, 0, 255), thickness)
+
+        # Opponents
+        for name, box in OPPONENT_BOXES.items():
+            ox, oy, ow, oh = box
+            cv2.rectangle(debug_img, (ox, oy), (ox+ow, oy+oh), color, thickness)
+
+        return debug_img
+
     def extract_state(self, image_path):
         img = cv2.imread(image_path)
         if img is None:
             raise ValueError(f"Could not read image at {image_path}")
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        if not self.is_table_present(gray):
+            return None # Skip parsing if table is not detected
 
         # Some elements are white on black, invert for better OCR in some cases
         _, thresh_inv = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
@@ -77,6 +117,13 @@ class GameStateExtractor:
         hero_stack_img = self._crop(thresh_inv, HERO_STACK)
         stack_text = self._ocr_text(hero_stack_img)
         state["hero"]["stack"] = self._clean_number(stack_text)
+
+        # Cards
+        hero_cards_img = self._crop(img, HERO_CARDS)
+        state["hero"]["cards"] = self.card_parser.parse_cards(hero_cards_img)
+
+        board_cards_img = self._crop(img, BOARD_CARDS)
+        state["board"] = self.card_parser.parse_cards(board_cards_img)
 
         # Pot
         pot_img = self._crop(thresh_inv, MAIN_POT)

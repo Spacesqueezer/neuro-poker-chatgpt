@@ -58,7 +58,7 @@ def _get_dummy_screen_state_from_extractor(extracted_state) -> ScreenState:
         is_my_turn=True, # Assuming it's our turn when extracting
         street_name="preflop" if not extracted_state.get('board') else "flop",
         board_cards=extracted_state.get('board', []),
-        hero_hole_cards=["A♠", "A♥"], # Hardcoded for now until we parse cards
+        hero_hole_cards=hero_dict.get('cards', []),
         total_pot=extracted_state.get('pot', 0.0) or 0.0,
         call_amount_needed=0.0,
         min_raise_amount=2.0,
@@ -76,6 +76,7 @@ def main():
     parser = argparse.ArgumentParser(description="Запуск Режима Советника (Фаза 8).")
     parser.add_argument("--model", required=False, help="Путь к .pt модели (лучшему агенту)")
     parser.add_argument("--image", required=False, help="Тестовое изображение для парсинга")
+    parser.add_argument("--debug", action="store_true", help="Отрисовывать окно с рамками ROI (дебаг)")
     args = parser.parse_args()
 
     print("Инициализация Режима Советника (Advisor Mode)...")
@@ -103,13 +104,7 @@ def main():
         while True:
             # 1. Захват экрана
             if args.image:
-                try:
-                    raw_state = extractor.extract_state(args.image)
-                    screen_state = _get_dummy_screen_state_from_extractor(raw_state)
-                except Exception as e:
-                    print(f"Ошибка парсинга: {e}")
-                    time.sleep(2)
-                    continue
+                screenshot_path = args.image
             else:
                 # Fallback to screenshot if mss is installed
                 try:
@@ -120,12 +115,32 @@ def main():
                         tmp_dir = tempfile.gettempdir()
                         screenshot_path = os.path.join(tmp_dir, "advisor_capture.png")
                         sct.shot(mon=1, output=screenshot_path)
-                        raw_state = extractor.extract_state(screenshot_path)
-                        screen_state = _get_dummy_screen_state_from_extractor(raw_state)
                 except ImportError:
                     print("Модуль mss не установлен! Установите зависимости: pip install -e .[vision]")
                     print("Или используйте: --image <путь_к_изображению>")
                     break
+
+            try:
+                raw_state = extractor.extract_state(screenshot_path)
+                if raw_state is None:
+                    print("[Vision] Покерный стол не найден или перекрыт. Ожидание...")
+                    time.sleep(2)
+                    continue
+
+                if args.debug:
+                    import cv2
+                    img = cv2.imread(screenshot_path)
+                    debug_img = extractor.draw_debug_rois(img)
+                    # Resize for viewing if too large
+                    debug_img = cv2.resize(debug_img, (0,0), fx=0.8, fy=0.8)
+                    cv2.imshow("Poker Advisor Debug", debug_img)
+                    cv2.waitKey(1)
+
+                screen_state = _get_dummy_screen_state_from_extractor(raw_state)
+            except Exception as e:
+                print(f"Ошибка парсинга: {e}")
+                time.sleep(2)
+                continue
 
             # 2. Если не наш ход - ждем
             if not screen_state.is_my_turn:
