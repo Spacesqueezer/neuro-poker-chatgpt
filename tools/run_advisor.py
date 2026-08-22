@@ -123,7 +123,8 @@ def main():
                         raw_state = extractor.extract_state(screenshot_path)
                         screen_state = _get_dummy_screen_state_from_extractor(raw_state)
                 except ImportError:
-                    print("Модуль mss не установлен! Используйте --image <путь_к_изображению>")
+                    print("Модуль mss не установлен! Установите зависимости: pip install -e .[vision]")
+                    print("Или используйте: --image <путь_к_изображению>")
                     break
 
             # 2. Если не наш ход - ждем
