@@ -6,6 +6,7 @@ Coordinates are stored as (x, y, w, h).
 # Hero info
 HERO_NAME = (520, 875, 160, 30)
 HERO_STACK = (520, 900, 160, 30)
+HERO_CARDS = (510, 720, 200, 150) # Rough bounding box for both pocket cards
 
 # Main pot
 MAIN_POT = (560, 410, 160, 30)
