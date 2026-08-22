@@ -29,7 +29,7 @@ def _get_dummy_screen_state_from_extractor(extracted_state) -> ScreenState:
     players.append(
         ScreenPlayer(
             seat_index=1,
-            name=hero_dict.get('name', 'Hero'),
+            name="Hero", # Force to match ScreenTranslator hero_name expectation
             is_active=True,
             is_dealer=True,
             stack=hero_dict.get('stack', 0.0) or 0.0,
