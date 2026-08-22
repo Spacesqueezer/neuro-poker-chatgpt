@@ -22,6 +22,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+vision = [
+	"mss>=9.0",
+	"opencv-python>=4.10",
+	"pytesseract>=0.3.10",
+	"Pillow>=10.4"
+]
 ml = [
 	"gymnasium>=1.0",
 	"torch>=2.4",
