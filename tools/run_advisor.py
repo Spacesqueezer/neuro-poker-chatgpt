@@ -113,8 +113,8 @@ def main():
             else:
                 # Fallback to screenshot if mss is installed
                 try:
-                    from mss import mss
-                    with mss() as sct:
+                    from mss import MSS
+                    with MSS() as sct:
                         # Use cross-platform temporary directory
                         import tempfile
                         tmp_dir = tempfile.gettempdir()
