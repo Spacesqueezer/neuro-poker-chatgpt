@@ -1,0 +1,14 @@
+{
+	"hero_name": "spacesqueezer",
+	"debug": {
+		"show_preview": true,
+		"preview_scale": 0.5
+	},
+	"capture": {
+		"monitor": 1,
+		"fps_limit": 10
+	},
+	"anchor": {
+		"threshold": 0.75
+	}
+}
