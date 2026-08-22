@@ -149,3 +149,8 @@ tools/snapshots/
 config/simulation.json
 .neuropatch/
 sound/*.db
+tmp/
+*.png
+tests_tmp
+__pycache__/
+*.pyc
