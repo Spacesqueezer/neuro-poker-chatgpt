@@ -1,6 +1,8 @@
 import cv2
 import pytesseract
 import re
+import os
+import sys
 
 from poker.vision.roi_config import HERO_NAME, HERO_STACK, MAIN_POT, BOARD_CARDS, OPPONENT_BOXES
 
@@ -8,6 +10,22 @@ class GameStateExtractor:
     def __init__(self, tesseract_cmd=None):
         if tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+        elif sys.platform == "win32":
+            # Auto-configure tesseract for standard Windows installation paths
+            standard_paths = [
+                r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+                r"D:\Program Files\Tesseract-OCR\tesseract.exe"
+            ]
+
+            # Check for tesseract.exe
+            for path in standard_paths:
+                if os.path.exists(path):
+                    pytesseract.pytesseract.tesseract_cmd = path
+                    tessdata_path = os.path.join(os.path.dirname(path), "tessdata")
+                    if os.path.exists(tessdata_path) and "TESSDATA_PREFIX" not in os.environ:
+                        os.environ["TESSDATA_PREFIX"] = tessdata_path
+                    break
 
     def _crop(self, image, box):
         x, y, w, h = box
