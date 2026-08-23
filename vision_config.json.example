@@ -1,14 +1,22 @@
 {
 	"hero_name": "spacesqueezer",
-	"debug": {
-		"show_preview": true,
-		"preview_scale": 0.5
-	},
 	"capture": {
 		"monitor": 1,
 		"fps_limit": 10
 	},
 	"anchor": {
-		"threshold": 0.75
+		"threshold": 0.72
+	},
+	"debug": {
+		"preview_scale": 0.8
+	},
+	"captures_folder": "captures",
+	"player_name_rois": {
+		"seat_top_left": [0.02, 0.39, 0.17, 0.47],
+		"seat_top_center": [0.59, 0.22, 0.75, 0.30],
+		"seat_right": [0.84, 0.39, 0.98, 0.47],
+		"seat_bottom_right": [0.81, 0.72, 0.97, 0.80],
+		"seat_bottom_center": [0.43, 0.84, 0.59, 0.92],
+		"seat_bottom_left": [0.05, 0.72, 0.21, 0.80]
 	}
 }

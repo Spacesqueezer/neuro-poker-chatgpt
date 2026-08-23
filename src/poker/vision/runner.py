@@ -1,4 +1,5 @@
 import time
+
 import cv2
 
 from poker.vision.config import load_vision_config
@@ -8,6 +9,10 @@ from poker.vision.debug.windows_capture import exclude_from_capture
 from poker.vision.project_paths import find_project_root, get_assets_path
 from poker.vision.detection.multi_anchor import MultiAnchorDetector
 from poker.vision.tracking.table_region import build_preview_region
+from poker.vision.layout.player_layout import get_name_rois, scale_roi
+from poker.vision.ocr.name_reader import read_player_name
+from poker.vision.roi_debug import draw_name_rois
+from poker.vision.capture_manager import CaptureManager
 
 
 def _crop(frame, region):
@@ -17,36 +22,62 @@ def _crop(frame, region):
 	]
 
 
-def _draw_anchor_boxes(frame, anchors):
-	colors = {
-		"top_left": (0, 255, 0),
-		"top_right": (255, 200, 0),
-		"bottom_left": (255, 0, 255),
-	}
+def _extract_name_rois(table_frame, config):
+	height, width = table_frame.shape[:2]
+	normalized_rois = get_name_rois(config)
 
-	for group_name, anchor in anchors.items():
-		color = colors.get(group_name, (255, 255, 255))
+	scaled_rois = {}
 
-		cv2.rectangle(
-			frame,
-			(anchor["x"], anchor["y"]),
-			(
-				anchor["x"] + anchor["width"],
-				anchor["y"] + anchor["height"],
-			),
-			color,
-			2,
+	for seat_name, normalized_roi in normalized_rois.items():
+		scaled_rois[seat_name] = scale_roi(
+			width,
+			height,
+			normalized_roi,
 		)
 
-		cv2.putText(
-			frame,
-			f"{group_name} {anchor['score']:.3f}",
-			(anchor["x"], max(20, anchor["y"] - 8)),
-			cv2.FONT_HERSHEY_SIMPLEX,
-			0.5,
-			color,
-			1,
-		)
+	return scaled_rois
+
+
+def _extract_name_crops(table_frame, scaled_rois):
+	crops = {}
+
+	for seat_name, rect in scaled_rois.items():
+		x1, y1, x2, y2 = rect
+		crops[seat_name] = table_frame[y1:y2, x1:x2].copy()
+
+	return crops
+
+
+def _detect_names(name_crops):
+	detected = {}
+
+	for seat_name, crop in name_crops.items():
+		detected[seat_name] = read_player_name(crop)
+
+	return detected
+
+
+def _print_names(detected_names):
+	ordered = [
+		"seat_top_left",
+		"seat_top_center",
+		"seat_right",
+		"seat_bottom_right",
+		"seat_bottom_center",
+		"seat_bottom_left",
+	]
+
+	parts = []
+
+	for seat_name in ordered:
+		name = detected_names.get(seat_name, "")
+
+		if not name:
+			name = "?"
+
+		parts.append(f"{seat_name}={name}")
+
+	print("[PLAYERS] " + " | ".join(parts))
 
 
 def run():
@@ -69,44 +100,25 @@ def run():
 		config["anchor"]["threshold"],
 	)
 
+	capture_manager = CaptureManager(
+		config.get("captures_folder", "captures")
+	)
+
 	create_window()
 	excluded = exclude_from_capture(WINDOW_NAME)
 
 	print(f"[DEBUG] Preview excluded from capture: {excluded}")
 
+	last_print_time = 0.0
+
 	while True:
 		frame = capture.grab()
 		anchors = detector.find(frame)
-
-		for group_name in ["top_left", "top_right", "bottom_left"]:
-			if group_name in anchors:
-				anchor = anchors[group_name]
-				print(
-					f"[ANCHOR:{group_name}] "
-					f"{anchor['name']} score={anchor['score']:.3f} "
-					f"x={anchor['x']} y={anchor['y']}"
-				)
-			else:
-				print(f"[ANCHOR:{group_name}] not found")
-
-		preview_frame = frame.copy()
-		_draw_anchor_boxes(preview_frame, anchors)
-
 		region = build_preview_region(frame, anchors)
 
-		if region is not None:
-			preview_frame = _crop(frame, region)
+		if region is None:
+			preview_frame = frame.copy()
 
-			cv2.putText(
-				preview_frame,
-				"THREE ANCHOR PREVIEW",
-				(20, 36),
-				cv2.FONT_HERSHEY_SIMPLEX,
-				0.9,
-				(0, 255, 0),
-				2,
-			)
-		else:
 			cv2.putText(
 				preview_frame,
 				"WAITING FOR ALL 3 ANCHORS",
@@ -117,17 +129,56 @@ def run():
 				2,
 			)
 
+			key = show_frame(
+				preview_frame,
+				config.get("debug", {}).get("preview_scale", 0.8),
+			)
+
+			if key == ord("q"):
+				break
+
+			time.sleep(1 / config["capture"]["fps_limit"])
+			continue
+
+		table_frame = _crop(frame, region)
+		scaled_rois = _extract_name_rois(table_frame, config)
+		name_crops = _extract_name_crops(table_frame, scaled_rois)
+		detected_names = _detect_names(name_crops)
+
+		debug_frame = table_frame.copy()
+		draw_name_rois(debug_frame, scaled_rois, detected_names)
+
+		cv2.putText(
+			debug_frame,
+			"PLAYER NAME DETECTION",
+			(20, 36),
+			cv2.FONT_HERSHEY_SIMPLEX,
+			0.9,
+			(0, 255, 0),
+			2,
+		)
+
+		now = time.time()
+
+		if now - last_print_time >= 1.0:
+			_print_names(detected_names)
+			last_print_time = now
+
 		key = show_frame(
-			preview_frame,
+			debug_frame,
 			config.get("debug", {}).get("preview_scale", 0.8),
 		)
 
 		if key == ord("q"):
 			break
 
-		time.sleep(
-			1 / config["capture"]["fps_limit"]
-		)
+		if key == 0x71:
+			capture_manager.save_table_and_names(
+				table_frame,
+				name_crops,
+			)
+
+		time.sleep(1 / config["capture"]["fps_limit"])
 
 	close()
 

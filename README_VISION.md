@@ -1,19 +1,36 @@
 # Vision
 
-Этап: захват окна PokerDom.
+Этап: поиск стола по трём якорям и определение ников игроков.
 
-Добавлено:
-- поиск окна через WinAPI;
-- захват только окна игры;
-- подготовка к поиску ROI стола.
+Что есть сейчас:
+- стол ищется по трём якорям;
+- внутри найденного стола рисуются ROI зон с никами;
+- OCR читает ники игроков;
+- в консоль выводятся ники игроков, а не служебные якоря;
+- по F2 сохраняется полный стол и все вырезанные зоны ников.
 
-Установка:
+Зависимости:
 
-pip install pywin32
+pip install pywin32 pytesseract
+
+Также нужен установленный Tesseract OCR и доступный язык eng.
 
 Запуск:
 
-python src/poker/vision/window_runner.py
+python src/poker/vision/runner.py
 
-Следующий этап:
-определение границ стола внутри окна.
+Управление:
+- Q: выход
+- F2: сохранить текущий стол и все зоны ников
+
+Структура сохранений:
+
+captures/
+	table_0001.png
+	table_0001_names/
+		seat_top_left.png
+		seat_top_center.png
+		seat_right.png
+		seat_bottom_right.png
+		seat_bottom_center.png
+		seat_bottom_left.png
