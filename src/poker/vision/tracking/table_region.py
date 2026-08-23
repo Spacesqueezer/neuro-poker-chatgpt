@@ -16,7 +16,7 @@ def build_preview_region(frame, anchors):
 		"bottom_left",
 	]
 
-	if not all(key in anchors for key in required):
+	if not all(name in anchors for name in required):
 		return None
 
 	top_left = anchors["top_left"]
@@ -33,24 +33,22 @@ def build_preview_region(frame, anchors):
 		top_right["y"],
 	)
 
-	right = max(
-		top_right["x"] + top_right["width"],
-		top_left["x"] + top_left["width"],
-	)
+	right = top_right["x"] + top_right["width"]
 
-	bottom = max(
-		bottom_left["y"] + bottom_left["height"],
-	)
+	bottom = bottom_left["y"] + bottom_left["height"]
 
-	width = right - left
-	height = bottom - top
+	padding_x = 40
+	padding_y = 40
 
-	if width < 300 or height < 200:
-		return None
+	left = max(0, left - padding_x)
+	top = max(0, top - padding_y)
+
+	right += padding_x
+	bottom += padding_y
 
 	return TableRegion(
 		left=left,
 		top=top,
-		width=width,
-		height=height,
+		width=right - left,
+		height=bottom - top,
 	)
