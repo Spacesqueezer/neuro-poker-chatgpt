@@ -29,7 +29,7 @@ from poker.vision.state.screen_state import (
 	VisionScreenState,
 	street_from_board,
 )
-from poker.vision.tracking.card_state import CardStateTracker
+from poker.vision.tracking.hand_state import HandStateTracker
 from poker.vision.tracking.dynamic_players import DynamicPlayerTracker
 from poker.vision.tracking.fast_hero import FastHeroLocator
 from poker.vision.tracking.table_region import (
@@ -151,6 +151,93 @@ def _find_hero_panel(players):
 	return None
 
 
+def _decorate_fast_hero(
+	players,
+	panels,
+	hero_panel,
+	hero_name,
+):
+	if hero_panel is None:
+		return players
+
+	rows = list(
+		players
+		if len(players) == len(panels)
+		else _panel_only_players(
+			panels
+		)
+	)
+
+	best_index = None
+	best_distance = None
+
+	for index, player in enumerate(
+		rows
+	):
+		distance = (
+			(
+				player.panel.center[0]
+				- hero_panel.center[0]
+			) ** 2
+			+ (
+				player.panel.center[1]
+				- hero_panel.center[1]
+			) ** 2
+		) ** 0.5
+
+		if (
+			best_distance is None
+			or distance < best_distance
+		):
+			best_distance = distance
+			best_index = index
+
+	if best_index is None:
+		return rows
+
+	player = rows[
+		best_index
+	]
+
+	if not getattr(
+		player,
+		"is_hero",
+		False,
+	):
+		# Не мутируем объект DynamicPlayerTracker: его identity state
+		# остаётся консервативным для статистики. Это только runtime view.
+		player = type(
+			"RuntimeHeroPlayer",
+			(),
+			{
+				"index": getattr(
+					player,
+					"index",
+					best_index,
+				),
+				"panel": player.panel,
+				"name": hero_name,
+				"action": getattr(
+					player,
+					"action",
+					None,
+				),
+				"is_hero": True,
+				"identity_pending": getattr(
+					player,
+					"identity_pending",
+					False,
+				),
+			},
+		)()
+
+		rows[
+			best_index
+		] = player
+
+	return rows
+
+
 def _scan_cards(
 	card_detector,
 	table_frame,
@@ -224,7 +311,7 @@ def run():
 	panel_detector = PlayerPanelDetector()
 	card_detector = CardDetector()
 	card_recognizer = CardRecognizer()
-	card_state = CardStateTracker()
+	hand_state = HandStateTracker()
 	action_detector = HeroActionDetector()
 	pot_reader = PotReader()
 
@@ -403,8 +490,7 @@ def run():
 				board_signature = None
 				hero_signature = None
 
-				card_state.reset_board()
-				card_state.reset_hero()
+				hand_state.reset_geometry_only()
 
 				last_player_count = None
 				last_name_log = None
@@ -496,7 +582,8 @@ def run():
 
 				if confirmed_hero is not None:
 					fast_hero.remember(
-						confirmed_hero
+						confirmed_hero,
+						table_frame.shape,
 					)
 
 				name_log = tuple(
@@ -519,14 +606,6 @@ def run():
 
 			ocr_future = None
 
-		draw_players = (
-			players
-			if len(players) == len(panels)
-			else _panel_only_players(
-				panels
-			)
-		)
-
 		# HERO ищем быстрым template/cached locator сразу по panels.
 		# Не ждём, пока полный Tesseract OCR всех игроков закончит цикл.
 		hero_panel = fast_hero.locate(
@@ -541,8 +620,16 @@ def run():
 
 			if hero_panel is not None:
 				fast_hero.remember(
-					hero_panel
+					hero_panel,
+					table_frame.shape,
 				)
+
+		draw_players = _decorate_fast_hero(
+			players,
+			panels,
+			hero_panel,
+			config["hero_name"],
+		)
 
 		# Геометрию карт тоже уводим из main loop.
 		# Раньше detect_board + detect_hero выполнялись синхронно каждые
@@ -582,6 +669,15 @@ def run():
 					)
 				)
 
+				hand_state.observe_geometry(
+					board_count=len(
+						new_board_cards
+					),
+					hero_count=len(
+						new_hero_cards
+					),
+				)
+
 				if (
 					new_board_signature
 					!= board_signature
@@ -590,7 +686,6 @@ def run():
 					board_signature = (
 						new_board_signature
 					)
-					card_state.reset_board()
 
 				if (
 					new_hero_signature
@@ -600,7 +695,6 @@ def run():
 					hero_signature = (
 						new_hero_signature
 					)
-					card_state.reset_hero()
 			except Exception as error:
 				dashboard.set_event(
 					f"Card detector: {error}",
@@ -652,12 +746,14 @@ def run():
 				):
 					if board_cards:
 						board_values = (
-							card_state.update_board(
+							hand_state.update_board(
 								raw_board
 							)
 						)
 					else:
-						board_values = []
+						board_values = (
+							hand_state.board_values
+						)
 
 				if (
 					result_hero_signature
@@ -665,12 +761,22 @@ def run():
 				):
 					if hero_cards:
 						hero_values = (
-							card_state.update_hero(
+							hand_state.update_hero(
 								raw_hero
 							)
 						)
 					else:
-						hero_values = []
+						hero_values = (
+							hand_state.hero_values
+						)
+
+				board_values = (
+					hand_state.board_values
+				)
+
+				hero_values = (
+					hand_state.hero_values
+				)
 
 				card_log = (
 					tuple(board_values),
@@ -707,9 +813,7 @@ def run():
 		if action_state is not None:
 			vision_state = VisionScreenState(
 				is_my_turn=action_state.is_my_turn,
-				street_name=street_from_board(
-					board_values
-				),
+				street_name=hand_state.street_name,
 				board_cards=list(board_values),
 				hero_hole_cards=list(hero_values),
 				total_pot=total_pot,
@@ -796,6 +900,19 @@ def run():
 			ocr_worker_busy=(
 				ocr_future is not None
 			),
+			card_worker_busy=(
+				card_future is not None
+				or card_ocr_future is not None
+			),
+			hero_locked=(
+				hero_panel is not None
+			),
+			board_box_count=len(
+				board_cards
+			),
+			hero_box_count=len(
+				hero_cards
+			),
 		)
 
 		key = show_frame(
@@ -821,8 +938,7 @@ def run():
 			hero_values = []
 			board_signature = None
 			hero_signature = None
-			card_state.reset_board()
-			card_state.reset_hero()
+			hand_state.reset_all()
 			last_player_count = None
 			last_name_log = None
 			last_card_log = None

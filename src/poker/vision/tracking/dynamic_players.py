@@ -528,6 +528,37 @@ class DynamicPlayerTracker:
 				history.display_name()
 			)
 
+			# HERO — особый случай.
+			#
+			# Для обычных игроков при pending identity мы специально
+			# отдаём пустое имя: лучше временно "unknown", чем записать
+			# нового человека в статистику старого.
+			#
+			# Но HERO известен из config и не должен исчезать из runtime
+			# из-за одного плохого OCR. Пока новый ник не подтверждён
+			# несколькими чтениями, держим стабильное имя HERO.
+			stable_name = (
+				history.stable_name
+			)
+
+			stable_hero_score = 0.0
+
+			if stable_name:
+				stable_hero_score = (
+					self._hero_similarity(
+						stable_name
+					)
+				)
+
+			if (
+				not display_name
+				and stable_hero_score
+				>= self.hero_threshold
+			):
+				display_name = (
+					self.hero_name
+				)
+
 			hero_score = 0.0
 
 			if display_name:

@@ -61,6 +61,10 @@ class ScannerDashboard:
 		action_state,
 		panel_worker_busy=False,
 		ocr_worker_busy=False,
+		card_worker_busy=False,
+		hero_locked=False,
+		board_box_count=0,
+		hero_box_count=0,
 	):
 		self._configure_layout(
 			screen_size,
@@ -122,6 +126,10 @@ class ScannerDashboard:
 			y,
 			panel_worker_busy=panel_worker_busy,
 			ocr_worker_busy=ocr_worker_busy,
+			card_worker_busy=card_worker_busy,
+			hero_locked=hero_locked,
+			board_box_count=board_box_count,
+			hero_box_count=hero_box_count,
 			board_values=board_values,
 			hero_values=hero_values,
 		)
@@ -660,6 +668,10 @@ class ScannerDashboard:
 		*,
 		panel_worker_busy,
 		ocr_worker_busy,
+		card_worker_busy,
+		hero_locked,
+		board_box_count,
+		hero_box_count,
 		board_values,
 		hero_values,
 	):
@@ -714,10 +726,57 @@ class ScannerDashboard:
 
 		y += 22
 
+		card_worker = (
+			"busy"
+			if card_worker_busy
+			else "idle"
+		)
+
 		self._key_value(
 			panel,
 			y,
-			"Cards",
+			"Card worker",
+			card_worker,
+			value_color=(
+				YELLOW
+				if card_worker_busy
+				else MUTED
+			),
+		)
+
+		y += 22
+
+		self._key_value(
+			panel,
+			y,
+			"HERO lock",
+			(
+				"LOCKED"
+				if hero_locked
+				else "searching"
+			),
+			value_color=(
+				GREEN
+				if hero_locked
+				else YELLOW
+			),
+		)
+
+		y += 22
+
+		self._key_value(
+			panel,
+			y,
+			"Card boxes",
+			f"B:{board_box_count} H:{hero_box_count}",
+		)
+
+		y += 22
+
+		self._key_value(
+			panel,
+			y,
+			"Cards read",
 			f"B:{len(board_values or [])} H:{len(hero_values or [])}",
 		)
 

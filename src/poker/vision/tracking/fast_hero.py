@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 
 import cv2
 import numpy as np
@@ -30,6 +31,9 @@ class FastHeroLocator:
 
 		self.templates = []
 		self.cached_center = None
+		self.cached_normalized_center = None
+		self.last_confirmed_at = 0.0
+		self.hold_seconds = 12.0
 
 		self._load_templates()
 
@@ -64,6 +68,7 @@ class FastHeroLocator:
 	def remember(
 		self,
 		panel,
+		table_shape=None,
 	):
 		if panel is None:
 			return
@@ -77,8 +82,27 @@ class FastHeroLocator:
 			),
 		)
 
+		if table_shape is not None:
+			height, width = (
+				table_shape[:2]
+			)
+
+			if width > 0 and height > 0:
+				self.cached_normalized_center = (
+					self.cached_center[0]
+					/ width,
+					self.cached_center[1]
+					/ height,
+				)
+
+		self.last_confirmed_at = (
+			time.monotonic()
+		)
+
 	def reset(self):
 		self.cached_center = None
+		self.cached_normalized_center = None
+		self.last_confirmed_at = 0.0
 
 	def locate(
 		self,
@@ -90,7 +114,8 @@ class FastHeroLocator:
 
 		# Сначала держимся за уже известное физическое место HERO.
 		cached = self._nearest_cached(
-			panels
+			panels,
+			table_frame.shape,
 		)
 
 		if cached is not None:
@@ -127,7 +152,8 @@ class FastHeroLocator:
 			and best_score >= 0.64
 		):
 			self.remember(
-				best_panel
+				best_panel,
+				table_frame.shape,
 			)
 
 			return best_panel
@@ -137,9 +163,35 @@ class FastHeroLocator:
 	def _nearest_cached(
 		self,
 		panels,
+		table_shape,
 	):
-		if self.cached_center is None:
+		if (
+			self.cached_center is None
+			and self.cached_normalized_center
+			is None
+		):
 			return None
+
+		height, width = (
+			table_shape[:2]
+		)
+
+		if (
+			self.cached_normalized_center
+			is not None
+			and width > 0
+			and height > 0
+		):
+			reference_center = (
+				self.cached_normalized_center[0]
+				* width,
+				self.cached_normalized_center[1]
+				* height,
+			)
+		else:
+			reference_center = (
+				self.cached_center
+			)
 
 		best = None
 		best_distance = None
@@ -148,9 +200,9 @@ class FastHeroLocator:
 			distance = float(
 				np.hypot(
 					panel.center[0]
-					- self.cached_center[0],
+					- reference_center[0],
 					panel.center[1]
-					- self.cached_center[1],
+					- reference_center[1],
 				)
 			)
 
@@ -173,10 +225,21 @@ class FastHeroLocator:
 		)
 
 		if best_distance > threshold:
+			# Короткий detector miss / дрожание panels не должно сразу
+			# уничтожать HERO lock. Но чужую далёкую panel не принимаем.
+			if (
+				time.monotonic()
+				- self.last_confirmed_at
+				<= self.hold_seconds
+			):
+				return None
+
+			self.reset()
 			return None
 
 		self.remember(
-			best
+			best,
+			table_shape,
 		)
 
 		return best

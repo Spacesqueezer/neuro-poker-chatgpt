@@ -635,7 +635,31 @@
     "captures/table_20260902_041317_056613/cards/hero_01.png": {
       "status": "accepted",
       "label": "2d"
+    },
+    "captures/table_20260902_051240_737087/cards/board_00.png": {
+      "status": "accepted",
+      "label": "5s"
+    },
+    "captures/table_20260902_051240_737087/cards/board_01.png": {
+      "status": "accepted",
+      "label": "5c"
+    },
+    "captures/table_20260902_051240_737087/cards/board_02.png": {
+      "status": "accepted",
+      "label": "9h"
+    },
+    "captures/table_20260902_053651_251031/cards/board_00.png": {
+      "status": "accepted",
+      "label": "3s"
+    },
+    "captures/table_20260902_053651_251031/cards/board_01.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260902_053651_251031/cards/board_02.png": {
+      "status": "accepted",
+      "label": "8d"
     }
   },
-  "last_index": 158
+  "last_index": 164
 }

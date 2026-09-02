@@ -1,73 +1,68 @@
-# Vision — fast HERO + async cards v1
+# Vision — HandState + card voting v1
 
-Этот patch исправляет две связанные проблемы:
+Следующий слой над уже работающим card detector.
 
-1. Scanner GUI прыгал примерно 5–12 FPS.
-2. HERO мог определяться очень долго, а hole cards почти не искались.
+## Что исправляет
 
-## Почему HERO тормозил
-
-`runner` раньше делал:
+Однокадровое распознавание вроде:
 
 ```text
-panels
-→ полный OCR всех игроков
-→ найти player.is_hero
-→ только после этого detect_hero_cards()
+5h
+5h
+Jh
+5h
 ```
 
-Полный OCR — самая дорогая часть player pipeline. Пока он не завершился,
-`hero_panel=None`, а значит hole cards вообще не искались.
+больше не должно превращать runtime state в `Jh`.
 
-Теперь добавлен `FastHeroLocator`.
-
-Он:
-- сначала удерживает уже известное физическое место HERO;
-- если HERO ещё неизвестен, использует готовые full-name templates
-  `assets/players/templates/names/spacesqueezer/`;
-- это обычное OpenCV сравнение маленьких nickname ROI без Tesseract;
-- когда полный OCR всё-таки подтверждает HERO, locator обновляет cache.
-
-То есть рамка HERO и поиск hole cards больше не должны зависеть от скорости
-полного OCR всех ников.
-
-## Почему hole cards сверху не находились
-
-Старая `CardDetector.detect_hero()` исходила из предположения:
+Первый валидный read принимается сразу, но смена уже подтверждённой карты
+требует нескольких голосов:
 
 ```text
-hole cards находятся по направлению от panel к центру стола
+board card switch: 3 votes
+hero card switch:  4 votes
 ```
 
-На верхнем seat PokerDom рисует hole cards НАД name panel, то есть в обратную
-сторону.
+## Board монотонный
 
-Теперь search ROI строится вокруг и главным образом над hero panel, поэтому
-работает и для верхнего seat.
-
-## FPS
-
-Из main loop вынесены:
-- `detect_board()`;
-- `detect_hero()`;
-- card template recognition / Tesseract fallback.
-
-Они выполняются worker-потоками.
-
-Также panel detector в steady-state запускается реже:
+В рамках одной руки допускается только:
 
 ```text
-1.6 сек вместо 1.0 сек
+0 -> 3 -> 4 -> 5
+preflop -> flop -> turn -> river
 ```
 
-Количество workers увеличено с 2 до 4, чтобы slow nickname OCR не блокировал
-card geometry worker.
+Если detector на turn временно показывает только 3 карты, tracker не
+откатывается на flop и не сдвигает card slots.
 
-## Ожидаемый эффект
+Если одна из четырёх карт временно потеряна, более короткий OCR sample
+игнорируется целиком.
 
-- dashboard должен стать существенно ровнее;
-- HERO должен появляться почти сразу после panels, если есть full-name template
-  `spacesqueezer`;
-- после первого подтверждённого OCR HERO seat удерживается по физической позиции;
-- hole cards должны искаться даже когда HERO сидит сверху;
-- card OCR не должен подвешивать кадр GUI.
+## Новая рука
+
+Board очищается не по одному пустому кадру, а после серии из 7 detector scans
+без board boxes. Resize/re-lock стола не считается новой рукой.
+
+## Важное изменение runner
+
+Раньше при любом изменении card geometry выполнялось:
+
+```text
+card_state.reset_board()
+card_state.reset_hero()
+```
+
+То есть voting уничтожался именно тогда, когда он был нужнее всего.
+
+Теперь signature change меняет только geometry boxes. Hand/card state живёт
+отдельно.
+
+Патч меняет:
+
+```text
+src/poker/vision/runner.py
+src/poker/vision/tracking/card_state.py
+src/poker/vision/tracking/hand_state.py
+```
+
+`cards.py` не трогается — текущий рабочий partial-occlusion detector остаётся.
