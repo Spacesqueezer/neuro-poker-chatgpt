@@ -4,7 +4,7 @@
 	"debug_console": true,
 	"capture": {
 		"monitor": 1,
-		"fps_limit": 10
+		"fps_limit": 30
 	},
 	"anchor": {
 		"enabled": true,

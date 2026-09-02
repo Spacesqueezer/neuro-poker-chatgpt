@@ -1,0 +1,32 @@
+[
+  {
+    "index": 0,
+    "name": "ciperus",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 1,
+    "name": "spacesqueezer",
+    "is_hero": true,
+    "action": null
+  },
+  {
+    "index": 2,
+    "name": "ant_man",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 3,
+    "name": "silmone",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 4,
+    "name": "skyneeet",
+    "is_hero": false,
+    "action": null
+  }
+]

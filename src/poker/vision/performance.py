@@ -3,18 +3,18 @@ import time
 
 class PerformanceMeter:
 	def __init__(self):
-		self.last = time.time()
-		self.frames = 0
+		self._started_at = time.perf_counter()
+		self._frames = 0
+		self.fps = 0.0
 
 	def tick(self):
-		self.frames += 1
+		self._frames += 1
+		now = time.perf_counter()
+		elapsed = now - self._started_at
 
-		now = time.time()
+		if elapsed >= 0.5:
+			self.fps = self._frames / elapsed
+			self._frames = 0
+			self._started_at = now
 
-		if now - self.last >= 1:
-			fps = self.frames
-			self.frames = 0
-			self.last = now
-			return fps
-
-		return None
+		return self.fps

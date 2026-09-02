@@ -1,0 +1,641 @@
+{
+  "samples": {
+    "captures/table_20260901_121615_054723/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Qd"
+    },
+    "captures/table_20260901_121615_054723/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "3c"
+    },
+    "captures/table_20260901_121617_413241/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Qd"
+    },
+    "captures/table_20260901_121617_413241/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "3c"
+    },
+    "captures/table_20260901_121641_237399/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Jh"
+    },
+    "captures/table_20260901_121641_237399/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "7d"
+    },
+    "captures/table_20260901_121653_637933/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Kd"
+    },
+    "captures/table_20260901_121653_637933/cards/hero_01.png": {
+      "status": "skipped",
+      "label": ""
+    },
+    "captures/table_20260901_121728_075546/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "4s"
+    },
+    "captures/table_20260901_121728_075546/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "3c"
+    },
+    "captures/table_20260901_121809_600087/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Kc"
+    },
+    "captures/table_20260901_121809_600087/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "8d"
+    },
+    "captures/table_20260901_125609_339227/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "7h"
+    },
+    "captures/table_20260901_125609_339227/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "2c"
+    },
+    "captures/table_20260901_130009_885113/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Qc"
+    },
+    "captures/table_20260901_130009_885113/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_130543_391522/cards/board_00.png": {
+      "status": "accepted",
+      "label": "4h"
+    },
+    "captures/table_20260901_130543_391522/cards/board_01.png": {
+      "status": "accepted",
+      "label": "5h"
+    },
+    "captures/table_20260901_130543_391522/cards/board_02.png": {
+      "status": "accepted",
+      "label": "3d"
+    },
+    "captures/table_20260901_130544_696282/cards/board_00.png": {
+      "status": "accepted",
+      "label": "4h"
+    },
+    "captures/table_20260901_130544_696282/cards/board_01.png": {
+      "status": "accepted",
+      "label": "5h"
+    },
+    "captures/table_20260901_130544_696282/cards/board_02.png": {
+      "status": "accepted",
+      "label": "3d"
+    },
+    "captures/table_20260901_132047_254836/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "9c"
+    },
+    "captures/table_20260901_132047_254836/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "8d"
+    },
+    "captures/table_20260901_133908_608526/cards/board_00.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_133908_608526/cards/board_01.png": {
+      "status": "skipped",
+      "label": ""
+    },
+    "captures/table_20260901_133908_608526/cards/board_02.png": {
+      "status": "accepted",
+      "label": "2s"
+    },
+    "captures/table_20260901_134119_702422/cards/board_00.png": {
+      "status": "accepted",
+      "label": "4h"
+    },
+    "captures/table_20260901_134119_702422/cards/board_01.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_134119_702422/cards/board_02.png": {
+      "status": "accepted",
+      "label": "8d"
+    },
+    "captures/table_20260901_134119_702422/cards/board_03.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_134119_702422/cards/board_04.png": {
+      "status": "accepted",
+      "label": "Qs"
+    },
+    "captures/table_20260901_134355_840827/cards/board_00.png": {
+      "status": "accepted",
+      "label": "7c"
+    },
+    "captures/table_20260901_134355_840827/cards/board_01.png": {
+      "status": "accepted",
+      "label": "4s"
+    },
+    "captures/table_20260901_134355_840827/cards/board_02.png": {
+      "status": "accepted",
+      "label": "5h"
+    },
+    "captures/table_20260901_153909_830112/cards/board_00.png": {
+      "status": "accepted",
+      "label": "9d"
+    },
+    "captures/table_20260901_153909_830112/cards/board_01.png": {
+      "status": "accepted",
+      "label": "4s"
+    },
+    "captures/table_20260901_153909_830112/cards/board_02.png": {
+      "status": "accepted",
+      "label": "2d"
+    },
+    "captures/table_20260901_153909_830112/cards/board_03.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_154114_094328/cards/board_00.png": {
+      "status": "accepted",
+      "label": "Kc"
+    },
+    "captures/table_20260901_154114_094328/cards/board_01.png": {
+      "status": "accepted",
+      "label": "8c"
+    },
+    "captures/table_20260901_154114_094328/cards/board_02.png": {
+      "status": "accepted",
+      "label": "9s"
+    },
+    "captures/table_20260901_154114_094328/cards/board_03.png": {
+      "status": "accepted",
+      "label": "8h"
+    },
+    "captures/table_20260901_154114_094328/cards/board_04.png": {
+      "status": "accepted",
+      "label": "6s"
+    },
+    "captures/table_20260901_160201_541588/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "5d"
+    },
+    "captures/table_20260901_160201_541588/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "3s"
+    },
+    "captures/table_20260901_160211_930970/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_160211_930970/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "2c"
+    },
+    "captures/table_20260901_160312_784840/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_160312_784840/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "5c"
+    },
+    "captures/table_20260901_173353_788568/cards/board_00.png": {
+      "status": "accepted",
+      "label": "Jc"
+    },
+    "captures/table_20260901_173353_788568/cards/board_01.png": {
+      "status": "accepted",
+      "label": "9h"
+    },
+    "captures/table_20260901_173353_788568/cards/board_02.png": {
+      "status": "accepted",
+      "label": "7s"
+    },
+    "captures/table_20260901_173353_788568/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Ac"
+    },
+    "captures/table_20260901_173353_788568/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Jh"
+    },
+    "captures/table_20260901_173358_077461/cards/board_00.png": {
+      "status": "accepted",
+      "label": "Jc"
+    },
+    "captures/table_20260901_173358_077461/cards/board_01.png": {
+      "status": "accepted",
+      "label": "9h"
+    },
+    "captures/table_20260901_173358_077461/cards/board_02.png": {
+      "status": "accepted",
+      "label": "7s"
+    },
+    "captures/table_20260901_173358_077461/cards/board_03.png": {
+      "status": "accepted",
+      "label": "6h"
+    },
+    "captures/table_20260901_173358_077461/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Ac"
+    },
+    "captures/table_20260901_173358_077461/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Jh"
+    },
+    "captures/table_20260901_173409_051555/cards/board_00.png": {
+      "status": "accepted",
+      "label": "Jc"
+    },
+    "captures/table_20260901_173409_051555/cards/board_01.png": {
+      "status": "accepted",
+      "label": "9h"
+    },
+    "captures/table_20260901_173409_051555/cards/board_02.png": {
+      "status": "skipped",
+      "label": ""
+    },
+    "captures/table_20260901_173409_051555/cards/board_03.png": {
+      "status": "accepted",
+      "label": "6h"
+    },
+    "captures/table_20260901_173409_051555/cards/board_04.png": {
+      "status": "accepted",
+      "label": "9s"
+    },
+    "captures/table_20260901_173420_196756/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Kh"
+    },
+    "captures/table_20260901_173420_196756/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Ks"
+    },
+    "captures/table_20260901_173437_060645/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "8s"
+    },
+    "captures/table_20260901_173437_060645/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "2d"
+    },
+    "captures/table_20260901_173451_760060/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "9s"
+    },
+    "captures/table_20260901_173451_760060/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "3d"
+    },
+    "captures/table_20260901_173505_936583/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Kc"
+    },
+    "captures/table_20260901_173505_936583/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Qs"
+    },
+    "captures/table_20260901_173513_388169/cards/board_00.png": {
+      "status": "accepted",
+      "label": "Jh"
+    },
+    "captures/table_20260901_173513_388169/cards/board_01.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_173513_388169/cards/board_02.png": {
+      "status": "accepted",
+      "label": "5h"
+    },
+    "captures/table_20260901_173527_281649/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_173527_281649/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "4c"
+    },
+    "captures/table_20260901_173541_803642/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_173541_803642/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Th"
+    },
+    "captures/table_20260901_173548_624474/cards/board_00.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_173548_624474/cards/board_01.png": {
+      "status": "accepted",
+      "label": "Ts"
+    },
+    "captures/table_20260901_173548_624474/cards/board_02.png": {
+      "status": "accepted",
+      "label": "Tc"
+    },
+    "captures/table_20260901_173548_624474/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_173548_624474/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Th"
+    },
+    "captures/table_20260901_173606_486435/cards/board_00.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_173606_486435/cards/board_01.png": {
+      "status": "accepted",
+      "label": "Ts"
+    },
+    "captures/table_20260901_173606_486435/cards/board_02.png": {
+      "status": "accepted",
+      "label": "Tc"
+    },
+    "captures/table_20260901_173606_486435/cards/board_03.png": {
+      "status": "accepted",
+      "label": "9h"
+    },
+    "captures/table_20260901_173606_486435/cards/board_04.png": {
+      "status": "accepted",
+      "label": "6s"
+    },
+    "captures/table_20260901_173606_486435/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_173606_486435/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Th"
+    },
+    "captures/table_20260901_173619_066521/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Kd"
+    },
+    "captures/table_20260901_173619_066521/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "4h"
+    },
+    "captures/table_20260901_173629_359263/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "7s"
+    },
+    "captures/table_20260901_173629_359263/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_173654_578309/cards/board_00.png": {
+      "status": "accepted",
+      "label": "9h"
+    },
+    "captures/table_20260901_173654_578309/cards/board_01.png": {
+      "status": "accepted",
+      "label": "Ac"
+    },
+    "captures/table_20260901_173654_578309/cards/board_02.png": {
+      "status": "accepted",
+      "label": "4c"
+    },
+    "captures/table_20260901_173654_578309/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Jd"
+    },
+    "captures/table_20260901_173654_578309/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "4s"
+    },
+    "captures/table_20260901_173721_515828/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Qs"
+    },
+    "captures/table_20260901_173721_515828/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "5d"
+    },
+    "captures/table_20260901_173758_108308/cards/board_00.png": {
+      "status": "accepted",
+      "label": "5d"
+    },
+    "captures/table_20260901_173758_108308/cards/board_01.png": {
+      "status": "accepted",
+      "label": "7h"
+    },
+    "captures/table_20260901_173758_108308/cards/board_02.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_173758_108308/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Qd"
+    },
+    "captures/table_20260901_173758_108308/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "8h"
+    },
+    "captures/table_20260901_173813_092395/cards/board_00.png": {
+      "status": "accepted",
+      "label": "5d"
+    },
+    "captures/table_20260901_173813_092395/cards/board_01.png": {
+      "status": "accepted",
+      "label": "7h"
+    },
+    "captures/table_20260901_173813_092395/cards/board_02.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_173813_092395/cards/board_03.png": {
+      "status": "accepted",
+      "label": "Js"
+    },
+    "captures/table_20260901_173813_092395/cards/board_04.png": {
+      "status": "accepted",
+      "label": "3c"
+    },
+    "captures/table_20260901_175618_888067/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "9d"
+    },
+    "captures/table_20260901_175618_888067/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_175632_843513/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Th"
+    },
+    "captures/table_20260901_175632_843513/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "8s"
+    },
+    "captures/table_20260901_175730_938301/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Ac"
+    },
+    "captures/table_20260901_175730_938301/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Jc"
+    },
+    "captures/table_20260901_175744_223764/cards/board_00.png": {
+      "status": "accepted",
+      "label": "9s"
+    },
+    "captures/table_20260901_175744_223764/cards/board_01.png": {
+      "status": "accepted",
+      "label": "5h"
+    },
+    "captures/table_20260901_175744_223764/cards/board_02.png": {
+      "status": "accepted",
+      "label": "8c"
+    },
+    "captures/table_20260901_175744_223764/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Ac"
+    },
+    "captures/table_20260901_175744_223764/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Jc"
+    },
+    "captures/table_20260901_175755_710408/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "8d"
+    },
+    "captures/table_20260901_175755_710408/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "6s"
+    },
+    "captures/table_20260901_175809_115381/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Ks"
+    },
+    "captures/table_20260901_175809_115381/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "8h"
+    },
+    "captures/table_20260901_175825_160363/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "9h"
+    },
+    "captures/table_20260901_175825_160363/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "7h"
+    },
+    "captures/table_20260901_175835_608546/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Ah"
+    },
+    "captures/table_20260901_175835_608546/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Js"
+    },
+    "captures/table_20260901_175843_432557/cards/board_00.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_175843_432557/cards/board_01.png": {
+      "status": "accepted",
+      "label": "9c"
+    },
+    "captures/table_20260901_175843_432557/cards/board_02.png": {
+      "status": "accepted",
+      "label": "6h"
+    },
+    "captures/table_20260901_175843_432557/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Ah"
+    },
+    "captures/table_20260901_175843_432557/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "Js"
+    },
+    "captures/table_20260901_175852_461603/cards/board_00.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260901_175852_461603/cards/board_01.png": {
+      "status": "accepted",
+      "label": "9c"
+    },
+    "captures/table_20260901_175852_461603/cards/board_02.png": {
+      "status": "accepted",
+      "label": "6h"
+    },
+    "captures/table_20260901_175852_461603/cards/board_03.png": {
+      "status": "accepted",
+      "label": "3c"
+    },
+    "captures/table_20260901_175901_604818/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "Qs"
+    },
+    "captures/table_20260901_175901_604818/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "7d"
+    },
+    "captures/table_20260902_041109_786226/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "9d"
+    },
+    "captures/table_20260902_041109_786226/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "4s"
+    },
+    "captures/table_20260902_041121_405555/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "8h"
+    },
+    "captures/table_20260902_041121_405555/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "5s"
+    },
+    "captures/table_20260902_041146_447112/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "4c"
+    },
+    "captures/table_20260902_041146_447112/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "2c"
+    },
+    "captures/table_20260902_041213_149226/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "6c"
+    },
+    "captures/table_20260902_041213_149226/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "4h"
+    },
+    "captures/table_20260902_041222_872398/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "6h"
+    },
+    "captures/table_20260902_041222_872398/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "5h"
+    },
+    "captures/table_20260902_041259_385546/cards/board_00.png": {
+      "status": "accepted",
+      "label": "4c"
+    },
+    "captures/table_20260902_041259_385546/cards/board_01.png": {
+      "status": "accepted",
+      "label": "3c"
+    },
+    "captures/table_20260902_041259_385546/cards/board_02.png": {
+      "status": "accepted",
+      "label": "Ah"
+    },
+    "captures/table_20260902_041317_056613/cards/hero_00.png": {
+      "status": "accepted",
+      "label": "8s"
+    },
+    "captures/table_20260902_041317_056613/cards/hero_01.png": {
+      "status": "accepted",
+      "label": "2d"
+    }
+  },
+  "last_index": 158
+}

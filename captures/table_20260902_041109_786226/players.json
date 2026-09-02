@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "name": "badfish21",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 1,
+    "name": "71q1975",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 2,
+    "name": "spacesqueezer",
+    "is_hero": true,
+    "action": null
+  },
+  {
+    "index": 3,
+    "name": "svvat1337",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 4,
+    "name": "28medved",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 5,
+    "name": "killreal",
+    "is_hero": false,
+    "action": null
+  }
+]

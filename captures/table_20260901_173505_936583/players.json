@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "name": "",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 1,
+    "name": "",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 2,
+    "name": "spacesqueezer",
+    "is_hero": true,
+    "action": null
+  },
+  {
+    "index": 3,
+    "name": "soul1966",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 4,
+    "name": "kamf3r",
+    "is_hero": false,
+    "action": "unknown"
+  },
+  {
+    "index": 5,
+    "name": "",
+    "is_hero": false,
+    "action": null
+  }
+]

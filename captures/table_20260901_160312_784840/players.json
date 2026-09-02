@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "name": "timeisover",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 1,
+    "name": "ant_man",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 2,
+    "name": "spacesqueezer",
+    "is_hero": true,
+    "action": null
+  },
+  {
+    "index": 3,
+    "name": "gldolea",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 4,
+    "name": "idby9",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 5,
+    "name": "zinr777ztr",
+    "is_hero": false,
+    "action": null
+  }
+]

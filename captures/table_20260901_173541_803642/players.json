@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "name": "",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 1,
+    "name": "",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 2,
+    "name": "spacesqueezer",
+    "is_hero": true,
+    "action": null
+  },
+  {
+    "index": 3,
+    "name": "avatarchik",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 4,
+    "name": "nord_manaust",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 5,
+    "name": "novuipvl21",
+    "is_hero": false,
+    "action": null
+  }
+]

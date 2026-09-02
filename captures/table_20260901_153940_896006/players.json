@@ -1,0 +1,44 @@
+[
+  {
+    "index": 0,
+    "name": "olegkeni",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 1,
+    "name": "samvystraight",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 2,
+    "name": "rezhisser228",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 3,
+    "name": "spacesqueezer",
+    "is_hero": true,
+    "action": null
+  },
+  {
+    "index": 4,
+    "name": "mambarostov",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 5,
+    "name": "qg_den",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 6,
+    "name": "lakets",
+    "is_hero": false,
+    "action": null
+  }
+]
