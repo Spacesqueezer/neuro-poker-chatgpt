@@ -1,68 +1,139 @@
-# Vision — HandState + card voting v1
+# Vision — полный rewrite card detector v1
 
-Следующий слой над уже работающим card detector.
+Это не очередной тюнинг старых thresholds. `CardDetector` переписан целиком.
 
-## Что исправляет
+## Что было неправильно
 
-Однокадровое распознавание вроде:
-
-```text
-5h
-5h
-Jh
-5h
-```
-
-больше не должно превращать runtime state в `Jh`.
-
-Первый валидный read принимается сразу, но смена уже подтверждённой карты
-требует нескольких голосов:
+Старый подход считал каждую карту независимым белым прямоугольником:
 
 ```text
-board card switch: 3 votes
-hero card switch:  4 votes
+threshold -> contour -> width/height/aspect/fill -> CardBox
 ```
 
-## Board монотонный
+Это ломалось сразу в нескольких реальных сценариях PokerDom:
 
-В рамках одной руки допускается только:
+- chips перекрыли одну board card;
+- player panel закрыл низ hole cards;
+- contour одной карты временно исчез;
+- две светлые области слиплись;
+- на turn detector увидел карты `1, 2, 4`, потерял `3` и вернул три boxes.
+
+Последний случай особенно плох: список сжимается, индексы карт сдвигаются,
+а street остаётся `flop`, хотя четвёртая карта уже существует.
+
+## Новый board detector
+
+Board теперь рассматривается как **геометрическая решётка из 5 slots**.
+
+### Flop
+
+Первый устойчивый flop используется для калибровки:
 
 ```text
-0 -> 3 -> 4 -> 5
-preflop -> flop -> turn -> river
+card width
+card height
+first slot X/Y
+pitch между картами
 ```
 
-Если detector на turn временно показывает только 3 карты, tracker не
-откатывается на flop и не сдвигает card slots.
+Требуется регулярная горизонтальная тройка.
 
-Если одна из четырёх карт временно потеряна, более короткий OCR sample
-игнорируется целиком.
+### Turn / river
 
-## Новая рука
+После калибровки количество карт больше НЕ равно количеству contours.
 
-Board очищается не по одному пустому кадру, а после серии из 7 detector scans
-без board boxes. Resize/re-lock стола не считается новой рукой.
-
-## Важное изменение runner
-
-Раньше при любом изменении card geometry выполнялось:
+Следующий street проверяется непосредственно в следующем canonical slot:
 
 ```text
-card_state.reset_board()
-card_state.reset_hero()
+slot 4 -> есть card evidence -> turn
+slot 5 -> есть card evidence -> river
 ```
 
-То есть voting уничтожался именно тогда, когда он был нужнее всего.
-
-Теперь signature change меняет только geometry boxes. Hand/card state живёт
-отдельно.
-
-Патч меняет:
+Если на turn detector физически видит:
 
 ```text
-src/poker/vision/runner.py
-src/poker/vision/tracking/card_state.py
-src/poker/vision/tracking/hand_state.py
+1, 2, _, 4
 ```
 
-`cards.py` не трогается — текущий рабочий partial-occlusion detector остаётся.
+он всё равно возвращает:
+
+```text
+slot1, slot2, slot3, slot4
+```
+
+Потерянный slot3 восстанавливается из сохранённой геометрии. Поэтому OCR
+продолжает читать правильные координаты, а street становится `turn`.
+
+Board geometry сбрасывается только после нескольких последовательных кадров,
+в которых реально исчез весь board.
+
+## Partial occlusion
+
+Карта больше не обязана иметь полный белый contour.
+
+Candidate принимается даже если видимо примерно 38% высоты. При частичном
+перекрытии полный CardBox восстанавливается канонического размера.
+
+Это предназначено и для:
+
+```text
+board card + chips
+```
+
+и для:
+
+```text
+hole card + player panel
+```
+
+## HERO cards
+
+Для HERO вообще не нужен contour полного прямоугольника.
+
+После нахождения hero panel:
+
+```text
+1. Берётся canonical card size.
+2. Строятся два ожидаемых соседних slots над panel.
+3. Каждый slot локально двигается на несколько пикселей, максимизируя
+   card evidence в верхней части.
+4. Нижняя часть может быть перекрыта player panel.
+```
+
+Если board уже был, HERO автоматически использует реально измеренный размер
+board cards. На preflop размер оценивается от table scale.
+
+## White mask
+
+Большой `MORPH_CLOSE`, который мог склеивать соседние карты, удалён.
+
+Осталась только лёгкая обработка:
+
+```text
+OPEN  2x2 x1
+CLOSE 3x3 x1
+```
+
+## Public API
+
+Интерфейс сохранён:
+
+```python
+CardDetector.detect_board(table_frame)
+CardDetector.detect_hero(table_frame, hero_panel)
+CardDetector.signature(cards)
+crop_card(frame, card)
+```
+
+Поэтому patch не требует переделывать runner.
+
+## Файл
+
+Patch намеренно заменяет только:
+
+```text
+src/poker/vision/detection/cards.py
+```
+
+Это позволяет наложить его поверх commit, который пользователь сейчас делает,
+не затрагивая остальной Vision pipeline.

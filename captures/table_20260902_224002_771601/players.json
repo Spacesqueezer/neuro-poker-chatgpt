@@ -1,0 +1,32 @@
+[
+  {
+    "index": 0,
+    "name": "nika006",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 1,
+    "name": "hehadotak",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 2,
+    "name": "spacesqueezer",
+    "is_hero": true,
+    "action": null
+  },
+  {
+    "index": 3,
+    "name": "gljuk",
+    "is_hero": false,
+    "action": null
+  },
+  {
+    "index": 4,
+    "name": "rjando",
+    "is_hero": false,
+    "action": null
+  }
+]

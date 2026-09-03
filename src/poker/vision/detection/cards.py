@@ -28,264 +28,350 @@ class CardBox:
 		)
 
 
+@dataclass
+class _BoardGeometry:
+	x: float
+	y: float
+	width: float
+	height: float
+	pitch: float
+	count: int
+
+
 class CardDetector:
-	def __init__(self):
+	"""
+	Полностью новый detector карт PokerDom.
+
+	Главная идея:
+	карта — это не "идеальный белый contour".
+	Нижнюю часть могут закрыть chips/player panel, отдельный contour может
+	временно пропасть, но геометрия раскладки карт остаётся стабильной.
+
+	Board:
+		1) на flop находим реальную горизонтальную тройку;
+		2) фиксируем canonical card size + pitch;
+		3) turn/river определяем по новым slot positions;
+		4) если середина временно потерялась, возвращаем canonical box
+		   на её месте, а не сдвигаем все последующие карты.
+
+	HERO:
+		1) размер карты берём из board geometry или table scale;
+		2) строим две ожидаемые соседние карты непосредственно над hero panel;
+		3) локально уточняем положение каждой по светлой верхней части;
+		4) нижняя часть карты может быть полностью перекрыта UI.
+	"""
+
+	def __init__(
+		self,
+	):
+		self.board_geometry = None
 		self.card_size_hint = None
+		self.board_empty_scans = 0
+
+		self.board_reset_scans = 6
+
+		self.white_low = np.array(
+			[0, 0, 140],
+			dtype=np.uint8,
+		)
+
+		self.white_high = np.array(
+			[179, 105, 255],
+			dtype=np.uint8,
+		)
 
 	def detect_board(
 		self,
 		table_frame,
 	):
+		if (
+			table_frame is None
+			or table_frame.size == 0
+		):
+			return []
+
 		height, width = (
 			table_frame.shape[:2]
 		)
 
 		region = (
-			int(width * 0.26),
-			int(height * 0.28),
-			int(width * 0.74),
-			int(height * 0.62),
+			int(width * 0.22),
+			int(height * 0.24),
+			int(width * 0.78),
+			int(height * 0.64),
 		)
 
-		# Сначала обычный строгий detector.
-		cards = self._detect_in_region(
+		mask = self._white_mask(
 			table_frame,
 			region,
 		)
 
-		if cards:
-			self._remember_card_size(
-				cards
-			)
-
-		# Фишки иногда закрывают низ board card. Тогда белый contour
-		# становится короче и строгий detector может её потерять.
-		#
-		# Второй проход разрешает частично видимую карту и восстанавливает
-		# полный CardBox по известному/оценённому размеру карты.
-		partial_cards = (
-			self._detect_partial_in_region(
-				table_frame,
-				region,
-			)
-		)
-
-		cards = self._merge_cards(
-			cards,
-			partial_cards,
-		)
-
-		cards = sorted(
-			cards,
-			key=lambda card: card.x,
-		)
-
-		if len(cards) > 5:
-			cards = cards[:5]
-
-		# Валидные состояния Hold'em: 0 / 3 / 4 / 5 карт.
-		if len(cards) in (
-			1,
-			2,
-		):
+		if mask is None:
 			return []
 
-		if cards:
-			self._remember_card_size(
-				cards
+		if self.board_geometry is None:
+			candidates = (
+				self._find_candidates(
+					table_frame,
+					region,
+					expected_size=None,
+				)
 			)
 
-		return cards
+			geometry = (
+				self._fit_new_board(
+					table_frame,
+					candidates,
+				)
+			)
 
+			if geometry is None:
+				self._note_board_empty()
+				return []
+
+			self.board_geometry = (
+				geometry
+			)
+
+			self.card_size_hint = (
+				int(
+					round(
+						geometry.width
+					)
+				),
+				int(
+					round(
+						geometry.height
+					)
+				),
+			)
+
+			self.board_empty_scans = 0
+
+			return self._board_boxes(
+				table_frame
+			)
+
+		self._update_board_geometry(
+			table_frame,
+			region,
+		)
+
+		if not self._board_present(
+			table_frame
+		):
+			self._note_board_empty()
+
+			if self.board_geometry is None:
+				return []
+		else:
+			self.board_empty_scans = 0
+
+		return self._board_boxes(
+			table_frame
+		)
 
 	def detect_hero(
 		self,
 		table_frame,
 		hero_panel,
 	):
-		"""
-		HERO cards используют тот же detector, что и board.
-
-		Дополнительно разрешаем partial-card fallback, потому что PokerDom
-		часто закрывает нижнюю часть открытой карты player panel.
-		"""
-		if hero_panel is None:
+		if (
+			hero_panel is None
+			or table_frame is None
+			or table_frame.size == 0
+		):
 			return []
 
 		height, width = (
 			table_frame.shape[:2]
 		)
 
-		panel_center_x = float(
-			hero_panel.center[0]
-		)
-
-		expected_width, expected_height = (
+		card_width, card_height = (
 			self._expected_card_size(
 				table_frame
 			)
 		)
 
+		gap = max(
+			3,
+			int(
+				round(
+					card_width * 0.055
+				)
+			),
+		)
+
 		pair_width = (
-			expected_width * 2
-			+ max(
-				3,
-				int(
-					round(
-						width * 0.0035
-					)
-				),
+			card_width * 2
+			+ gap
+		)
+
+		center_x = float(
+			hero_panel.center[0]
+		)
+
+		# Реальные PokerDom hole cards:
+		#	- стоят горизонтальной парой;
+		#	- центр пары совпадает примерно с центром player panel;
+		#	- низ карты заходит под верх player panel.
+		base_y = int(
+			round(
+				hero_panel.y
+				- card_height * 0.86
 			)
 		)
 
-		search_width = int(
+		first_x = int(
 			round(
-				max(
-					pair_width * 1.28,
-					hero_panel.width * 1.35,
+				center_x
+				- pair_width / 2
+			)
+		)
+
+		expected = [
+			CardBox(
+				x=first_x,
+				y=base_y,
+				width=card_width,
+				height=card_height,
+			),
+			CardBox(
+				x=(
+					first_x
+					+ card_width
+					+ gap
+				),
+				y=base_y,
+				width=card_width,
+				height=card_height,
+			),
+		]
+
+		result = []
+
+		for box in expected:
+			refined = (
+				self._refine_expected_card(
+					table_frame,
+					box,
+					search_x=max(
+						4,
+						int(
+							round(
+								card_width
+								* 0.22
+							)
+						),
+					),
+					search_y=max(
+						3,
+						int(
+							round(
+								card_height
+								* 0.12
+							)
+						),
+					),
 				)
 			)
-		)
 
-		search_height = int(
-			round(
-				expected_height * 1.20
+			evidence = (
+				self._card_evidence(
+					table_frame,
+					refined,
+					top_fraction=0.62,
+				)
 			)
-		)
 
-		search_width = min(
-			search_width,
-			int(
-				width * 0.19
-			),
-		)
+			if evidence >= 0.16:
+				result.append(
+					refined
+				)
 
-		search_height = min(
-			search_height,
-			int(
-				height * 0.24
-			),
-		)
+		# Если одна карта слегка хуже по белой маске, но соседняя уверенно
+		# найдена, геометрия пары намного надёжнее одиночного contour.
+		if len(result) == 1:
+			known = result[0]
 
-		x1 = int(
-			round(
-				panel_center_x
-				- search_width / 2
+			known_is_left = (
+				known.center[0]
+				< center_x
 			)
-		)
 
-		# Нижние 10-20% карт могут быть перекрыты player panel.
-		# Поэтому ROI чуть заходит внутрь panel.
-		y2 = int(
-			round(
-				hero_panel.y
-				+ hero_panel.height * 0.28
-			)
-		)
+			if known_is_left:
+				other = CardBox(
+					x=int(
+						round(
+							known.x
+							+ card_width
+							+ gap
+						)
+					),
+					y=known.y,
+					width=card_width,
+					height=card_height,
+				)
+			else:
+				other = CardBox(
+					x=int(
+						round(
+							known.x
+							- card_width
+							- gap
+						)
+					),
+					y=known.y,
+					width=card_width,
+					height=card_height,
+				)
 
-		y1 = int(
-			round(
-				y2
-				- search_height
-			)
-		)
-
-		region = (
-			max(0, x1),
-			max(0, y1),
-			min(
-				width,
-				x1 + search_width,
-			),
-			min(
-				height,
-				y2,
-			),
-		)
-
-		full_cards = self._detect_in_region(
-			table_frame,
-			region,
-		)
-
-		partial_cards = (
-			self._detect_partial_in_region(
+			other = self._clip_box(
 				table_frame,
-				region,
+				other,
 			)
-		)
 
-		cards = self._merge_cards(
-			full_cards,
-			partial_cards,
-		)
+			if (
+				self._card_evidence(
+					table_frame,
+					other,
+					top_fraction=0.50,
+				)
+				>= 0.09
+			):
+				result.append(
+					other
+				)
 
-		if len(cards) < 2:
+		if len(result) != 2:
 			return []
 
-		# Hole cards должны быть рядом с HERO и примерно на одной линии.
-		expected_center = (
-			panel_center_x,
-			float(
-				hero_panel.y
-				- expected_height * 0.48
-			),
-		)
-
-		cards = sorted(
-			cards,
-			key=lambda card: np.hypot(
-				card.center[0]
-				- expected_center[0],
-				card.center[1]
-				- expected_center[1],
-			),
-		)
-
-		best = sorted(
-			cards[:2],
+		result = sorted(
+			result,
 			key=lambda card: card.x,
 		)
 
-		if len(best) == 2:
-			y_delta = abs(
-				best[0].y
-				- best[1].y
-			)
+		# HERO pair должна быть компактной. Никаких "рамок на полстола".
+		center_distance = abs(
+			(
+				result[0].center[0]
+				+ result[1].center[0]
+			) / 2.0
+			- center_x
+		)
 
-			if (
-				y_delta
-				> expected_height * 0.22
-			):
-				return []
+		if (
+			center_distance
+			> card_width * 0.45
+		):
+			return []
 
-			pair_gap = (
-				best[1].x
-				- (
-					best[0].x
-					+ best[0].width
-				)
-			)
-
-			if (
-				pair_gap
-				> expected_width * 0.35
-			):
-				return []
-
-		return best
-
+		return result
 
 	def signature(
 		self,
 		cards,
 	):
-		"""
-		Стабильная геометрическая сигнатура набора карт.
-
-		runner использует её, чтобы понять: изменилась ли раскладка карт
-		и нужно ли сбрасывать накопленный CardStateTracker.
-		"""
 		if not cards:
 			return ()
 
@@ -305,163 +391,529 @@ class CardDetector:
 			)
 		)
 
-	def _detect_in_region(
+	def reset(
+		self,
+	):
+		self.board_geometry = None
+		self.card_size_hint = None
+		self.board_empty_scans = 0
+
+	def _fit_new_board(
+		self,
+		frame,
+		candidates,
+	):
+		if len(candidates) < 3:
+			return None
+
+		# Ищем именно горизонтальную регулярную группу.
+		best = None
+		best_score = None
+
+		for first_index in range(
+			len(candidates)
+		):
+			for second_index in range(
+				first_index + 1,
+				len(candidates),
+			):
+				for third_index in range(
+					second_index + 1,
+					len(candidates),
+				):
+					group = sorted(
+						[
+							candidates[
+								first_index
+							],
+							candidates[
+								second_index
+							],
+							candidates[
+								third_index
+							],
+						],
+						key=lambda card: card.x,
+					)
+
+					if not self._regular_row(
+						group
+					):
+						continue
+
+					pitch_a = (
+						group[1].center[0]
+						- group[0].center[0]
+					)
+
+					pitch_b = (
+						group[2].center[0]
+						- group[1].center[0]
+					)
+
+					pitch = (
+						pitch_a
+						+ pitch_b
+					) / 2.0
+
+					widths = [
+						card.width
+						for card in group
+					]
+
+					heights = [
+						card.height
+						for card in group
+					]
+
+					card_width = float(
+						np.median(
+							widths
+						)
+					)
+
+					card_height = float(
+						np.median(
+							heights
+						)
+					)
+
+					center_y = float(
+						np.median(
+							[
+								card.center[1]
+								for card
+								in group
+							]
+						)
+					)
+
+					pitch_error = abs(
+						pitch_a
+						- pitch_b
+					)
+
+					y_error = (
+						max(
+							card.center[1]
+							for card
+							in group
+						)
+						- min(
+							card.center[1]
+							for card
+							in group
+						)
+					)
+
+					size_error = (
+						max(widths)
+						- min(widths)
+						+ max(heights)
+						- min(heights)
+					)
+
+					score = (
+						pitch_error * 3.0
+						+ y_error * 2.0
+						+ size_error
+					)
+
+					if (
+						best_score is None
+						or score < best_score
+					):
+						best_score = score
+						best = (
+							group,
+							card_width,
+							card_height,
+							center_y,
+							pitch,
+						)
+
+		if best is None:
+			return None
+
+		(
+			group,
+			card_width,
+			card_height,
+			center_y,
+			pitch,
+		) = best
+
+		first_center_x = float(
+			group[0].center[0]
+		)
+
+		geometry = _BoardGeometry(
+			x=(
+				first_center_x
+				- card_width / 2.0
+			),
+			y=(
+				center_y
+				- card_height / 2.0
+			),
+			width=card_width,
+			height=card_height,
+			pitch=pitch,
+			count=3,
+		)
+
+		# Если detector стартовал уже на turn/river, сразу проверим
+		# следующие canonical slots.
+		for target_count in (
+			4,
+			5,
+		):
+			test_box = self._geometry_box(
+				frame,
+				geometry,
+				target_count - 1,
+			)
+
+			if (
+				self._card_evidence(
+					frame,
+					test_box,
+					top_fraction=0.70,
+				)
+				>= 0.18
+			):
+				geometry.count = (
+					target_count
+				)
+			else:
+				break
+
+		return geometry
+
+	def _update_board_geometry(
 		self,
 		frame,
 		region,
 	):
-		x1, y1, x2, y2 = region
+		geometry = self.board_geometry
 
-		crop = frame[
-			y1:y2,
-			x1:x2,
-		]
+		if geometry is None:
+			return
 
-		if crop.size == 0:
-			return []
-
-		hsv = cv2.cvtColor(
-			crop,
-			cv2.COLOR_BGR2HSV,
-		)
-
-		# Лицевая сторона карт PokerDom почти белая/светло-серая.
-		mask = cv2.inRange(
-			hsv,
-			np.array([0, 0, 135], dtype=np.uint8),
-			np.array([179, 105, 255], dtype=np.uint8),
-		)
-
-		# Карты PokerDom стоят с промежутком всего в несколько пикселей.
-		# Старый CLOSE (5x7) x2 мог физически склеить две соседние карты
-		# в один contour. Нужна только лёгкая чистка внутри одной карты.
-		mask = cv2.morphologyEx(
-			mask,
-			cv2.MORPH_CLOSE,
-			cv2.getStructuringElement(
-				cv2.MORPH_RECT,
-				(3, 3),
+		expected_size = (
+			int(
+				round(
+					geometry.width
+				)
 			),
-			iterations=1,
+			int(
+				round(
+					geometry.height
+				)
+			),
 		)
 
-		contours, _ = cv2.findContours(
-			mask,
-			cv2.RETR_EXTERNAL,
-			cv2.CHAIN_APPROX_SIMPLE,
+		candidates = (
+			self._find_candidates(
+				frame,
+				region,
+				expected_size=(
+					expected_size
+				),
+			)
 		)
 
-		frame_height, frame_width = frame.shape[:2]
-		result = []
+		matched = []
 
-		for contour in contours:
-			x, y, width, height = cv2.boundingRect(
-				contour
-			)
-
-			absolute_x = x1 + x
-			absolute_y = y1 + y
-
-			rel_width = width / frame_width
-			rel_height = height / frame_height
-			aspect = width / max(height, 1)
-
-			if not 0.035 <= rel_width <= 0.10:
-				continue
-
-			if not 0.075 <= rel_height <= 0.19:
-				continue
-
-			if not 0.48 <= aspect <= 0.85:
-				continue
-
-			area = cv2.contourArea(
-				contour
-			)
-
-			box_area = width * height
-
-			if box_area <= 0:
-				continue
-
-			fill_ratio = area / box_area
-
-			if fill_ratio < 0.62:
-				continue
-
-			result.append(
-				CardBox(
-					x=absolute_x,
-					y=absolute_y,
-					width=width,
-					height=height,
+		for candidate in candidates:
+			index = int(
+				round(
+					(
+						candidate.center[0]
+						- (
+							geometry.x
+							+ geometry.width
+							/ 2.0
+						)
+					)
+					/ max(
+						geometry.pitch,
+						1.0,
+					)
 				)
 			)
 
-		return self._deduplicate(
-			result
+			if not (
+				0
+				<= index
+				<= 4
+			):
+				continue
+
+			expected = (
+				self._geometry_box(
+					frame,
+					geometry,
+					index,
+				)
+			)
+
+			distance = float(
+				np.hypot(
+					candidate.center[0]
+					- expected.center[0],
+					candidate.center[1]
+					- expected.center[1],
+				)
+			)
+
+			if (
+				distance
+				> geometry.width * 0.55
+			):
+				continue
+
+			matched.append(
+				(
+					index,
+					candidate,
+				)
+			)
+
+		if matched:
+			x_offsets = []
+			y_offsets = []
+			widths = []
+			heights = []
+
+			for index, card in matched:
+				expected_center_x = (
+					geometry.x
+					+ geometry.width / 2.0
+					+ geometry.pitch * index
+				)
+
+				x_offsets.append(
+					card.center[0]
+					- expected_center_x
+				)
+
+				y_offsets.append(
+					card.center[1]
+					- (
+						geometry.y
+						+ geometry.height / 2.0
+					)
+				)
+
+				widths.append(
+					card.width
+				)
+
+				heights.append(
+					card.height
+				)
+
+			geometry.x += (
+				float(
+					np.median(
+						x_offsets
+					)
+				)
+				* 0.30
+			)
+
+			geometry.y += (
+				float(
+					np.median(
+						y_offsets
+					)
+				)
+				* 0.30
+			)
+
+			measured_width = float(
+				np.median(
+					widths
+				)
+			)
+
+			measured_height = float(
+				np.median(
+					heights
+				)
+			)
+
+			geometry.width = (
+				geometry.width * 0.85
+				+ measured_width * 0.15
+			)
+
+			geometry.height = (
+				geometry.height * 0.85
+				+ measured_height * 0.15
+			)
+
+			self.card_size_hint = (
+				int(
+					round(
+						geometry.width
+					)
+				),
+				int(
+					round(
+						geometry.height
+					)
+				),
+			)
+
+		# Street count не определяется количеством contours.
+		# Проверяем следующий slot напрямую по изображению.
+		if geometry.count < 5:
+			next_box = (
+				self._geometry_box(
+					frame,
+					geometry,
+					geometry.count,
+				)
+			)
+
+			evidence = (
+				self._card_evidence(
+					frame,
+					next_box,
+					top_fraction=0.72,
+				)
+			)
+
+			if evidence >= 0.17:
+				geometry.count += 1
+
+	def _board_present(
+		self,
+		frame,
+	):
+		geometry = self.board_geometry
+
+		if geometry is None:
+			return False
+
+		visible = 0
+
+		for index in range(
+			min(
+				geometry.count,
+				3,
+			)
+		):
+			box = self._geometry_box(
+				frame,
+				geometry,
+				index,
+			)
+
+			if (
+				self._card_evidence(
+					frame,
+					box,
+					top_fraction=0.58,
+				)
+				>= 0.11
+			):
+				visible += 1
+
+		return visible >= 2
+
+	def _note_board_empty(
+		self,
+	):
+		self.board_empty_scans += 1
+
+		if (
+			self.board_empty_scans
+			>= self.board_reset_scans
+		):
+			self.board_geometry = None
+			self.card_size_hint = None
+			self.board_empty_scans = 0
+
+	def _board_boxes(
+		self,
+		frame,
+	):
+		geometry = self.board_geometry
+
+		if geometry is None:
+			return []
+
+		return [
+			self._geometry_box(
+				frame,
+				geometry,
+				index,
+			)
+			for index in range(
+				geometry.count
+			)
+		]
+
+	def _geometry_box(
+		self,
+		frame,
+		geometry,
+		index,
+	):
+		box = CardBox(
+			x=int(
+				round(
+					geometry.x
+					+ geometry.pitch
+					* index
+				)
+			),
+			y=int(
+				round(
+					geometry.y
+				)
+			),
+			width=int(
+				round(
+					geometry.width
+				)
+			),
+			height=int(
+				round(
+					geometry.height
+				)
+			),
 		)
 
-	def _detect_partial_in_region(
+		return self._clip_box(
+			frame,
+			box,
+		)
+
+	def _find_candidates(
 		self,
 		frame,
 		region,
+		expected_size,
 	):
-		"""
-		Находит частично перекрытые карты.
-
-		Ключевая идея: rank/suit находятся в верхней части карты, поэтому
-		для recognition нам не обязательно видеть весь белый прямоугольник.
-
-		Если нижнюю часть закрыл player panel или стопка фишек, берём
-		видимый верх карты и восстанавливаем полный CardBox ожидаемого размера.
-		"""
 		x1, y1, x2, y2 = region
 
-		crop = frame[
-			y1:y2,
-			x1:x2,
-		]
+		mask = self._white_mask(
+			frame,
+			region,
+		)
 
-		if crop.size == 0:
+		if mask is None:
 			return []
 
-		hsv = cv2.cvtColor(
-			crop,
-			cv2.COLOR_BGR2HSV,
-		)
-
-		mask = cv2.inRange(
-			hsv,
-			np.array(
-				[0, 0, 135],
-				dtype=np.uint8,
-			),
-			np.array(
-				[179, 105, 255],
-				dtype=np.uint8,
-			),
-		)
-
-		mask = cv2.morphologyEx(
-			mask,
-			cv2.MORPH_CLOSE,
-			cv2.getStructuringElement(
-				cv2.MORPH_RECT,
-				(3, 3),
-			),
-			iterations=1,
-		)
-
-		contours, _ = cv2.findContours(
-			mask,
-			cv2.RETR_EXTERNAL,
-			cv2.CHAIN_APPROX_SIMPLE,
-		)
-
-		expected_width, expected_height = (
-			self._expected_card_size(
-				frame
+		contours, _ = (
+			cv2.findContours(
+				mask,
+				cv2.RETR_EXTERNAL,
+				cv2.CHAIN_APPROX_SIMPLE,
 			)
 		)
 
@@ -469,44 +921,69 @@ class CardDetector:
 			frame.shape[:2]
 		)
 
+		if expected_size is None:
+			expected_height = max(
+				36,
+				int(
+					round(
+						frame_height
+						* 0.115
+					)
+				),
+			)
+
+			expected_width = max(
+				22,
+				int(
+					round(
+						expected_height
+						* 0.70
+					)
+				),
+			)
+		else:
+			(
+				expected_width,
+				expected_height,
+			) = expected_size
+
 		result = []
 
 		for contour in contours:
-			x, y, box_width, box_height = (
+			x, y, width, height = (
 				cv2.boundingRect(
 					contour
 				)
 			)
 
-			# Ширина карты при перекрытии снизу почти не меняется.
 			width_ratio = (
-				box_width
+				width
 				/ max(
 					expected_width,
 					1,
 				)
 			)
 
-			# Высота может заметно уменьшиться.
 			height_ratio = (
-				box_height
+				height
 				/ max(
 					expected_height,
 					1,
 				)
 			)
 
+			# Полная карта и карта с закрытым низом проходят одним путём.
 			if not (
-				0.72
+				0.60
 				<= width_ratio
-				<= 1.18
+				<= 1.35
 			):
 				continue
 
 			if not (
-				0.42
+				0.38
 				<= height_ratio
-				<= 1.08
+				<= 1.28
 			):
 				continue
 
@@ -515,8 +992,8 @@ class CardDetector:
 			)
 
 			box_area = (
-				box_width
-				* box_height
+				width
+				* height
 			)
 
 			if box_area <= 0:
@@ -527,70 +1004,512 @@ class CardDetector:
 				/ box_area
 			)
 
-			# Для частично закрытой карты contour может быть рваным.
-			if fill_ratio < 0.48:
+			if fill_ratio < 0.42:
 				continue
 
-			absolute_x = (
-				x1 + x
-			)
+			absolute_x = x1 + x
+			absolute_y = y1 + y
 
-			absolute_y = (
-				y1 + y
-			)
-
-			# Восстанавливаем канонический размер от видимого top-left.
-			# Нижняя часть может попасть под overlay — это нормально:
-			# rank/suit extractor всё равно работает в верхнем левом углу.
-			card_width = min(
-				expected_width,
-				frame_width
-				- absolute_x,
-			)
-
-			card_height = min(
-				expected_height,
-				frame_height
-				- absolute_y,
-			)
-
-			if (
-				card_width <= 8
-				or card_height <= 16
-			):
-				continue
-
+			# Частично перекрытая карта получает canonical size.
 			result.append(
 				CardBox(
 					x=absolute_x,
 					y=absolute_y,
-					width=card_width,
-					height=card_height,
+					width=(
+						expected_width
+						if height_ratio < 0.82
+						else width
+					),
+					height=(
+						expected_height
+						if height_ratio < 0.82
+						else height
+					),
 				)
 			)
+
+		result.extend(
+			self._split_wide_candidates(
+				frame,
+				region,
+				mask,
+				expected_width,
+				expected_height,
+			)
+		)
 
 		return self._deduplicate(
 			result
 		)
 
+	def _split_wide_candidates(
+		self,
+		frame,
+		region,
+		mask,
+		expected_width,
+		expected_height,
+	):
+		"""
+		Если chips/morphology визуально связали несколько карт,
+		широкий светлый blob не выбрасывается — разбирается по vertical
+		projection на несколько card-width slots.
+		"""
+		x1, y1, _, _ = region
+
+		contours, _ = cv2.findContours(
+			mask,
+			cv2.RETR_EXTERNAL,
+			cv2.CHAIN_APPROX_SIMPLE,
+		)
+
+		result = []
+
+		for contour in contours:
+			x, y, width, height = (
+				cv2.boundingRect(
+					contour
+				)
+			)
+
+			if (
+				width
+				< expected_width * 1.45
+			):
+				continue
+
+			if not (
+				expected_height * 0.38
+				<= height
+				<= expected_height * 1.30
+			):
+				continue
+
+			count = int(
+				round(
+					width
+					/ max(
+						expected_width,
+						1,
+					)
+				)
+			)
+
+			count = max(
+				2,
+				min(
+					5,
+					count,
+				),
+			)
+
+			step = (
+				width
+				/ float(
+					count
+				)
+			)
+
+			for index in range(
+				count
+			):
+				center_x = (
+					x
+					+ step
+					* (
+						index
+						+ 0.5
+					)
+				)
+
+				card_x = int(
+					round(
+						x1
+						+ center_x
+						- expected_width / 2
+					)
+				)
+
+				card_y = (
+					y1 + y
+				)
+
+				result.append(
+					CardBox(
+						x=card_x,
+						y=card_y,
+						width=expected_width,
+						height=expected_height,
+					)
+				)
+
+		return result
+
+	def _regular_row(
+		self,
+		group,
+	):
+		if len(group) != 3:
+			return False
+
+		group = sorted(
+			group,
+			key=lambda card: card.x,
+		)
+
+		widths = [
+			card.width
+			for card in group
+		]
+
+		heights = [
+			card.height
+			for card in group
+		]
+
+		if (
+			min(widths)
+			/ max(
+				max(widths),
+				1,
+			)
+			< 0.72
+		):
+			return False
+
+		if (
+			min(heights)
+			/ max(
+				max(heights),
+				1,
+			)
+			< 0.72
+		):
+			return False
+
+		y_span = (
+			max(
+				card.center[1]
+				for card in group
+			)
+			- min(
+				card.center[1]
+				for card in group
+			)
+		)
+
+		if (
+			y_span
+			> np.median(
+				heights
+			) * 0.25
+		):
+			return False
+
+		pitch_a = (
+			group[1].center[0]
+			- group[0].center[0]
+		)
+
+		pitch_b = (
+			group[2].center[0]
+			- group[1].center[0]
+		)
+
+		if (
+			pitch_a <= 0
+			or pitch_b <= 0
+		):
+			return False
+
+		return (
+			min(
+				pitch_a,
+				pitch_b,
+			)
+			/ max(
+				pitch_a,
+				pitch_b,
+			)
+			>= 0.72
+		)
+
+	def _refine_expected_card(
+		self,
+		frame,
+		expected,
+		search_x,
+		search_y,
+	):
+		best = self._clip_box(
+			frame,
+			expected,
+		)
+
+		best_score = (
+			self._card_evidence(
+				frame,
+				best,
+				top_fraction=0.62,
+			)
+		)
+
+		step_x = max(
+			2,
+			search_x // 4,
+		)
+
+		step_y = max(
+			2,
+			search_y // 3,
+		)
+
+		for dy in range(
+			-search_y,
+			search_y + 1,
+			step_y,
+		):
+			for dx in range(
+				-search_x,
+				search_x + 1,
+				step_x,
+			):
+				candidate = CardBox(
+					x=expected.x + dx,
+					y=expected.y + dy,
+					width=expected.width,
+					height=expected.height,
+				)
+
+				candidate = (
+					self._clip_box(
+						frame,
+						candidate,
+					)
+				)
+
+				score = (
+					self._card_evidence(
+						frame,
+						candidate,
+						top_fraction=0.62,
+					)
+				)
+
+				# Небольшой штраф за уход далеко от expected geometry.
+				score -= (
+					abs(dx)
+					/ max(
+						expected.width,
+						1,
+					)
+					* 0.035
+				)
+
+				score -= (
+					abs(dy)
+					/ max(
+						expected.height,
+						1,
+					)
+					* 0.035
+				)
+
+				if score > best_score:
+					best = candidate
+					best_score = score
+
+		return best
+
+	def _card_evidence(
+		self,
+		frame,
+		box,
+		top_fraction,
+	):
+		box = self._clip_box(
+			frame,
+			box,
+		)
+
+		if (
+			box.width <= 2
+			or box.height <= 4
+		):
+			return 0.0
+
+		visible_height = max(
+			4,
+			int(
+				round(
+					box.height
+					* top_fraction
+				)
+			),
+		)
+
+		crop = frame[
+			box.y:(
+				box.y
+				+ min(
+					box.height,
+					visible_height,
+				)
+			),
+			box.x:(
+				box.x
+				+ box.width
+			),
+		]
+
+		if crop.size == 0:
+			return 0.0
+
+		hsv = cv2.cvtColor(
+			crop,
+			cv2.COLOR_BGR2HSV,
+		)
+
+		mask = cv2.inRange(
+			hsv,
+			self.white_low,
+			self.white_high,
+		)
+
+		white_ratio = (
+			cv2.countNonZero(
+				mask
+			)
+			/ float(
+				mask.shape[0]
+				* mask.shape[1]
+			)
+		)
+
+		# У настоящей карты есть светлая область почти по всей ширине.
+		column_fill = (
+			np.count_nonzero(
+				np.mean(
+					mask > 0,
+					axis=0,
+				)
+				>= 0.28
+			)
+			/ float(
+				max(
+					mask.shape[1],
+					1,
+				)
+			)
+		)
+
+		return (
+			white_ratio * 0.68
+			+ column_fill * 0.32
+		)
+
+	def _white_mask(
+		self,
+		frame,
+		region,
+	):
+		x1, y1, x2, y2 = (
+			region
+		)
+
+		x1 = max(
+			0,
+			int(x1),
+		)
+
+		y1 = max(
+			0,
+			int(y1),
+		)
+
+		x2 = min(
+			frame.shape[1],
+			int(x2),
+		)
+
+		y2 = min(
+			frame.shape[0],
+			int(y2),
+		)
+
+		if (
+			x2 <= x1
+			or y2 <= y1
+		):
+			return None
+
+		crop = frame[
+			y1:y2,
+			x1:x2,
+		]
+
+		hsv = cv2.cvtColor(
+			crop,
+			cv2.COLOR_BGR2HSV,
+		)
+
+		mask = cv2.inRange(
+			hsv,
+			self.white_low,
+			self.white_high,
+		)
+
+		# Только лёгкая чистка. Большой CLOSE раньше физически склеивал
+		# соседние карты и chips с картами.
+		mask = cv2.morphologyEx(
+			mask,
+			cv2.MORPH_OPEN,
+			cv2.getStructuringElement(
+				cv2.MORPH_RECT,
+				(2, 2),
+			),
+			iterations=1,
+		)
+
+		mask = cv2.morphologyEx(
+			mask,
+			cv2.MORPH_CLOSE,
+			cv2.getStructuringElement(
+				cv2.MORPH_RECT,
+				(3, 3),
+			),
+			iterations=1,
+		)
+
+		return mask
+
 	def _expected_card_size(
 		self,
 		frame,
 	):
-		if self.card_size_hint is not None:
-			return self.card_size_hint
+		if (
+			self.card_size_hint
+			is not None
+		):
+			return (
+				int(
+					self.card_size_hint[0]
+				),
+				int(
+					self.card_size_hint[1]
+				),
+			)
 
-		height, width = (
+		height, _ = (
 			frame.shape[:2]
 		)
 
-		# Хорошая оценка для PokerDom при любом resize:
-		# высота карты ~11-12% table crop.
 		card_height = max(
 			36,
 			int(
 				round(
-					height * 0.115
+					height
+					* 0.115
 				)
 			),
 		)
@@ -599,7 +1518,8 @@ class CardDetector:
 			22,
 			int(
 				round(
-					card_height * 0.70
+					card_height
+					* 0.70
 				)
 			),
 		)
@@ -609,94 +1529,20 @@ class CardDetector:
 			card_height,
 		)
 
-	def _remember_card_size(
+	def _deduplicate(
 		self,
 		cards,
 	):
-		if not cards:
-			return
+		result = []
 
-		widths = [
-			card.width
-			for card in cards
-			if card.width > 0
-		]
-
-		heights = [
-			card.height
-			for card in cards
-			if card.height > 0
-		]
-
-		if (
-			not widths
-			or not heights
-		):
-			return
-
-		width = int(
-			round(
-				float(
-					np.median(
-						widths
-					)
-				)
-			)
-		)
-
-		height = int(
-			round(
-				float(
-					np.median(
-						heights
-					)
-				)
-			)
-		)
-
-		if (
-			width <= 8
-			or height <= 16
-		):
-			return
-
-		if self.card_size_hint is None:
-			self.card_size_hint = (
-				width,
-				height,
-			)
-			return
-
-		old_width, old_height = (
-			self.card_size_hint
-		)
-
-		# Плавно обновляем hint, чтобы один кривой contour его не испортил.
-		self.card_size_hint = (
-			int(
-				round(
-					old_width * 0.75
-					+ width * 0.25
-				)
+		for card in sorted(
+			cards,
+			key=lambda item: (
+				item.width
+				* item.height
 			),
-			int(
-				round(
-					old_height * 0.75
-					+ height * 0.25
-				)
-			),
-		)
-
-	def _merge_cards(
-		self,
-		primary,
-		secondary,
-	):
-		result = list(
-			primary
-		)
-
-		for card in secondary:
+			reverse=True,
+		):
 			duplicate = False
 
 			for existing in result:
@@ -711,10 +1557,10 @@ class CardDetector:
 
 				if (
 					distance
-					< max(
+					< min(
 						card.width,
 						existing.width,
-					) * 0.55
+					) * 0.52
 				):
 					duplicate = True
 					break
@@ -724,61 +1570,64 @@ class CardDetector:
 					card
 				)
 
-		return self._deduplicate(
-			result
-		)
-
-
-	def _deduplicate(
-		self,
-		cards,
-	):
-		result = []
-
-		for card in sorted(
-			cards,
-			key=lambda item: item.width * item.height,
-			reverse=True,
-		):
-			duplicate = False
-
-			for existing in result:
-				distance = np.hypot(
-					card.center[0] - existing.center[0],
-					card.center[1] - existing.center[1],
-				)
-
-				if distance < max(
-					card.width,
-					existing.width,
-				) * 0.55:
-					duplicate = True
-					break
-
-			if not duplicate:
-				result.append(card)
-
 		return result
 
-	def _pick_nearest_pair(
+	def _clip_box(
 		self,
-		cards,
-		panel_center,
+		frame,
+		box,
 	):
-		return sorted(
-			cards,
-			key=lambda card: np.hypot(
-				card.center[0] - panel_center[0],
-				card.center[1] - panel_center[1],
+		frame_height, frame_width = (
+			frame.shape[:2]
+		)
+
+		x = max(
+			0,
+			min(
+				int(box.x),
+				frame_width - 1,
 			),
-		)[:2]
+		)
+
+		y = max(
+			0,
+			min(
+				int(box.y),
+				frame_height - 1,
+			),
+		)
+
+		width = max(
+			1,
+			min(
+				int(box.width),
+				frame_width - x,
+			),
+		)
+
+		height = max(
+			1,
+			min(
+				int(box.height),
+				frame_height - y,
+			),
+		)
+
+		return CardBox(
+			x=x,
+			y=y,
+			width=width,
+			height=height,
+		)
 
 
 def crop_card(
 	frame,
 	card,
 ):
-	x1, y1, x2, y2 = card.rect
+	x1, y1, x2, y2 = (
+		card.rect
+	)
 
 	return frame[
 		y1:y2,
