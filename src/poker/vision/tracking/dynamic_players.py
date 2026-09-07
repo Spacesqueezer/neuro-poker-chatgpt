@@ -17,13 +17,20 @@ from poker.vision.ocr.name_reader import read_player_name
 
 CONFUSION_GROUPS = (
 	frozenset(("y", "v")),
+	frozenset(("i", "l", "1")),
+	frozenset(("o", "0")),
+	frozenset(("s", "5")),
+	frozenset(("b", "8")),
+	frozenset(("g", "q")),
 )
 
-SAME_PLAYER_THRESHOLD = 0.82
-CHANGE_CANDIDATE_THRESHOLD = 0.82
-CHANGE_CONFIRMATIONS = 2
+SAME_PLAYER_THRESHOLD = 0.78
+CHANGE_CANDIDATE_THRESHOLD = 0.84
+CHANGE_CONFIRMATIONS = 3
 PERIODIC_NAME_RECHECK_SECONDS = 4.0
-FINGERPRINT_CHANGE_THRESHOLD = 10.0
+FINGERPRINT_CHANGE_THRESHOLD = 28.0
+VISUAL_CHANGE_CONFIRMATIONS = 2
+VISUAL_RETURN_CONFIRMATIONS = 2
 PANEL_MATCH_DISTANCE_FACTOR = 0.90
 
 
@@ -66,11 +73,31 @@ def _confusion_similarity(
 		return 0.0
 
 	if len(left) != len(right):
-		return SequenceMatcher(
+		ratio = SequenceMatcher(
 			None,
 			left,
 			right,
 		).ratio()
+
+		# Типичный OCR drift из captures:
+		# bm51 -> obm51
+		# dimitry -> dimitrvy
+		# Одно вставленное/потерянное начертание не должно означать
+		# "новый игрок", если остальная строка практически совпадает.
+		length_delta = abs(
+			len(left) - len(right)
+		)
+
+		if (
+			length_delta == 1
+			and ratio >= 0.80
+		):
+			return max(
+				ratio,
+				0.86,
+			)
+
+		return ratio
 
 	matches = 0.0
 
@@ -167,11 +194,12 @@ class NameHistory:
 		self.stable_name = ""
 
 		self.pending_values = deque(
-			maxlen=4
+			maxlen=6
 		)
 
 		self.pending_name = ""
 		self.change_pending = False
+		self.visual_change_pending = False
 		self.changed_this_scan = False
 
 	def observe(
@@ -214,12 +242,17 @@ class NameHistory:
 				value
 			)
 
-			# Не дёргаем stable_name на каждом OCR-варианте.
-			# Но если последние чтения согласованно дают чуть лучшее
-			# написание того же ника, разрешаем мягкое уточнение.
+			# Stable name не переписываем по каждому похожему OCR read.
+			# Именно это вызывало "плавание" вроде:
+			# dimitrvy -> dimitry -> dimitrvy
+			# bm51 -> obm51 -> bm5t.
+			#
+			# Похожие чтения используются только как подтверждение
+			# текущей личности. Исправить написание можно лишь через
+			# отдельный сильный consensus ниже.
 			recent = list(
 				self.values
-			)[-5:]
+			)[-7:]
 
 			candidate = _vote_strings(
 				recent
@@ -227,12 +260,35 @@ class NameHistory:
 
 			if (
 				candidate
-				and _confusion_similarity(
-					candidate,
-					self.stable_name,
-				) >= 0.94
+				and candidate != self.stable_name
 			):
-				self.stable_name = candidate
+				candidate_votes = sum(
+					1
+					for item in recent
+					if item == candidate
+				)
+
+				stable_votes = sum(
+					1
+					for item in recent
+					if item == self.stable_name
+				)
+
+				if (
+					candidate_votes >= 5
+					and candidate_votes
+					> stable_votes + 2
+					and _confusion_similarity(
+						candidate,
+						self.stable_name,
+					) >= 0.88
+				):
+					self.stable_name = candidate
+
+					self.values.clear()
+					self.values.extend(
+						[candidate] * 3
+					)
 
 			return "same"
 
@@ -268,7 +324,7 @@ class NameHistory:
 		)
 
 	def _initial_candidate(self):
-		if len(self.values) < 2:
+		if len(self.values) < 3:
 			return ""
 
 		values = list(
@@ -304,7 +360,7 @@ class NameHistory:
 
 		best = clusters[0]
 
-		if len(best) < 2:
+		if len(best) < 3:
 			return ""
 
 		return (
@@ -314,28 +370,67 @@ class NameHistory:
 			or best[-1]
 		)
 
-	def _observe_change_candidate(
+	def begin_visual_change(self):
+		if not self.stable_name:
+			return
+
+		if self.visual_change_pending:
+			return
+
+		self.visual_change_pending = True
+		self.pending_values.clear()
+		self.pending_name = ""
+		self.change_pending = False
+
+	def cancel_visual_change(self):
+		if not self.visual_change_pending:
+			return
+
+		self.visual_change_pending = False
+		self.pending_values.clear()
+		self.pending_name = ""
+		self.change_pending = False
+
+	def _observe_visual_candidate(
 		self,
 		value,
 	):
+		"""
+		Сильное визуальное изменение nickname bitmap уже подтвердило,
+		что в seat, вероятно, сидит другой человек.
+
+		Пока visual pending активен, похожее на старый ник OCR-чтение
+		НЕ имеет права вернуть старую identity. Это как раз лечит кейс:
+		на экране уже `flesh1112`, а OCR ещё иногда выдаёт что-то,
+		похожее на старый `teesallliz`.
+		"""
+		if not value:
+			return "visual_pending"
+
 		if (
-			not self.change_pending
-			or not self.pending_name
+			_confusion_similarity(
+				value,
+				self.stable_name,
+			)
+			>= SAME_PLAYER_THRESHOLD
+		):
+			return "visual_old_like"
+
+		if (
+			not self.pending_name
 			or _confusion_similarity(
 				value,
 				self.pending_name,
-			) < CHANGE_CANDIDATE_THRESHOLD
+			)
+			< CHANGE_CANDIDATE_THRESHOLD
 		):
 			self.pending_values.clear()
-
 			self.pending_values.append(
 				value
 			)
-
 			self.pending_name = value
-			self.change_pending = True
 
-			return "change_pending"
+			return "visual_pending"
 
 		self.pending_values.append(
 			value
@@ -359,7 +454,7 @@ class NameHistory:
 		)
 
 		if confirmations < CHANGE_CONFIRMATIONS:
-			return "change_pending"
+			return "visual_pending"
 
 		self.stable_name = (
 			self.pending_name
@@ -370,6 +465,74 @@ class NameHistory:
 			self.pending_values
 		)
 
+		self.visual_change_pending = False
+		self._cancel_pending_change()
+		self.changed_this_scan = True
+
+		return "switched"
+
+	def _observe_change_candidate(
+		self,
+		value,
+	):
+		if (
+			not self.pending_name
+			or _confusion_similarity(
+				value,
+				self.pending_name,
+			) < CHANGE_CANDIDATE_THRESHOLD
+		):
+			self.pending_values.clear()
+			self.pending_values.append(
+				value
+			)
+
+			self.pending_name = value
+			self.change_pending = False
+
+			return "change_candidate"
+
+		self.pending_values.append(
+			value
+		)
+
+		self.pending_name = (
+			_vote_strings(
+				self.pending_values
+			)
+			or value
+		)
+
+		confirmations = sum(
+			1
+			for candidate
+			in self.pending_values
+			if _confusion_similarity(
+				candidate,
+				self.pending_name,
+			) >= CHANGE_CANDIDATE_THRESHOLD
+		)
+
+		if confirmations >= 2:
+			self.change_pending = True
+
+		if confirmations < CHANGE_CONFIRMATIONS:
+			return (
+				"change_pending"
+				if self.change_pending
+				else "change_candidate"
+			)
+
+		self.stable_name = (
+			self.pending_name
+		)
+
+		self.values.clear()
+		self.values.extend(
+			self.pending_values
+		)
+
+		self.visual_change_pending = False
 		self._cancel_pending_change()
 		self.changed_this_scan = True
 
@@ -400,6 +563,8 @@ class DynamicPlayerTracker:
 		self._raw_cache = {}
 		self._last_name_read_at = {}
 		self._panel_centers = {}
+		self._visual_change_hits = {}
+		self._visual_return_hits = {}
 
 	def update_ocr(
 		self,
@@ -438,6 +603,57 @@ class DynamicPlayerTracker:
 					panel_frame
 				)
 
+				# Иногда action overlay не распознаётся action_reader,
+				# но визуально он ярко-зелёный/оранжевый. Такой кадр
+				# нельзя использовать ни для OCR ника, ни для fingerprint.
+				if self._looks_like_action_overlay(
+					name_frame
+				):
+					display_name = (
+						history.display_name()
+					)
+
+					stable_name = (
+						history.stable_name
+					)
+
+					hero_score = 0.0
+
+					if stable_name:
+						hero_score = (
+							self._hero_similarity(
+								stable_name
+							)
+						)
+
+					players.append(
+						DetectedPlayer(
+							index=index,
+							panel=panel,
+							name=display_name,
+							raw_name=(
+								self._raw_cache.get(
+									index,
+									"",
+								)
+							),
+							action=(
+								action
+								or "unknown"
+							),
+							hero_score=hero_score,
+							confidence=history.confidence(),
+							identity_pending=history.change_pending,
+							identity_changed=False,
+						)
+					)
+
+					if hero_score > best_score:
+						best_score = hero_score
+						best_index = index
+
+					continue
+
 				fingerprint = self._fingerprint(
 					name_frame
 				)
@@ -462,9 +678,32 @@ class DynamicPlayerTracker:
 					)
 				)
 
+				if changed_fingerprint:
+					self._visual_change_hits[
+						index
+					] = min(
+						3,
+						self._visual_change_hits.get(
+							index,
+							0,
+						)
+						+ 1,
+					)
+				else:
+					self._visual_change_hits[
+						index
+					] = 0
+
+				self._visual_return_hits[
+					index
+				] = 0
+
 				should_read = (
 					not history.stable_name
 					or history.change_pending
+					or bool(
+						history.pending_values
+					)
 					or changed_fingerprint
 					or periodic_recheck
 				)
@@ -483,6 +722,13 @@ class DynamicPlayerTracker:
 					self._last_name_read_at[
 						index
 					] = now
+
+					if raw_name == "*****":
+						self._raw_cache[
+							index
+						] = raw_name
+
+						continue
 
 					normalized = self._normalize_name(
 						raw_name
@@ -504,14 +750,30 @@ class DynamicPlayerTracker:
 					# на следующих OCR-циклах и быстро получит второе
 					# подтверждение, вместо того чтобы залипнуть на
 					# старом stable_name на несколько рук.
-					if observation in {
-						"same",
-						"stabilized",
-						"switched",
-					}:
+					should_store_fingerprint = (
+						observation
+						in {
+							"stabilized",
+							"switched",
+						}
+						or (
+							observation == "same"
+							and not changed_fingerprint
+						)
+					)
+
+					if should_store_fingerprint:
 						self._fingerprints[
 							index
 						] = fingerprint
+
+						self._visual_change_hits[
+							index
+						] = 0
+
+						self._visual_return_hits[
+							index
+						] = 0
 
 					self._raw_cache[
 						index
@@ -651,6 +913,38 @@ class DynamicPlayerTracker:
 				duplicate.name = ""
 				duplicate.confidence = 0.0
 
+	def _looks_like_action_overlay(
+		self,
+		image,
+	):
+		if (
+			image is None
+			or image.size == 0
+		):
+			return False
+
+		hsv = cv2.cvtColor(
+			image,
+			cv2.COLOR_BGR2HSV,
+		)
+
+		saturation = hsv[:, :, 1]
+		value = hsv[:, :, 2]
+
+		colored = (
+			(saturation >= 85)
+			& (value >= 95)
+		)
+
+		colored_ratio = float(
+			np.mean(
+				colored
+			)
+		)
+
+		return colored_ratio >= 0.055
+
+
 	def _fingerprint(
 		self,
 		image,
@@ -666,22 +960,157 @@ class DynamicPlayerTracker:
 			cv2.COLOR_BGR2GRAY,
 		)
 
-		# Убираем часть влияния общей яркости white/gray nickname.
-		gray = cv2.normalize(
+		gray = cv2.GaussianBlur(
 			gray,
-			None,
+			(3, 3),
+			0,
+		)
+
+		_, mask = cv2.threshold(
+			gray,
 			0,
 			255,
-			cv2.NORM_MINMAX,
+			cv2.THRESH_BINARY
+			+ cv2.THRESH_OTSU,
 		)
 
-		small = cv2.resize(
-			gray,
-			(40, 12),
-			interpolation=cv2.INTER_AREA,
+		# Верхняя кромка ROI и единичный anti-alias мусор не должны
+		# влиять на identity fingerprint.
+		mask[
+			: min(
+				2,
+				mask.shape[0],
+			),
+			:
+		] = 0
+
+		count, labels, stats, _ = (
+			cv2.connectedComponentsWithStats(
+				mask,
+				8,
+			)
 		)
 
-		return small.astype(
+		clean = np.zeros_like(
+			mask
+		)
+
+		for component in range(
+			1,
+			count,
+		):
+			x, y, width, height, area = (
+				stats[
+					component
+				]
+			)
+
+			if area < 4:
+				continue
+
+			if height < 3:
+				continue
+
+			clean[
+				labels == component
+			] = 255
+
+		points = cv2.findNonZero(
+			clean
+		)
+
+		if points is None:
+			return None
+
+		x, y, width, height = (
+			cv2.boundingRect(
+				points
+			)
+		)
+
+		glyphs = clean[
+			y:y + height,
+			x:x + width,
+		]
+
+		canvas_width = 96
+		canvas_height = 24
+		padding = 2
+
+		scale = min(
+			(
+				canvas_width
+				- padding * 2
+			)
+			/ max(
+				glyphs.shape[1],
+				1,
+			),
+			(
+				canvas_height
+				- padding * 2
+			)
+			/ max(
+				glyphs.shape[0],
+				1,
+			),
+		)
+
+		target_width = max(
+			1,
+			int(
+				round(
+					glyphs.shape[1]
+					* scale
+				)
+			),
+		)
+
+		target_height = max(
+			1,
+			int(
+				round(
+					glyphs.shape[0]
+					* scale
+				)
+			),
+		)
+
+		resized = cv2.resize(
+			glyphs,
+			(
+				target_width,
+				target_height,
+			),
+			interpolation=cv2.INTER_NEAREST,
+		)
+
+		canvas = np.zeros(
+			(
+				canvas_height,
+				canvas_width,
+			),
+			dtype=np.uint8,
+		)
+
+		offset_x = (
+			canvas_width
+			- target_width
+		) // 2
+
+		offset_y = (
+			canvas_height
+			- target_height
+		) // 2
+
+		canvas[
+			offset_y:
+			offset_y + target_height,
+			offset_x:
+			offset_x + target_width,
+		] = resized
+
+		return canvas.astype(
 			np.int16
 		)
 
@@ -739,6 +1168,8 @@ class DynamicPlayerTracker:
 			self._raw_cache.clear()
 			self._last_name_read_at.clear()
 			self._panel_centers.clear()
+			self._visual_change_hits.clear()
+			self._visual_return_hits.clear()
 			return
 
 		if not self._panel_centers:
@@ -752,6 +1183,14 @@ class DynamicPlayerTracker:
 				self._panel_centers[
 					index
 				] = panel.center
+
+				self._visual_change_hits[
+					index
+				] = 0
+
+				self._visual_return_hits[
+					index
+				] = 0
 
 			return
 
@@ -830,6 +1269,8 @@ class DynamicPlayerTracker:
 		new_raw_cache = {}
 		new_last_read = {}
 		new_centers = {}
+		new_visual_change_hits = {}
+		new_visual_return_hits = {}
 
 		for new_index, panel in enumerate(
 			panels
@@ -873,6 +1314,29 @@ class DynamicPlayerTracker:
 						old_index
 					]
 
+				new_visual_change_hits[
+					new_index
+				] = self._visual_change_hits.get(
+					old_index,
+					0,
+				)
+
+				new_visual_return_hits[
+					new_index
+				] = self._visual_return_hits.get(
+					old_index,
+					0,
+				)
+
+			if old_index is None:
+				new_visual_change_hits[
+					new_index
+				] = 0
+
+				new_visual_return_hits[
+					new_index
+				] = 0
+
 			new_centers[
 				new_index
 			] = panel.center
@@ -882,6 +1346,8 @@ class DynamicPlayerTracker:
 		self._raw_cache = new_raw_cache
 		self._last_name_read_at = new_last_read
 		self._panel_centers = new_centers
+		self._visual_change_hits = new_visual_change_hits
+		self._visual_return_hits = new_visual_return_hits
 
 	def _normalize_name(
 		self,

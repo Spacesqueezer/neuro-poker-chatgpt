@@ -8,7 +8,7 @@ import numpy as np
 
 LOWER_NAME_CHARS = (
 	"abcdefghijklmnopqrstuvwxyz"
-	"0123456789_-"
+	"0123456789_"
 )
 
 
@@ -75,19 +75,17 @@ class CharacterTemplatePredictor:
 					character
 				] = items
 
-	def predict(
+	def predict_top(
 		self,
 		image,
+		limit=3,
 	):
 		if (
 			image is None
 			or image.size == 0
 			or not self.templates
 		):
-			return (
-				"",
-				0.0,
-			)
+			return []
 
 		if image.shape != (
 			40,
@@ -103,8 +101,7 @@ class CharacterTemplatePredictor:
 			np.float32
 		)
 
-		best_character = ""
-		best_score = 0.0
+		scores = []
 
 		for character, templates in (
 			self.templates.items()
@@ -128,11 +125,40 @@ class CharacterTemplatePredictor:
 				if score > character_score:
 					character_score = score
 
-			if character_score > best_score:
-				best_score = character_score
-				best_character = character
+			scores.append(
+				(
+					character,
+					float(
+						character_score
+					),
+				)
+			)
 
-		return (
-			best_character,
-			best_score,
+		scores.sort(
+			key=lambda item: item[1],
+			reverse=True,
 		)
+
+		return scores[
+			:max(
+				1,
+				int(limit),
+			)
+		]
+
+	def predict(
+		self,
+		image,
+	):
+		top = self.predict_top(
+			image,
+			limit=1,
+		)
+
+		if not top:
+			return (
+				"",
+				0.0,
+			)
+
+		return top[0]

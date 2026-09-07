@@ -966,6 +966,67 @@ class ScannerDashboard:
 		width = 44
 		height = 27
 
+		if not value:
+			cv2.rectangle(
+				panel,
+				(x, y),
+				(
+					x + width,
+					y + height,
+				),
+				(44, 44, 44),
+				-1,
+			)
+
+			cv2.rectangle(
+				panel,
+				(x, y),
+				(
+					x + width,
+					y + height,
+				),
+				BORDER,
+				1,
+			)
+
+			self._text(
+				panel,
+				"-",
+				x + 17,
+				y + 19,
+				scale=0.56,
+				color=MUTED,
+			)
+
+			return
+
+		value = str(
+			value
+		)
+
+		rank = (
+			value[0].upper()
+			if value
+			else "?"
+		)
+
+		suit = (
+			value[1].lower()
+			if len(value) >= 2
+			else ""
+		)
+
+		is_red = suit in {
+			"h",
+			"d",
+		}
+
+		card_color = (
+			(55, 55, 225)
+			if is_red
+			else (18, 18, 18)
+		)
+
 		cv2.rectangle(
 			panel,
 			(x, y),
@@ -973,7 +1034,7 @@ class ScannerDashboard:
 				x + width,
 				y + height,
 			),
-			(44, 44, 44),
+			(238, 238, 238),
 			-1,
 		)
 
@@ -984,37 +1045,225 @@ class ScannerDashboard:
 				x + width,
 				y + height,
 			),
-			(
-				accent
-				if value
-				else BORDER
-			),
+			accent,
 			1,
-		)
-
-		label = (
-			str(value)
-			if value
-			else "-"
 		)
 
 		self._text(
 			panel,
-			label,
-			x + 7,
+			rank,
+			x + 5,
 			y + 19,
-			scale=0.56,
-			color=(
-				TEXT
-				if value
-				else MUTED
-			),
-			thickness=(
-				2
-				if value
-				else 1
-			),
+			scale=0.58,
+			color=card_color,
+			thickness=2,
 		)
+
+		self._draw_suit(
+			panel,
+			x + 31,
+			y + 14,
+			suit,
+			card_color,
+		)
+
+	def _draw_suit(
+		self,
+		panel,
+		x,
+		y,
+		suit,
+		color,
+	):
+		radius = max(
+			2,
+			self._s(3),
+		)
+
+		if suit == "h":
+			cv2.circle(
+				panel,
+				(
+					x - radius,
+					y - radius,
+				),
+				radius,
+				color,
+				-1,
+			)
+
+			cv2.circle(
+				panel,
+				(
+					x + radius,
+					y - radius,
+				),
+				radius,
+				color,
+				-1,
+			)
+
+			points = np.array(
+				[
+					[
+						x - radius * 2,
+						y - radius,
+					],
+					[
+						x + radius * 2,
+						y - radius,
+					],
+					[
+						x,
+						y + radius * 3,
+					],
+				],
+				dtype=np.int32,
+			)
+
+			cv2.fillConvexPoly(
+				panel,
+				points,
+				color,
+			)
+
+		elif suit == "d":
+			points = np.array(
+				[
+					[
+						x,
+						y - radius * 2,
+					],
+					[
+						x + radius * 2,
+						y,
+					],
+					[
+						x,
+						y + radius * 2,
+					],
+					[
+						x - radius * 2,
+						y,
+					],
+				],
+				dtype=np.int32,
+			)
+
+			cv2.fillConvexPoly(
+				panel,
+				points,
+				color,
+			)
+
+		elif suit == "c":
+			cv2.circle(
+				panel,
+				(
+					x,
+					y - radius,
+				),
+				radius,
+				color,
+				-1,
+			)
+
+			cv2.circle(
+				panel,
+				(
+					x - radius,
+					y + radius // 2,
+				),
+				radius,
+				color,
+				-1,
+			)
+
+			cv2.circle(
+				panel,
+				(
+					x + radius,
+					y + radius // 2,
+				),
+				radius,
+				color,
+				-1,
+			)
+
+			cv2.rectangle(
+				panel,
+				(
+					x - 1,
+					y + radius // 2,
+				),
+				(
+					x + 1,
+					y + radius * 2,
+				),
+				color,
+				-1,
+			)
+
+		elif suit == "s":
+			points = np.array(
+				[
+					[
+						x,
+						y - radius * 3,
+					],
+					[
+						x - radius * 2,
+						y,
+					],
+					[
+						x + radius * 2,
+						y,
+					],
+				],
+				dtype=np.int32,
+			)
+
+			cv2.fillConvexPoly(
+				panel,
+				points,
+				color,
+			)
+
+			cv2.circle(
+				panel,
+				(
+					x - radius,
+					y,
+				),
+				radius,
+				color,
+				-1,
+			)
+
+			cv2.circle(
+				panel,
+				(
+					x + radius,
+					y,
+				),
+				radius,
+				color,
+				-1,
+			)
+
+			cv2.rectangle(
+				panel,
+				(
+					x - 1,
+					y,
+				),
+				(
+					x + 1,
+					y + radius * 2,
+				),
+				color,
+				-1,
+			)
 
 	def _pill(
 		self,

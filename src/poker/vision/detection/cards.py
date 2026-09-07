@@ -67,6 +67,15 @@ class CardDetector:
 		self.board_geometry = None
 		self.card_size_hint = None
 		self.board_empty_scans = 0
+		self.hero_pair_hint = None
+		self.hero_pair_misses = 0
+
+		# HERO panel detector немного гуляет между кадрами, а реальные
+		# hole cards обычно остаются неподвижными. Поэтому отдельно
+		# держим устойчивую геометрию пары и используем panel только
+		# для первичного захвата / проверки, что HERO не переехал.
+		self.hero_pair_hint = None
+		self.hero_pair_misses = 0
 
 		self.board_reset_scans = 6
 
@@ -183,10 +192,6 @@ class CardDetector:
 		):
 			return []
 
-		height, width = (
-			table_frame.shape[:2]
-		)
-
 		card_width, card_height = (
 			self._expected_card_size(
 				table_frame
@@ -202,23 +207,43 @@ class CardDetector:
 			),
 		)
 
+		center_x = float(
+			hero_panel.center[0]
+		)
+
+		# Сначала пробуем temporal lock. В присланных captures player panel
+		# менял Y примерно на 15 px, тогда как реальные карты держались
+		# практически на одной координате. Поэтому после первого хорошего
+		# захвата не следуем за jitter панели.
+		locked = self._hero_pair_from_hint(
+			table_frame,
+			hero_panel,
+			card_width,
+			card_height,
+			gap,
+		)
+
+		if locked:
+			self.hero_pair_misses = 0
+			self._remember_hero_pair(
+				locked
+			)
+			return locked
+
+		self.hero_pair_misses += 1
+
+		# Полный reacquire. Panel нужен только как грубая опора.
+		# Верх карты ищется joint-refinement сразу для ПАРЫ, поэтому две
+		# рамки не могут независимо разъехаться по Y.
 		pair_width = (
 			card_width * 2
 			+ gap
 		)
 
-		center_x = float(
-			hero_panel.center[0]
-		)
-
-		# Реальные PokerDom hole cards:
-		#	- стоят горизонтальной парой;
-		#	- центр пары совпадает примерно с центром player panel;
-		#	- низ карты заходит под верх player panel.
 		base_y = int(
 			round(
 				hero_panel.y
-				- card_height * 0.86
+				- card_height * 0.94
 			)
 		)
 
@@ -248,110 +273,40 @@ class CardDetector:
 			),
 		]
 
-		result = []
-
-		for box in expected:
-			refined = (
-				self._refine_expected_card(
-					table_frame,
-					box,
-					search_x=max(
-						4,
-						int(
-							round(
-								card_width
-								* 0.22
-							)
-						),
-					),
-					search_y=max(
-						3,
-						int(
-							round(
-								card_height
-								* 0.12
-							)
-						),
-					),
-				)
-			)
-
-			evidence = (
-				self._card_evidence(
-					table_frame,
-					refined,
-					top_fraction=0.62,
-				)
-			)
-
-			if evidence >= 0.16:
-				result.append(
-					refined
-				)
-
-		# Если одна карта слегка хуже по белой маске, но соседняя уверенно
-		# найдена, геометрия пары намного надёжнее одиночного contour.
-		if len(result) == 1:
-			known = result[0]
-
-			known_is_left = (
-				known.center[0]
-				< center_x
-			)
-
-			if known_is_left:
-				other = CardBox(
-					x=int(
-						round(
-							known.x
-							+ card_width
-							+ gap
-						)
-					),
-					y=known.y,
-					width=card_width,
-					height=card_height,
-				)
-			else:
-				other = CardBox(
-					x=int(
-						round(
-							known.x
-							- card_width
-							- gap
-						)
-					),
-					y=known.y,
-					width=card_width,
-					height=card_height,
-				)
-
-			other = self._clip_box(
-				table_frame,
-				other,
-			)
-
-			if (
-				self._card_evidence(
-					table_frame,
-					other,
-					top_fraction=0.50,
-				)
-				>= 0.09
-			):
-				result.append(
-					other
-				)
-
-		if len(result) != 2:
-			return []
-
-		result = sorted(
-			result,
-			key=lambda card: card.x,
+		result = self._refine_hero_pair(
+			table_frame,
+			expected,
+			search_x=max(
+				4,
+				int(
+					round(
+						card_width * 0.16
+					)
+				),
+			),
+			search_y_up=max(
+				5,
+				int(
+					round(
+						card_height * 0.18
+					)
+				),
+			),
+			search_y_down=max(
+				2,
+				int(
+					round(
+						card_height * 0.045
+					)
+				),
+			),
 		)
 
-		# HERO pair должна быть компактной. Никаких "рамок на полстола".
+		if not result:
+			if self.hero_pair_misses >= 4:
+				self.hero_pair_hint = None
+			return []
+
 		center_distance = abs(
 			(
 				result[0].center[0]
@@ -362,11 +317,283 @@ class CardDetector:
 
 		if (
 			center_distance
-			> card_width * 0.45
+			> card_width * 0.50
 		):
 			return []
 
+		self.hero_pair_misses = 0
+		self._remember_hero_pair(
+			result
+		)
+
 		return result
+
+	def _hero_pair_from_hint(
+		self,
+		frame,
+		hero_panel,
+		card_width,
+		card_height,
+		gap,
+	):
+		hint = self.hero_pair_hint
+
+		if not hint:
+			return []
+
+		hint_center_x = float(
+			hint["center_x"]
+		)
+
+		panel_center_x = float(
+			hero_panel.center[0]
+		)
+
+		# HERO сменил место / stale lock.
+		if (
+			abs(
+				hint_center_x
+				- panel_center_x
+			)
+			> card_width * 0.75
+		):
+			self.hero_pair_hint = None
+			return []
+
+		first_x = int(
+			round(
+				panel_center_x
+				- (
+					card_width * 2
+					+ gap
+				) / 2.0
+			)
+		)
+
+		base_y = int(
+			round(
+				hint["y"]
+			)
+		)
+
+		expected = [
+			CardBox(
+				x=first_x,
+				y=base_y,
+				width=card_width,
+				height=card_height,
+			),
+			CardBox(
+				x=(
+					first_x
+					+ card_width
+					+ gap
+				),
+				y=base_y,
+				width=card_width,
+				height=card_height,
+			),
+		]
+
+		# Locked path очень маленький и потому заметно дешевле полного
+		# reacquire. Одновременно это не даёт ROI прыгать за panel jitter.
+		return self._refine_hero_pair(
+			frame,
+			expected,
+			search_x=max(
+				2,
+				int(
+					round(
+						card_width * 0.055
+					)
+				),
+			),
+			search_y_up=max(
+				2,
+				int(
+					round(
+						card_height * 0.055
+					)
+				),
+			),
+			search_y_down=max(
+				1,
+				int(
+					round(
+						card_height * 0.025
+					)
+				),
+			),
+			min_score=0.20,
+		)
+
+	def _refine_hero_pair(
+		self,
+		frame,
+		expected,
+		search_x,
+		search_y_up,
+		search_y_down,
+		min_score=0.17,
+	):
+		if len(expected) != 2:
+			return []
+
+		best = None
+		best_score = None
+
+		step_x = max(
+			1,
+			search_x // 4,
+		)
+
+		step_y = max(
+			1,
+			max(
+				search_y_up,
+				search_y_down,
+			) // 5,
+		)
+
+		for dy in range(
+			-search_y_up,
+			search_y_down + 1,
+			step_y,
+		):
+			for dx in range(
+				-search_x,
+				search_x + 1,
+				step_x,
+			):
+				pair = [
+					self._clip_box(
+						frame,
+						CardBox(
+							x=box.x + dx,
+							y=box.y + dy,
+							width=box.width,
+							height=box.height,
+						),
+					)
+					for box in expected
+				]
+
+				left_score = (
+					self._hero_alignment_score(
+						frame,
+						pair[0],
+					)
+				)
+
+				right_score = (
+					self._hero_alignment_score(
+						frame,
+						pair[1],
+					)
+				)
+
+				# Обе карты должны иметь evidence. Одна сильная карта
+				# больше не может "утащить" пару в неправильный Y.
+				weakest = min(
+					left_score,
+					right_score,
+				)
+
+				score = (
+					(
+						left_score
+						+ right_score
+					) * 0.40
+					+ weakest * 0.35
+				)
+
+				score -= (
+					abs(dx)
+					/ max(
+						expected[0].width,
+						1,
+					)
+					* 0.045
+				)
+
+				if dy > 0:
+					score -= (
+						dy
+						/ max(
+							expected[0].height,
+							1,
+						)
+						* 0.42
+					)
+				else:
+					score -= (
+						abs(dy)
+						/ max(
+							expected[0].height,
+							1,
+						)
+						* 0.035
+					)
+
+				if (
+					best_score is None
+					or score > best_score
+				):
+					best_score = score
+					best = pair
+
+		if (
+			best is None
+			or best_score is None
+			or best_score < min_score
+		):
+			return []
+
+		return sorted(
+			best,
+			key=lambda card: card.x,
+		)
+
+	def _remember_hero_pair(
+		self,
+		cards,
+	):
+		if len(cards) != 2:
+			return
+
+		center_x = (
+			cards[0].center[0]
+			+ cards[1].center[0]
+		) / 2.0
+
+		y = (
+			cards[0].y
+			+ cards[1].y
+		) / 2.0
+
+		if self.hero_pair_hint is None:
+			self.hero_pair_hint = {
+				"center_x": center_x,
+				"y": y,
+			}
+			return
+
+		# Небольшое EMA: реальная карта может сдвинуться при resize,
+		# но единичный jitter не двигает lock.
+		self.hero_pair_hint = {
+			"center_x": (
+				self.hero_pair_hint[
+					"center_x"
+				] * 0.78
+				+ center_x * 0.22
+			),
+			"y": (
+				self.hero_pair_hint[
+					"y"
+				] * 0.84
+				+ y * 0.16
+			),
+		}
 
 	def signature(
 		self,
@@ -1239,7 +1466,8 @@ class CardDetector:
 		frame,
 		expected,
 		search_x,
-		search_y,
+		search_y_up,
+		search_y_down,
 	):
 		best = self._clip_box(
 			frame,
@@ -1247,10 +1475,9 @@ class CardDetector:
 		)
 
 		best_score = (
-			self._card_evidence(
+			self._hero_alignment_score(
 				frame,
 				best,
-				top_fraction=0.62,
 			)
 		)
 
@@ -1261,12 +1488,15 @@ class CardDetector:
 
 		step_y = max(
 			2,
-			search_y // 3,
+			max(
+				search_y_up,
+				search_y_down,
+			) // 4,
 		)
 
 		for dy in range(
-			-search_y,
-			search_y + 1,
+			-search_y_up,
+			search_y_down + 1,
 			step_y,
 		):
 			for dx in range(
@@ -1289,37 +1519,202 @@ class CardDetector:
 				)
 
 				score = (
-					self._card_evidence(
+					self._hero_alignment_score(
 						frame,
 						candidate,
-						top_fraction=0.62,
 					)
 				)
 
-				# Небольшой штраф за уход далеко от expected geometry.
 				score -= (
 					abs(dx)
 					/ max(
 						expected.width,
 						1,
 					)
-					* 0.035
+					* 0.055
 				)
 
-				score -= (
-					abs(dy)
-					/ max(
-						expected.height,
-						1,
+				if dy > 0:
+					score -= (
+						dy
+						/ max(
+							expected.height,
+							1,
+						)
+						* 0.38
 					)
-					* 0.035
-				)
+				else:
+					score -= (
+						abs(dy)
+						/ max(
+							expected.height,
+							1,
+						)
+						* 0.055
+					)
 
 				if score > best_score:
 					best = candidate
 					best_score = score
 
 		return best
+
+	def _hero_alignment_score(
+		self,
+		frame,
+		box,
+	):
+		"""
+		HERO ROI должен попадать именно в верх карты.
+
+		Просто большой процент белого недостаточен: box на несколько
+		пикселей ниже всё ещё содержит много белого, но rank/suit corner
+		уже съезжает и даёт ошибки вроде 6->T и Q->8.
+		"""
+		box = self._clip_box(
+			frame,
+			box,
+		)
+
+		if (
+			box.width <= 4
+			or box.height <= 8
+		):
+			return 0.0
+
+		top_band_height = max(
+			3,
+			int(
+				round(
+					box.height * 0.10
+				)
+			),
+		)
+
+		upper_height = max(
+			8,
+			int(
+				round(
+					box.height * 0.48
+				)
+			),
+		)
+
+		inside = frame[
+			box.y:min(
+				frame.shape[0],
+				box.y + upper_height,
+			),
+			box.x:min(
+				frame.shape[1],
+				box.x + box.width,
+			),
+		]
+
+		if inside.size == 0:
+			return 0.0
+
+		hsv = cv2.cvtColor(
+			inside,
+			cv2.COLOR_BGR2HSV,
+		)
+
+		mask = cv2.inRange(
+			hsv,
+			self.white_low,
+			self.white_high,
+		)
+
+		top_band = mask[
+			0:min(
+				top_band_height,
+				mask.shape[0],
+			),
+			:,
+		]
+
+		top_white = (
+			cv2.countNonZero(
+				top_band
+			)
+			/ float(
+				max(
+					top_band.size,
+					1,
+				)
+			)
+		)
+
+		upper_white = (
+			cv2.countNonZero(
+				mask
+			)
+			/ float(
+				max(
+					mask.size,
+					1,
+				)
+			)
+		)
+
+		above_height = max(
+			3,
+			int(
+				round(
+					box.height * 0.08
+				)
+			),
+		)
+
+		above_y1 = max(
+			0,
+			box.y - above_height,
+		)
+
+		above = frame[
+			above_y1:box.y,
+			box.x:min(
+				frame.shape[1],
+				box.x + box.width,
+			),
+		]
+
+		above_white = 0.0
+
+		if above.size:
+			above_hsv = cv2.cvtColor(
+				above,
+				cv2.COLOR_BGR2HSV,
+			)
+
+			above_mask = cv2.inRange(
+				above_hsv,
+				self.white_low,
+				self.white_high,
+			)
+
+			above_white = (
+				cv2.countNonZero(
+					above_mask
+				)
+				/ float(
+					max(
+						above_mask.size,
+						1,
+					)
+				)
+			)
+
+		return (
+			top_white * 0.52
+			+ upper_white * 0.38
+			+ max(
+				0.0,
+				top_white - above_white,
+			) * 0.22
+			- above_white * 0.20
+		)
+
 
 	def _card_evidence(
 		self,

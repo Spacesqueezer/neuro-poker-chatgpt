@@ -1,0 +1,77 @@
+{
+  "timestamp": "20260907_080106_785479",
+  "table": {
+    "width": 2344,
+    "height": 1369
+  },
+  "players": [
+    {
+      "index": 0,
+      "name": "",
+      "raw_name": "",
+      "confidence": 0.0,
+      "identity_pending": false,
+      "is_hero": false,
+      "action": null,
+      "panel_roi": {
+        "x": 1727,
+        "y": 481,
+        "width": 252,
+        "height": 94,
+        "x2": 1979,
+        "y2": 575,
+        "center_x": 1853,
+        "center_y": 528
+      }
+    },
+    {
+      "index": 1,
+      "name": "",
+      "raw_name": "",
+      "confidence": 0.0,
+      "identity_pending": false,
+      "is_hero": false,
+      "action": "unknown",
+      "panel_roi": {
+        "x": 1628,
+        "y": 934,
+        "width": 241,
+        "height": 90,
+        "x2": 1869,
+        "y2": 1024,
+        "center_x": 1748,
+        "center_y": 979
+      }
+    },
+    {
+      "index": 2,
+      "name": "belka_013",
+      "raw_name": "belka_013",
+      "confidence": 1.0,
+      "identity_pending": false,
+      "is_hero": false,
+      "action": null,
+      "panel_roi": {
+        "x": 424,
+        "y": 473,
+        "width": 237,
+        "height": 89,
+        "x2": 661,
+        "y2": 562,
+        "center_x": 542,
+        "center_y": 518
+      }
+    }
+  ],
+  "cards": {
+    "board": [],
+    "hero": []
+  },
+  "summary": {
+    "player_count": 3,
+    "board_box_count": 0,
+    "hero_box_count": 0,
+    "board_values": [],
+    "hero_values": []
+  }
+}

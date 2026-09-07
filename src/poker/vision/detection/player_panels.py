@@ -416,6 +416,153 @@ def crop_panel(
 	]
 
 
+def _compute_name_top_offset(
+	panel_frame,
+):
+	if panel_frame.size == 0:
+		return 0
+
+	height, width = panel_frame.shape[:2]
+
+	search_height = max(
+		1,
+		int(round(height * 0.32)),
+	)
+
+	upper = panel_frame[
+		:search_height,
+		:,
+	]
+
+	hsv = cv2.cvtColor(
+		upper,
+		cv2.COLOR_BGR2HSV,
+	)
+
+	saturation = hsv[:, :, 1]
+	value = hsv[:, :, 2]
+
+	white_mask = np.where(
+		(value >= 148)
+		& (saturation <= 72),
+		255,
+		0,
+	).astype(np.uint8)
+
+	white_mask = cv2.morphologyEx(
+		white_mask,
+		cv2.MORPH_OPEN,
+		cv2.getStructuringElement(
+			cv2.MORPH_RECT,
+			(2, 2),
+		),
+		iterations=1,
+	)
+
+	white_mask = cv2.morphologyEx(
+		white_mask,
+		cv2.MORPH_CLOSE,
+		cv2.getStructuringElement(
+			cv2.MORPH_RECT,
+			(5, 2),
+		),
+		iterations=1,
+	)
+
+	contours, _ = cv2.findContours(
+		white_mask,
+		cv2.RETR_EXTERNAL,
+		cv2.CHAIN_APPROX_SIMPLE,
+	)
+
+	exclusion_bottom = 0
+	min_width = max(
+		5,
+		int(round(width * 0.05)),
+	)
+	max_height = max(
+		4,
+		int(round(height * 0.16)),
+	)
+
+	for contour in contours:
+		x, y, w, h = cv2.boundingRect(
+			contour
+		)
+
+		if y > 6:
+			continue
+
+		if w < min_width:
+			continue
+
+		if h > max_height:
+			continue
+
+		aspect_ratio = (
+			w
+			/ max(
+				h,
+				1,
+			)
+		)
+
+		is_rim_like = (
+			w
+			>= int(
+				round(
+					width * 0.18
+				)
+			)
+			or aspect_ratio >= 2.0
+		)
+
+		if not is_rim_like:
+			continue
+
+		exclusion_bottom = max(
+			exclusion_bottom,
+			y + h,
+		)
+
+	if white_mask.size != 0:
+		row_fill = np.mean(
+			white_mask > 0,
+			axis=1,
+		)
+
+		row_run = 0
+		row_cut = 0
+
+		for index, fill in enumerate(
+			row_fill
+		):
+			if fill >= 0.08:
+				row_run += 1
+				row_cut = index + 1
+				continue
+
+			if row_run >= 2:
+				break
+
+			if index >= 4:
+				break
+
+		if row_cut > 0:
+			exclusion_bottom = max(
+				exclusion_bottom,
+				row_cut,
+			)
+
+	if exclusion_bottom <= 0:
+		return 0
+
+	return min(
+		exclusion_bottom + 3,
+		int(round(height * 0.26)),
+	)
+
+
 def crop_name_from_panel(
 	panel_frame,
 ):
@@ -424,24 +571,54 @@ def crop_name_from_panel(
 
 	height, width = panel_frame.shape[:2]
 
-	# Runtime ROI ника должен быть широким по горизонтали.
-	#
-	# Старый left=12% оказался слишком агрессивным: у плашек,
-	# где ник начинается почти от края, пропадала первая буква:
-	#
-	# roman...    -> oman...
-	# pokerdom... -> okerdom...
-	#
-	# Статусные иконки PokerDom обычно находятся вне основной
-	# прямоугольной плашки или ниже/сбоку, поэтому безопаснее
-	# оставить небольшой край в 2%, чем стабильно терять символ.
-	#
-	# По вертикали ROI остаётся узким: это не даёт захватывать
-	# stack и большую часть посторонних элементов.
-	top = int(height * 0.04)
-	bottom = int(height * 0.52)
-	left = int(width * 0.02)
-	right = int(width * 0.99)
+	base_top = int(
+		round(
+			height * 0.09
+		)
+	)
+
+	top = max(
+		base_top,
+		_compute_name_top_offset(
+			panel_frame
+		),
+	)
+
+	top = min(
+		top,
+		int(
+			round(
+				height * 0.20
+			)
+		),
+	)
+
+	bottom = int(
+		round(
+			height * 0.50
+		)
+	)
+
+	left = int(
+		width * 0.02
+	)
+
+	right = int(
+		width * 0.99
+	)
+
+	if bottom <= top:
+		top = int(
+			round(
+				height * 0.10
+			)
+		)
+
+		bottom = int(
+			round(
+				height * 0.50
+			)
+		)
 
 	return panel_frame[
 		top:bottom,

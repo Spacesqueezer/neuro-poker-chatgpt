@@ -1,0 +1,59 @@
+[
+  {
+    "index": 0,
+    "name": "",
+    "raw_name": "",
+    "confidence": 0.0,
+    "identity_pending": false,
+    "is_hero": false,
+    "action": null,
+    "panel_roi": {
+      "x": 1727,
+      "y": 481,
+      "width": 252,
+      "height": 94,
+      "x2": 1979,
+      "y2": 575,
+      "center_x": 1853,
+      "center_y": 528
+    }
+  },
+  {
+    "index": 1,
+    "name": "",
+    "raw_name": "",
+    "confidence": 0.0,
+    "identity_pending": false,
+    "is_hero": false,
+    "action": "unknown",
+    "panel_roi": {
+      "x": 1618,
+      "y": 937,
+      "width": 254,
+      "height": 95,
+      "x2": 1872,
+      "y2": 1032,
+      "center_x": 1745,
+      "center_y": 984
+    }
+  },
+  {
+    "index": 2,
+    "name": "belka_013",
+    "raw_name": "belka_013",
+    "confidence": 1.0,
+    "identity_pending": false,
+    "is_hero": false,
+    "action": "unknown",
+    "panel_roi": {
+      "x": 408,
+      "y": 480,
+      "width": 250,
+      "height": 94,
+      "x2": 658,
+      "y2": 574,
+      "center_x": 533,
+      "center_y": 527
+    }
+  }
+]
