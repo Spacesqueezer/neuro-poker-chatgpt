@@ -1,4 +1,4 @@
-from poker.statistics.database.models import (
+from poker.statistics.database.records import (
 	AgentMemoryRecord,
 	PlayerRecord,
 	PlayerStatisticsRecord,

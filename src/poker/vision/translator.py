@@ -14,6 +14,12 @@ class ScreenTranslator:
         self.hero_name = hero_name
 
     def translate_state(self, screen: ScreenState) -> HandStateView:
+        if screen.total_pot is None or screen.call_amount_needed is None:
+            raise ValueError("Cannot translate an observation without pot and call amounts")
+        if not any(player.name == self.hero_name for player in screen.players):
+            raise ValueError("Cannot translate an observation without the hero player")
+        if (screen.can_raise or screen.can_bet) and screen.min_raise_amount is None:
+            raise ValueError("Cannot translate an observation without the minimum raise amount")
         # Ищем дилера (баттон)
         dealer_name = ""
         for p in screen.players:
@@ -65,6 +71,12 @@ class ScreenTranslator:
         )
 
     def translate_legal_actions(self, screen: ScreenState) -> LegalActions:
+        if screen.call_amount_needed is None:
+            raise ValueError("Cannot translate legal actions without the call amount")
+        if (screen.can_raise or screen.can_bet) and (
+            screen.min_raise_amount is None or screen.max_raise_amount is None
+        ):
+            raise ValueError("Cannot translate legal actions without bet/raise bounds")
         actions = []
 
         if screen.can_fold:

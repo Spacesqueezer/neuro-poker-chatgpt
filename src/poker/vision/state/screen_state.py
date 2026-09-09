@@ -1,41 +1,44 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass, field
 
 
-@dataclass
-class VisionScreenState:
-	is_my_turn: bool
-	street_name: str
-	board_cards: list
-	hero_hole_cards: list
-	total_pot: float | None
-	can_fold: bool
-	can_check: bool
-	can_call: bool
-	can_bet: bool
-	can_raise: bool
-	can_all_in: bool
-
-	def to_dict(self):
-		return asdict(
-			self
-		)
+@dataclass(frozen=True)
+class ScreenPlayer:
+    seat_index: int
+    name: str
+    is_active: bool
+    is_dealer: bool
+    stack: float
+    current_bet: float
+    cards_dealt: bool  # Если True, у игрока есть карты на руках (значит он не в пас)
 
 
-def street_from_board(
-	board_cards,
-):
-	count = len(board_cards)
+@dataclass(frozen=True)
+class ScreenState:
+    """Shared screen observation; missing OCR amounts remain unknown."""
 
-	if count == 0:
-		return "preflop"
+    is_my_turn: bool
+    street_name: str  # "preflop", "flop", "turn", "river"
+    board_cards: list[str]  # e.g. ["A♠", "K♥", "2♦"]
+    hero_hole_cards: list[str]  # e.g. ["7♣", "8♣"]
 
-	if count == 3:
-		return "flop"
+    total_pot: float | None
+    call_amount_needed: float | None = None
+    min_raise_amount: float | None = None
+    max_raise_amount: float | None = None
 
-	if count == 4:
-		return "turn"
+    players: list[ScreenPlayer] = field(default_factory=list)
 
-	if count == 5:
-		return "river"
+    # Доступные кнопки на экране (чтобы не нажать то, чего нет)
+    can_fold: bool = False
+    can_check: bool = False
+    can_call: bool = False
+    can_bet: bool = False
+    can_raise: bool = False
+    can_all_in: bool = False
 
-	return "unknown"
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def street_from_board(board_cards: list[str]) -> str:
+    return {0: "preflop", 3: "flop", 4: "turn", 5: "river"}.get(len(board_cards), "unknown")

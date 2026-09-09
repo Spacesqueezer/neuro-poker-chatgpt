@@ -1,8 +1,0 @@
-[git]
-auto_commit = true
-
-[tests]
-default_command = "pytest"
-
-[safety]
-require_clean_git = true

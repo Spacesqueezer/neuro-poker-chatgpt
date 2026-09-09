@@ -1,234 +1,63 @@
-# Development Rules
+# Разработка
 
-This file is the single source of truth for AI-assisted development standards.
+## Перед изменениями
 
-All future patches MUST follow this document.
+1. Прочитать [README](../README.md) и [архитектуру](ARCHITECTURE.md).
+2. Проверить текущую ветку, состояние Git и затрагиваемые исходники.
+3. Сохранить пользовательские незавершённые изменения; не включать посторонние файлы в свою работу.
+4. Проверить фактические интерфейсы и зависимости. Код и тесты определяют текущее поведение.
 
-## Source of truth
+Изменения вносятся непосредственно в рабочее дерево. Выбор ветки, создание коммита и публикация определяются конкретной задачей; инструменты проекта не должны выполнять их неявно.
 
-The repository is the source of truth. Do not rely on previous chat history.
+## Границы модулей
 
-When repository access is available, AI must inspect the current repository instead of relying on memory or old snapshots.
+- Агенты и Arena используют `poker.api`; детали `HandController`, `BettingRound` и `GameState` остаются внутри движка.
+- Сохранять количество фишек, допустимость действий и границу скрытой информации.
+- Держать OCR и захват экрана отдельно от стратегии.
+- Базовая статистика не должна зависеть от БД; репозитории и сервисы отвечают за хранение.
+- Изменения схемы БД оформлять миграциями Alembic.
+- Форматы датасетов и solver artifacts версионировать; несовместимые входные данные отвергать явно.
+- Сначала соединять существующие компоненты, затем добавлять новые абстракции.
 
-Before creating a patch:
+## Проверка
 
-1. Read docs/DEV_RULES.md.
-2. Read docs/PROJECT_STATE.md.
-3. Inspect the current source tree.
-4. Verify assumptions against the current snapshot.
+Для документации и удаления изолированных инструментов проверить ссылки, команды, импорты и общий набор тестов:
 
-## NeuroPatch format
-
-Patch files are JSON.
-
-Required fields:
-
-- patch_id
-- goal
-- allowed_files
-- operations
-- validation
-- git
-
-Supported operations must be verified against tools/neuropatch.py.
-
-Never invent unsupported operations.
-
-A patch must be generated for the current snapshot.
-Never generate patches based only on memory.
-
-## NeuroPatch rules
-
-All project changes must be delivered through NeuroPatch.
-
-Supported operations must match the current patcher implementation.
-
-Do not invent unsupported operations.
-
-Typical supported operations:
-- create_file
-- replace
-- delete_file
-
-Every patch must:
-- target existing project state;
-- avoid speculative rewrites;
-- include validation commands;
-- update documentation when required.
-
-## Validation profiles
-
-Validation commands are selected according to patch impact.
-
-Default profile:
-
-```text
-fast
-```
-
-Runs after every patch:
-
-```text
+```powershell
 python -m pytest -q
 ```
 
-Extended profile:
+Для небольшой внутренней доработки допустимы адресные тесты соответствующего модуля. При изменении общего API, сериализации, Arena или хранения запускать весь набор.
 
-```text
-extended
-```
+При изменениях ставок, банков, случайности или жизненного цикла раздачи дополнительно выполнить:
 
-Runs when a patch affects shared contracts, architecture boundaries or complex internal logic:
-
-```text
-python -m pytest -q
-python tools/verify_history.py
-```
-
-Full profile:
-
-```text
-full
-```
-
-Runs before milestone completion and after risky gameplay changes:
-
-```text
-python -m pytest -q
+```powershell
 python tools/stress_poker.py --hands 10000 --seed 42
 python tools/verify_history.py
 ```
 
-AI generating NeuroPatches must choose the smallest sufficient profile.
+Replay требует существующего файла историй: при необходимости сначала создать завершённую раздачу ручным режимом или передать `--file`.
+Длительные solver benchmarks и обучение запускаются отдельно, с явными параметрами и seed.
+PostgreSQL integration test использует только отдельную тестовую БД и сбрасывает её схему.
 
-Use `fast` for isolated utilities, tests, documentation and internal refactoring without changed public contracts.
+Статические проверки:
 
-Focused profile:
-
-```text
-focused
+```powershell
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
 ```
 
-Runs only subsystem-specific tests plus cheap syntax/import checks when a patch is isolated behind an already-established internal boundary. The patch must name the exact test files or test directories in `validation.commands`.
+`tools/quality_check.py` и pre-commit используют Pyright вместо mypy. Для них отдельно нужны `pyright` и, для hooks, `pre-commit`; они не входят в текущий extra `dev`. Эти проверки могут обнаруживать существующие проблемы форматирования и типизации: фиксировать результат, а не объявлять его успешным по одному pytest.
 
-Use `focused` for isolated solver, statistics, learning or tooling work when:
-- production poker-engine behavior is untouched;
-- the affected subsystem already has direct regression coverage;
-- the patch does not change a cross-subsystem public contract;
-- a later milestone/full validation still exists as a safety net.
+## Документация
 
-Do not use `focused` for poker engine, hand lifecycle, pots/stacks, Arena, migrations, persistence schema, serialization compatibility or broad refactors.
+Поддерживать шесть документов, перечисленных в README. Не создавать отдельный README для каждой доработки.
 
-Use `extended` for API changes, serialization changes, database changes, migration changes, shared domain models and agent interfaces.
+- Команды запуска, переменные окружения и обслуживание: [USER_GUIDE_RU.md](USER_GUIDE_RU.md).
+- Датасеты, обучение и оценка: [LEARNING.md](LEARNING.md).
+- Захват экрана и HUD: [VISION.md](VISION.md).
+- Архитектура, ограничения и дальнейшие задачи: [ARCHITECTURE.md](ARCHITECTURE.md).
+- Процесс разработки: этот файл.
 
-Use `full` for poker engine changes, hand lifecycle, betting logic, stacks, pots, randomness, replay/history, Arena behavior and milestone patches.
-
-The selected validation profile must be justified by the affected systems.
-
-## Git commit rules
-
-A successfully applied patch MUST create a git commit automatically.
-
-Manual commits after successful patch application are not part of the workflow.
-
-The patch process is considered incomplete if:
-- files were changed but no commit was created;
-- the working tree remains dirty after successful validation.
-
-Every successful patch commit must:
-- include only changes from the current patch;
-- use an automatic commit message identifying the patch;
-- report the created commit hash in the patch result.
-
-The next patch must start from a clean git working tree created by the previous successful patch.
-
-AI-assisted development uses the dedicated `ai-development` branch. NeuroPatch automatically switches to that branch before applying a non-dry-run patch, creates it from the current clean HEAD when it does not yet exist, and establishes `origin/ai-development` as its upstream before modifying project files. `main` remains the human-controlled safety branch until changes are deliberately merged.
-
-Every successfully committed patch file is archived in the tracked repository path `patches/applied/<patch_id>.npatch.json` and removed from Downloads only after the commit succeeds. Failed patches remain in Downloads for diagnosis or retry. Archived patches are provenance records; they do not replace the current repository state, `PROJECT_STATE.md` or source inspection as sources of truth.
-
-After a successful patch, NeuroPatch prints a self-contained `SUCCESS HANDOFF` command addressed to the AI, not instructions for the user. The handoff text assumes the successful commit has already been pushed.
-
-When the user sends that final `SUCCESS HANDOFF` line back to the AI, it means:
-- the reported successful commit has been pushed to `ai-development`;
-- the AI must inspect the freshly pushed `ai-development` branch;
-- the AI must re-read `DEV_RULES.md` and `PROJECT_STATE.md`;
-- the AI must continue from the recorded next step;
-- the AI must generate and attach the next `.npatch.json` file in the same response rather than merely describing what it plans to do.
-
-The user does not need to restate the workflow or resend the complete success report unless additional diagnostic context is useful.
-
-## Documentation rules
-
-Any patch that changes:
-- architecture;
-- project structure;
-- completed features;
-- current focus;
-- next steps;
-
-MUST update docs/PROJECT_STATE.md.
-
-PROJECT_STATE.md synchronization is a mandatory development step.
-
-`docs/USER_GUIDE_RU.md` is the general user-facing command reference.
-`docs/NEURO_USAGE.md` is the dedicated guide for neural network training and database operations.
-
-Any patch that adds or changes:
-- a CLI command;
-- a command-line argument;
-- an interactive user command;
-- a tool under `tools/`;
-- a user-visible output format;
-- a required environment variable;
-- a standard workflow for tests, benchmarks, dataset generation, migrations, training, snapshots or patch application;
-
-MUST update `docs/USER_GUIDE_RU.md` in the same patch.
-
-Internal APIs that require no user action do not need to be duplicated in the user guide.
-
-## Project continuation rules
-
-Next steps in PROJECT_STATE.md are instructions for the next AI developer.
-
-They must include:
-- affected files or systems;
-- current architectural assumptions;
-- implementation direction;
-- migration risks;
-- validation expectations.
-
-Avoid vague instructions.
-
-## Architecture rules
-
-- Connect existing systems before creating new abstractions.
-- Keep responsibilities separated.
-- Avoid hidden dependencies.
-- Temporary architecture must include migration notes.
-- Do not perform partial migrations.
-
-## Project documentation structure
-
-DEV_RULES.md:
-How changes are made.
-
-PROJECT_STATE.md:
-Current state and next AI instructions.
-
-ARCHITECTURE.md:
-System structure.
-
-DECISIONS.md:
-Reasons behind important choices.
-
-ROADMAP.md:
-Long-term direction.
-
-USER_GUIDE_RU.md:
-Russian user-facing command reference, arguments and practical workflows.
-
-## Rule file ownership
-
-Do not create duplicate development rule files.
-
-Legacy development rules must be migrated into DEV_RULES.md.
+Обновлять соответствующий документ вместе с изменением поведения. Примеры должны соответствовать действующим CLI, а планы — быть отделены от реализованных возможностей.

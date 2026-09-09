@@ -1,3 +1,4 @@
+from poker.statistics.database.connection import statistics_connection
 import argparse
 import os
 import random
@@ -6,8 +7,6 @@ import sys
 # Подключаем пути
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from poker.agents import CallingStationAgent, LAGAgent, ManiacAgent, NitAgent, RandomAgent, TAGAgent
 from poker.agents.neural import NeuralAgent
@@ -15,14 +14,6 @@ from poker.api import ActionDecision
 from poker.arena.session import ArenaSession
 from poker.game.actions import PlayerAction
 from poker.learning.observation import LearningObservationEncoder
-from poker.statistics.database.facade import StatisticsFacade
-from poker.statistics.database.postgres_repositories import (
-    PostgresMemoryRepository,
-    PostgresPlayerRepository,
-    PostgresStatisticsRepository,
-)
-from poker.statistics.database.services import StatisticsService
-from poker.statistics.database.sqlalchemy_models import DeclarativeBase
 from poker.statistics.opponent_profile import OpponentProfileProvider
 
 ACTION_COMMANDS = {
@@ -82,22 +73,6 @@ class HumanAgent:
                 print("\nВыход из игры...")
                 sys.exit(0)
 
-def setup_statistics():
-    db_url = os.getenv("POKER_DATABASE_URL")
-    if not db_url:
-        return None, None
-
-    engine = create_engine(db_url, pool_pre_ping=True, pool_recycle=3600)
-    DeclarativeBase.metadata.create_all(engine)
-    Session = sessionmaker(engine)
-    session = Session()
-
-    service = StatisticsService(
-        player_repository=PostgresPlayerRepository(session),
-        statistics_repository=PostgresStatisticsRepository(session),
-        memory_repository=PostgresMemoryRepository(session),
-    )
-    return session, StatisticsFacade(service)
 
 def format_cards(cards):
 	return " ".join(str(card) for card in cards) or "-"
@@ -126,104 +101,102 @@ def main():
     parser.add_argument("--stochastic", action="store_true", help="Включить случайный выбор действий у нейросети (по умолчанию отключено)")
     args = parser.parse_args()
 
-    session, facade = setup_statistics()
-    provider = OpponentProfileProvider(facade) if facade else None
-    obs_encoder = LearningObservationEncoder(profile_provider=provider)
+    with statistics_connection() as (session, facade):
+        provider = OpponentProfileProvider(facade) if facade else None
+        obs_encoder = LearningObservationEncoder(profile_provider=provider)
 
-    agents = {}
+        agents = {}
 
-    # 1. Человек
-    agents["Human"] = HumanAgent("Human")
+        # 1. Человек
+        agents["Human"] = HumanAgent("Human")
 
-    # 2. Нейросеть
-    print(f"Загрузка модели {args.model}...")
-    agents["NeuralBot"] = NeuralAgent(
-        model_path=args.model,
-        agent_id="NeuralBot",
-        observation_encoder=obs_encoder,
-        profile_scope="combined",
-        stochastic=args.stochastic
-    )
+        # 2. Нейросеть
+        print(f"Загрузка модели {args.model}...")
+        agents["NeuralBot"] = NeuralAgent(
+            model_path=args.model,
+            agent_id="NeuralBot",
+            observation_encoder=obs_encoder,
+            profile_scope="combined",
+            stochastic=args.stochastic
+        )
 
-    # 3. Эвристика
-    for i, opp in enumerate(args.opponents):
-        name = f"{opp}_{i}"
-        if opp == "tag":
-            agents[name] = TAGAgent()
-        elif opp == "maniac":
-            agents[name] = ManiacAgent()
-        elif opp == "nit":
-            agents[name] = NitAgent()
-        elif opp == "calling_station":
-            agents[name] = CallingStationAgent()
-        elif opp == "lag":
-            agents[name] = LAGAgent()
-        elif opp == "random":
-            agents[name] = RandomAgent()
+        # 3. Эвристика
+        for i, opp in enumerate(args.opponents):
+            name = f"{opp}_{i}"
+            if opp == "tag":
+                agents[name] = TAGAgent()
+            elif opp == "maniac":
+                agents[name] = ManiacAgent()
+            elif opp == "nit":
+                agents[name] = NitAgent()
+            elif opp == "calling_station":
+                agents[name] = CallingStationAgent()
+            elif opp == "lag":
+                agents[name] = LAGAgent()
+            elif opp == "random":
+                agents[name] = RandomAgent()
 
-    print(f"\nСтол сформирован. Игроков: {len(agents)}")
-    print("Твои оппоненты:", ", ".join([k for k in agents if k != "Human"]))
+        print(f"\nСтол сформирован. Игроков: {len(agents)}")
+        print("Твои оппоненты:", ", ".join([k for k in agents if k != "Human"]))
 
-    # Чтобы движок мог передавать state в decision_observer, мы создадим враппер
+        # Чтобы движок мог передавать state в decision_observer, мы создадим враппер
 
-    def interactive_decision_observer(hand_state, legal_actions, decision):
-        # Печатаем действие ВСЕХ игроков
-        print(f">>> {hand_state.acting_player} совершает действие: {decision.action.value} {decision.amount if decision.amount > 0 else ''}")
+        def interactive_decision_observer(hand_state, legal_actions, decision):
+            # Печатаем действие ВСЕХ игроков
+            print(f">>> {hand_state.acting_player} совершает действие: {decision.action.value} {decision.amount if decision.amount > 0 else ''}")
 
-    arena_session = ArenaSession.create(players=agents.keys(), starting_stack=args.starting_stack, tournament_mode=False)
+        arena_session = ArenaSession.create(players=agents.keys(), starting_stack=args.starting_stack, tournament_mode=False)
 
-    hand_number = 1
-    players_list = list(agents.keys())
+        hand_number = 1
+        players_list = list(agents.keys())
 
-    while True:
-        if arena_session.is_finished():
-            print("\nУ кого-то закончились фишки! Игра окончена.")
-            break
+        while True:
+            if arena_session.is_finished():
+                print("\nУ кого-то закончились фишки! Игра окончена.")
+                break
 
-        print(f"\n\n{'*'*20} РАЗДАЧА {hand_number} {'*'*20}")
-        dealer_name = players_list[(hand_number - 1) % len(players_list)]
+            print(f"\n\n{'*'*20} РАЗДАЧА {hand_number} {'*'*20}")
+            dealer_name = players_list[(hand_number - 1) % len(players_list)]
 
-        try:
-            # Запоминаем стеки ДО раздачи, чтобы правильно посчитать выигрыш
-            stacks_before = dict(arena_session.stacks)
+            try:
+                # Запоминаем стеки ДО раздачи, чтобы правильно посчитать выигрыш
+                stacks_before = dict(arena_session.stacks)
 
-            result = arena_session.play_next_hand(
-                agents,
-                seed=random.randint(0, 1000000),
-                dealer_name=dealer_name,
-                decision_observer=interactive_decision_observer
-            )
+                result = arena_session.play_next_hand(
+                    agents,
+                    seed=random.randint(0, 1000000),
+                    dealer_name=dealer_name,
+                    decision_observer=interactive_decision_observer
+                )
 
-            # Показываем шоудаун, если он был
-            if result.events and result.events[-1].type == "showdown":
-                print("\n--- ШОУДАУН ---")
-                board = result.events[-1].data.get("board", [])
-                print(f"Борд: {' '.join(board)}")
-                results = result.events[-1].data.get("results", {})
-                for player_name, res in results.items():
-                    cards = res.get("cards", [])
-                    rank = res.get("rank", "")
-                    print(f"{player_name} открывает {cards} (Комбинация: {rank})")
+                # Показываем шоудаун, если он был
+                if result.events and result.events[-1].type == "showdown":
+                    print("\n--- ШОУДАУН ---")
+                    board = result.events[-1].data.get("board", [])
+                    print(f"Борд: {' '.join(board)}")
+                    results = result.events[-1].data.get("results", {})
+                    for player_name, res in results.items():
+                        cards = res.get("cards", [])
+                        rank = res.get("rank", "")
+                        print(f"{player_name} открывает {cards} (Комбинация: {rank})")
 
-            # Показываем результаты раздачи
-            print("\n--- Итоги раздачи ---")
-            for player, stack in result.final_stacks.items():
-                diff = stack - stacks_before[player]
-                diff_str = f"+{diff}" if diff > 0 else str(diff)
-                print(f"{player}: {stack} ({diff_str})")
+                # Показываем результаты раздачи
+                print("\n--- Итоги раздачи ---")
+                for player, stack in result.final_stacks.items():
+                    diff = stack - stacks_before[player]
+                    diff_str = f"+{diff}" if diff > 0 else str(diff)
+                    print(f"{player}: {stack} ({diff_str})")
 
-            hand_number += 1
-            input("\nНажми Enter для следующей раздачи...")
+                hand_number += 1
+                input("\nНажми Enter для следующей раздачи...")
 
-        except (EOFError, KeyboardInterrupt):
-            print("\nИгра прервана пользователем.")
-            break
-        except Exception as e:
-            print(f"\n[ОШИБКА ДВИЖКА] Произошел сбой в раздаче: {e}")
-            break
+            except (EOFError, KeyboardInterrupt):
+                print("\nИгра прервана пользователем.")
+                break
+            except Exception as e:
+                print(f"\n[ОШИБКА ДВИЖКА] Произошел сбой в раздаче: {e}")
+                break
 
-    if session:
-        session.close()
 
 if __name__ == "__main__":
     main()

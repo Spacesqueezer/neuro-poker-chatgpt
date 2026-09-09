@@ -3,7 +3,7 @@ import time
 
 from sqlalchemy.exc import OperationalError
 
-from poker.statistics.database.models import (
+from poker.statistics.database.records import (
 	PlayerPositionStatisticsRecord,
 	PlayerRecord,
 	PlayerStatisticsRecord,

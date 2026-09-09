@@ -85,8 +85,9 @@ models/
 *.onnx
 *.ckpt
 
-# Разрешаем сохранять лучших агентов (в папке ready_agents можно хранить .pt и .md)
-!ready_agents/
+# Результаты обучения и отбора
+/ready_agents/
+/tournament_winner/
 
 checkpoints/
 
@@ -144,18 +145,8 @@ Thumbs.db
 *.pickle
 *.pkl
 
-tools/neuropatch_data/
-tools/snapshots/
 config/simulation.json
-.neuropatch/
-sound/*.db
-<<<<<<< Updated upstream
-tmp/
-*.png
-tests_tmp
-__pycache__/
-*.pyc
-=======
-ready_agents
-poker.db
->>>>>>> Stashed changes
+/tests_tmp/
+/poker.db
+/captures/
+.ruff_cache/

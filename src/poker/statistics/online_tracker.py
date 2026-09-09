@@ -1,4 +1,4 @@
-from poker.statistics.database.models import AgentMemoryRecord
+from poker.statistics.database.records import AgentMemoryRecord
 from poker.statistics.hand_mapping import HandStatisticsMapper
 
 

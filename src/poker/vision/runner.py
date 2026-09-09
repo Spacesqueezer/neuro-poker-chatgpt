@@ -26,7 +26,7 @@ from poker.vision.project_paths import (
 )
 from poker.vision.recognition.card_recognizer import CardRecognizer
 from poker.vision.state.screen_state import (
-	VisionScreenState,
+	ScreenState,
 	street_from_board,
 )
 from poker.vision.tracking.hand_state import HandStateTracker
@@ -811,7 +811,7 @@ def run():
 			last_pot_scan = now
 
 		if action_state is not None:
-			vision_state = VisionScreenState(
+			vision_state = ScreenState(
 				is_my_turn=action_state.is_my_turn,
 				street_name=hand_state.street_name,
 				board_cards=list(board_values),

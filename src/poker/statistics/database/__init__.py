@@ -4,7 +4,7 @@ from poker.statistics.database.memory import (
 	MemoryPlayerRepository,
 	MemoryStatisticsRepository,
 )
-from poker.statistics.database.models import (
+from poker.statistics.database.records import (
 	AgentMemoryRecord,
 	PlayerRecord,
 	PlayerStatisticsRecord,
@@ -17,6 +17,11 @@ from poker.statistics.database.repositories import (
 from poker.statistics.database.services import StatisticsService
 
 __all__ = [
+	"StatisticsFacade",
+	"StatisticsService",
+	"AgentMemoryRecord",
+	"PlayerRecord",
+	"PlayerStatisticsRecord",
 	"PlayerRepository",
 	"StatisticsRepository",
 	"AgentMemoryRepository",
