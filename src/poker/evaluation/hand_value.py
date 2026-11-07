@@ -7,6 +7,9 @@ def build_tiebreaker(cards, rank):
 	ranks = [card.rank.value for card in cards]
 	counts = Counter(ranks)
 
+	if rank in (HandRank.STRAIGHT, HandRank.STRAIGHT_FLUSH):
+		return (5 if set(ranks) == {14, 2, 3, 4, 5} else max(ranks),)
+
 	if rank == HandRank.FOUR_OF_A_KIND:
 		quad = max(value for value, count in counts.items() if count == 4)
 		kicker = max(value for value, count in counts.items() if count == 1)

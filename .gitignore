@@ -149,4 +149,37 @@ config/simulation.json
 /tests_tmp/
 /poker.db
 /captures/
+/data/hud/
 .ruff_cache/
+
+# Local environment and IDE
+/%SystemDrive%/
+/.run/
+.idea/
+.vscode/
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Test and coverage reports
+.coverage
+htmlcov/
+test-results/
+allure-results/
+
+# Local secrets and databases
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log

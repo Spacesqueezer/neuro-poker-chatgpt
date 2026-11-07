@@ -9,6 +9,13 @@ class HandStatisticsMapper:
 	def map_hand(self, hand_history):
 		if hasattr(hand_history, "to_dict"):
 			hand_history = hand_history.to_dict()
+		if any(
+			(e.type if hasattr(e, "type") else e.get("type")) == "bomb_pot_start"
+			for e in hand_history.get("events", [])
+		):
+			# The legacy collector divides VPIP/PFR by all hands. Without a
+			# separate no-preflop denominator it would silently distort profiles.
+			raise ValueError("Bomb pot statistics require a separate variant-aware collector")
 
 		players = {
 			player["name"]: self._map_player(player)

@@ -43,6 +43,7 @@ class OpponentRangeState:
 	river_calls: int = 0
 	river_aggression: int = 0
 	river_aggression_ratio: float = 0.0
+	bomb_pot: bool = False
 
 	@property
 	def preflop_action_class(self):
@@ -82,18 +83,7 @@ class PositionRangeModel:
 		profile = self._profile_for(player)
 		exponent = self._range_exponent_from_state(range_state)
 		raw_weights = [
-			(
-				self._weight(combo) ** exponent
-				* self._evidence_multiplier(combo, range_state)
-				* self._board_evidence_multiplier(combo, state, range_state)
-				* self._profile_evidence_multiplier(
-					combo,
-					state,
-					range_state,
-					profile,
-				)
-			)
-			+ 0.002
+			self._combo_weight(combo, state, range_state, exponent, profile)
 			for combo in combos
 		]
 		total = sum(raw_weights)
@@ -102,6 +92,14 @@ class PositionRangeModel:
 			(combo, weight / total)
 			for combo, weight in zip(combos, raw_weights)
 		)
+
+	def _combo_weight(self, combo, state, range_state, exponent, profile):
+		return (
+			self._weight(combo) ** exponent
+			* self._evidence_multiplier(combo, range_state)
+			* self._board_evidence_multiplier(combo, state, range_state)
+			* self._profile_evidence_multiplier(combo, state, range_state, profile)
+		) + 0.002
 
 	def sample_hole_cards(self, available, player, state, rng):
 		distribution = self.combo_distribution(available, player, state)
@@ -168,6 +166,7 @@ class PositionRangeModel:
 
 		return OpponentRangeState(
 			position=player.position,
+			bomb_pot=getattr(state, "hand_variant", "standard") == "bomb-pot-single-board/1",
 			preflop_calls=preflop_calls,
 			preflop_raise_level=preflop_raise_level,
 			preflop_all_in=preflop_all_in,
@@ -189,7 +188,10 @@ class PositionRangeModel:
 		)
 
 	def _range_exponent_from_state(self, range_state):
-		exponent = _POSITION_EXPONENT.get(range_state.position, 2.5)
+		# All participants see the forced flop, with no positional preflop selection.
+		exponent = (
+			0.0 if range_state.bomb_pot else _POSITION_EXPONENT.get(range_state.position, 2.5)
+		)
 		exponent += {
 			"unopened": 0.0,
 			"call": 0.30,
@@ -224,7 +226,7 @@ class PositionRangeModel:
 		range_state,
 		profile,
 	):
-		if profile is None or profile.hands <= 0:
+		if range_state.bomb_pot or profile is None or profile.hands <= 0:
 			return 1.0
 
 		reliability = min(1.0, profile.hands / 200.0)

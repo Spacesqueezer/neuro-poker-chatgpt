@@ -1,6 +1,6 @@
 # Запуск и обслуживание
 
-[Все документы](../README.md) · [Обучение](LEARNING.md) · [Vision](VISION.md)
+[Все документы](../README.md) · [Обучение](LEARNING.md) · [HUD](VISION.md)
 
 Все команды выполняются из корня проекта. Примеры предназначены для PowerShell.
 
@@ -11,7 +11,7 @@
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev,ml,vision]"
+python -m pip install -e ".[dev,ml,hud]"
 python --version
 python -m pip check
 ```
@@ -21,7 +21,7 @@ python -m pip check
 В IDE выбрать этот же интерпретатор.
 
 Extras: `dev` — pytest, coverage, Ruff и mypy; `ml` — PyTorch и Gymnasium;
-`vision` — MSS, OpenCV, pytesseract и Pillow. Для одной симуляции достаточно
+`hud` — MSS, OpenCV, pytesseract и Pillow. Для одной симуляции достаточно
 `python -m pip install -e ".[dev]"`. Tesseract устанавливается отдельно.
 
 ## Проверки
@@ -152,11 +152,14 @@ python -m pytest tests/statistics/test_postgres_integration.py -q
 | Проверки | `stress_poker.py`, `quality_check.py` | Этот файл и [разработка](DEV_RULES.md) |
 | БД | `db_manager.py` | Этот файл |
 | Датасеты | `generate_dataset.py`, `import_teacher_dataset.py` | [Обучение](LEARNING.md) |
+| Новая модель текущего состояния | `prepare_snapshot_policy.py`, `train_snapshot_policy.py`, `audit_snapshot_policy.py`, `replay_snapshot_advice.py` | [Обучение и офлайн-советник](LEARNING.md) |
 | Обучение | `train_imitation.py`, `train_rl.py`, `run_self_play.py`, `rl_orchestrator.py`, `early_stopping_orchestrator.py` | [Обучение](LEARNING.md) |
 | Оценка | `benchmark_expert.py`, `benchmark_neural.py`, `run_tournament.py`, `play_vs_model.py`, `pipeline_diagnostics.py` | [Обучение](LEARNING.md) |
 | Solver | `benchmark_mccfr.py`, `export_mccfr_strategy.py`, `export_teacher_records.py`, `evaluate_solver_policy.py`, `smoke_solver_artifacts.py` | [Обучение](LEARNING.md) |
-| Vision | `run_vision_overlay.py`, `run_advisor.py`, `test_pokerdom_parser.py` | [Vision](VISION.md) |
-| Разметка | `label_card_samples.py`, `label_name_samples.py`, `clean_name_templates.py`, `rebuild_dash_underscore_templates.py` | [Vision](VISION.md) |
+| HUD | `run_hud.py`, `hud_players.py` | [HUD](VISION.md) |
 
 `manual_scenarios.py` содержит сценарии для ручного режима, а не отдельную команду запуска.
 Для CLI на argparse используйте `--help`; графические инструменты могут запускаться сразу.
+
+Статистика живого HUD хранится в `data/hud/players.sqlite3` без Postgres.
+Перенос через кнопку «Копия БД» и правила счётчика описаны в [HUD](VISION.md).

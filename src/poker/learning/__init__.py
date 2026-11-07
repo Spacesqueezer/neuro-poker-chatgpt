@@ -7,11 +7,6 @@ from poker.learning.dataset import (
 	LearningDatasetCapture,
 	LearningDatasetWriter,
 )
-from poker.learning.generation import (
-	DatasetGenerationConfig,
-	DatasetGenerationResult,
-	LearningDatasetGenerator,
-)
 from poker.learning.import_teacher import TeacherRecordImporter
 from poker.learning.observation import (
 	LearningObservation,
@@ -34,3 +29,15 @@ __all__ = [
 	"LearningSampleBuilder",
 	"TeacherRecordImporter",
 ]
+
+
+def __getattr__(name):
+    # Dataset generation loads agents and their optional PyTorch dependency.
+    # Importing the pure HUD contract must not initialize that runtime.
+    if name in {"DatasetGenerationConfig", "DatasetGenerationResult", "LearningDatasetGenerator"}:
+        from importlib import import_module
+
+        value = getattr(import_module("poker.learning.generation"), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

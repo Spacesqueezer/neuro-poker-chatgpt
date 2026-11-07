@@ -11,7 +11,7 @@ def has_straight(ranks):
 	if len(unique) != 5:
 		return False
 
-	return unique[-1] - unique[0] == 4
+	return unique[-1] - unique[0] == 4 or unique == [2, 3, 4, 5, 14]
 
 
 def has_flush(cards):

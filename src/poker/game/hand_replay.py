@@ -17,6 +17,17 @@ class ReplayVerification:
 
 class HandReplayVerifier:
 	def verify(self, history):
+		starts = [e for e in history.events if e.type == "bomb_pot_start"]
+		if starts and (
+			len(starts) != 1
+			or history.events[0] is not starts[0]
+			or starts[0].data.get("schema_version") != "bomb-pot-start/1"
+			or type(starts[0].data.get("ante")) is not int
+			or starts[0].data["ante"] <= 0
+		):
+			return ReplayVerification(
+				"invalid", history.hand_id, False, ("Invalid bomb pot start",),
+			)
 		if history.seed is None:
 			return self._verify_structural(history)
 		return self._verify_exact(history)
@@ -37,6 +48,9 @@ class HandReplayVerifier:
 			Dealer(seed=history.seed),
 			small_blind=history.small_blind,
 			big_blind=history.big_blind,
+			bomb_pot_ante=next(
+				(e.data["ante"] for e in history.events if e.type == "bomb_pot_start"), None,
+			),
 		)
 		controller.start_hand(state)
 

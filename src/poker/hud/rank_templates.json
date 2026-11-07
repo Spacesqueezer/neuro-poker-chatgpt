@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "description": "PokerDom corner glyphs from previously visually verified captures; excludes evaluation session 20260910_202646",
+  "templates": {
+    "A": {
+      "bits": "0000000000000003ffff00000003ffff80000003ffff80000003ffff80000007ffffc000000fffffe000000fffffe000000fffffe000000fffffe000000fffffe000000fffffe000001ffffff000001ffffff000001ffcfff000001ffc7ff000001ffc7ff000001ffc7ff000001ffc7ff000003ff87ff800007ff87ffc00007ff83ffc00007ff83ffc00007ff83ffc00007ff83ffc0000fff83ffc0000fff01ffc0000ffe00ffe0000ffe00ffe0000ffe00ffe0000ffe00fff0000ffe00fff0001ffe00fff0001ffc007ff0001ffc007ff0001ffc007ff0001ffc007ff0001ffc007ff8001ffc007ffc007ffc007ffc007ffffffffc007ffffffffc007ffffffffc007ffffffffe007ffffffffe007ffffffffe00fffffffffe00fffffffffe00fffffffffe00fffffffffe00ffe0000fff00ffe0000fff80ffe0000fff81ffe0000fff83ffe00007ff83ffe00007ff83ffe00007ff83ffc00007ffc3ffc00007ffc7ffc00007ffc7ffc00007ffc7ff800003ffc3ff000001ff8000000000000",
+      "source": "captures\\hud_20260909_083011_127917_238120\\table.png",
+      "roi": [
+        887,
+        563,
+        102,
+        147
+      ],
+      "crop_sha256": "d43b9b4f565c6338edf7d7099c8cefbdf229a346306d90a44c72e7771cc08472"
+    },
+    "8": {
+      "bits": "0000000000000003ffff8000001fffffc000003fffffe000007ffffffc0000fffffffe0001ffffffff0003ffffffff8003ffffffff8007ffffffffc007ffffffffc007ffffffffc007ffc007ffc007ff8003ffc007ff0001ffc007fe0001ffc007fe0001ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0001ffc007ff0001ffc007ff8003ffc007ffc007ffc007ffe03fffc003ffffffff8003ffffffff8003ffffffff8000fffffffe0000fffffffe00007ffffffc00007ffffffc0000fffffffe0000fffffffe0003ffffffff8003ffc01fff8003ff800fff8007ff0001ffc007ff0001ffc007ff0001ffc007fe0001ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0001ffc007fe0001ffc007ff0001ffc007ff8003ffc007ffc007ffc007ffffffffc007ffffffffc007ffffffffc003ffffffff8003ffffffff8001ffffffff0000fffffffe00007ffffffc00003fffffe000001fffffc0000001ffff0000000000000000",
+      "source": "captures\\hud_20260909_083011_127917_238120\\table.png",
+      "roi": [
+        994,
+        563,
+        103,
+        149
+      ],
+      "crop_sha256": "4c8ebb128843879ec0d3b88b9aa1555ef8b2a5acc71db3800eefcda086562c27"
+    },
+    "5": {
+      "bits": "00000000000003ffffffff8003ffffffff8003ffffffff8007ffffffff8007ffffffff8007ffffffff8007ffffffff8007ffffffff8007ffffffff8007ffffffff0007ff0000000007ff0000000007ff0000000007ff0000000007ff0000000007ff0000000007ff0000000007ff0000000007ff0000000007ff0000000007ff0000000007ff1fff800007ff1fffc00007ffbffff00007fffffffe0007ffffffff0007ffffffff8007ffffffff8007ffffffffc007ffffffffc007ffe007ffc003ffc003ffc003ff8001ffc001ff0000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc001fe0000ffc003fe0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0001ffc003ff8003ffc003ffc007ffc003ffffffffc003ffffffffc001ffffffffc000ffffffff8000ffffffff80007fffffff00003ffffffe00001ffffffc000007ffffe0000003ffffc0000000fffe0000000000000000",
+      "source": "captures\\hud_20260909_083011_127917_238120\\table.png",
+      "roi": [
+        1102,
+        563,
+        102,
+        149
+      ],
+      "crop_sha256": "2bf03b11e99972159218d1031e240dfc21f81a797351903ebda98819c9020e11"
+    },
+    "7": {
+      "bits": "00000000000003fffffffe0007ffffffff0007ffffffff8007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc000000007ff8000000007ff800000000fff800000000fff800000001fff000000003ffe000000003ffe000000003ffe000000003ffe000000007ffc000000007ffc00000000fff800000000fff000000000fff000000001fff000000003fff000000003ffe000000003ffe000000003ffc000000007ff8000000007ff8000000007ff800000000fff800000001fff000000001fff000000001fff000000003ffe000000003ffe000000007ffe00000000fffc00000000fff800000001fff800000001fff800000001fff000000001fff000000003fff000000003fff000000003ffc000000003ffc000000007ffc00000000fff800000000fff800000001fff000000001ffe000000001ffe000000003ffe000000007ffe000000007ffc000000007ffc000000007ffc00000000fff8000000000000000000",
+      "source": "captures\\hud_20260909_083011_127917_238120\\table.png",
+      "roi": [
+        1048,
+        955,
+        102,
+        144
+      ],
+      "crop_sha256": "d697fa309ffc923fa6c951467c6cbdb2d45bad20f604ea79eba637cbe4965e26"
+    },
+    "4": {
+      "bits": "0000000000000000007fe000000003fff000000003fff00000000ffff80000001ffff80000001ffff80000001ffff80000003ffff80000003ffff80000007ffff8000000fffff8000000fffff8000000fffff8000000fffff8000001ffbff8000001ffbff8000001ffbff8000007fe3ff800000ffe3ff800000ffe3ff800000ffc3ff800001ffc3ff800001ff83ff800003ff03ff800007ff03ff800007ff03ff800007fe03ff800007fe03ff80000ffc03ff80000ffc03ff80000ffc03ff80003ffc03ff80003ff803ff80003ff003ff80007ff003ff8000ffe003ff8001ffe003ff8001ffe003ff8003ffc003ff8003ff8003ff8003ffc003ffc003ffffffffff83ffffffffffc3ffffffffffc3ffffffffffc3ffffffffffc3ffffffffffc3ffffffffffc3ffffffffffc3ffffffffffc3ffffffffffc1ffffffffff80000003ffc000000003ff8000000003ff8000000003ff8000000003ff8000000003ff8000000003ff8000000003ff8000000003ff8000000003ff800000000000000",
+      "source": "captures\\hud_20260909_083011_127917_238120\\table.png",
+      "roi": [
+        1156,
+        955,
+        102,
+        144
+      ],
+      "crop_sha256": "6faf5beb04f0cca174e1dd0a2d27d7e4c04c37941d2f83224e63a51ce0d626c9"
+    },
+    "Q": {
+      "bits": "000000000000001ffffff000003ffffff800007ffffffc0000fffffffe0001ffffffff0003ffffffff8007ffffffffc007ffffffffe00fffffffffe00fffffffffe00fffffffffe00fff0001ffe00ffe0000ffe00ffe0000ffe00ffe0000ffe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00007fe00ffe00087fe00ffe001fffe00ffe003fffe00ffe007fffe00ffe00ffffe00ffe01ffffe00ffe01ffffe00fff01ffffe00fff80ffffe00fffc1ffffe00fffffffffc007ffffffff8007ffffffff8003ffffffffc001ffffffffe001fffffffff000fffffffff000fffffffff0007ffffffff0000ffffffff0000000003fe0000000001fc0000000000f80000000000000",
+      "source": "captures\\hud_20260909_083114_816999_574191\\table.png",
+      "roi": [
+        887,
+        563,
+        102,
+        147
+      ],
+      "crop_sha256": "90c8d082f06f85df2ecc2173b9abd037bf033e50a814057402323de1762e0bab"
+    },
+    "J": {
+      "bits": "00000000000000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0001ffc007fe0001ffc007ff0001ffc007ff8003ffc007ffc007ffc007ffffffffc007ffffffff8007ffffffff8003ffffffff0003fffffffe0001fffffffe0000fffffffe00007ffffff000000fffffe0000007ffffc0000001ffff0000000000000000",
+      "source": "captures\\hud_20260909_083114_816999_574191\\table.png",
+      "roi": [
+        994,
+        563,
+        103,
+        148
+      ],
+      "crop_sha256": "ced879f9d21511c094cabd33a303542986610180333303416a6cb3c0d5843edc"
+    },
+    "T": {
+      "bits": "0000000000003f00007ffc007fc007ffff807fe00fffffc07fe01fffffe07fe03ffffff07fe07ffffff87fe0fffffff87fe0fffffffc7fe0fffffffc7fe0fffffffc7fe0fffffffc7fe0fff03ffc7fe0ffe01ffc7fe0ffc01ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffc00ffc7fe0ffe01ffc7fe0fff03ffc7fe0fff87ffc7fe0fffffffc7fe0fffffffc7fe0fffffffc7fe0fffffffc7fe07ffffff87fe03ffffff87fe03ffffff87fe01fffffe07fe00fffffe07fe003ffff00000000000000",
+      "source": "captures\\hud_20260909_083254_591770_425066\\table.png",
+      "roi": [
+        1048,
+        955,
+        102,
+        144
+      ],
+      "crop_sha256": "9a1cf0b02ed72d95d4f2d3b9114c700868337f84224a457965c6eb6d7650efd8"
+    },
+    "3": {
+      "bits": "00000000000000001ff800000003ffff80000007ffffc000001ffffff000003ffffff800007ffffffc0000fffffffe0001ffffffff0003ffffffff8003ffffffff8007ffffffffc007ffc007ffc007ff8003ffc007ff0001ffc007ff0000ffc007ff0000ffc007fe0000ffc007fe0000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000001ffc000000003ffc000000007ffc000000fffffc000001fffffc000001fffff8000001ffffe0000001ffffe0000001ffffc0000001ffff00000001ffff80000001ffffc0000001fffff800000001fff800000000fff8000000001ffc000000001ffc000000001ffc000000000ffc000000000ffc000000000ffc000000000ffc007ff0000ffc007ffc000ffc007ffc000ffc007ffc000ffc007ffc001ffc007ffc001ffc007ffc003ffc007fff80fffc003ffffffffc003ffffffffc003ffffffff8003ffffffff8001ffffffff0000fffffffe00007ffffffc00003ffffff800001ffffff0000003ffff8000000000000000",
+      "source": "captures\\hud_20260909_083254_591770_425066\\table.png",
+      "roi": [
+        1156,
+        955,
+        102,
+        144
+      ],
+      "crop_sha256": "4e83158f5c52484a01d12dc3dc87dcb4dcd6f3816f5c3a54d409a0e8c836966c"
+    },
+    "6": {
+      "bits": "0000000000000003fffffc00001ffffffc00003ffffffc00007ffffffc0000fffffffc0001fffffffc0003fffffffe0003fffffffc0007fffffffc0007fffffffc0007ffe000000007ffc000000007ff8000000007ff0000000007fe0000000007fe0000000007fe0000000007fe0000000007fe0000000007fe0000000007fe0000000007fe0000000007ff0000000007ffffff000007ffffffe00007fffffff80007fffffffc0007fffffffe0007fffffffe0007ffffffff0007ffffffff8007ffffffff8007ffffffffc007ffffffffc007fe0007ffc007fe0003ffc007fe0001ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007fe0000ffc007ff0001ffc007ff0001ffc007ff0001ffc007ff8003ffc007ffc007ffc007ffffffffc003ffffffff8003ffffffff8001ffffffff0000fffffffe0000fffffffc0000fffffff800001ffffff000000fffffc0000007ffff800000003ff80000000000000000",
+      "source": "captures\\hud_20260909_084813_314087_003bd0\\table.png",
+      "roi": [
+        610,
+        522,
+        103,
+        151
+      ],
+      "crop_sha256": "43a14b50ecbbccf1b0ae94bb9aa8285267cf96b40ce5eed219dfb83c5da7a647"
+    },
+    "K": {
+      "bits": "0000000000000ff80001ffc01ff80003ffc01ff80003ffc01ff80003ffc01ff80007ff801ff8000fff801ff8001fff801ff8001fff001ff8003ffe001ff8007ffc001ff8007ffc001ff800fff8001ff800fff0001ff801ffe0001ff801ffe0001ff803ffe0001ff807ffc0001ff80fff00001ff80fff00001ff81fff00001ff83ffe00001ff83ffc00001ff83ffc00001ff87ff800001ff8fff000001ff8ffe000001ff9ffe000001ffbffe000001fffffe000001fffffe000001fffffe000001ffffff000001ffffff000001ffffff000001ffffffc00001ffffffe00001ffffffe00001ffffffe00001fff8fff00001fff87ff80001fff87ffc0001ffc07ffc0001ffc03ffe0001ffc01ffe0001ff800ffe0001ff800fff0001ff8007ff8001ff8007ff8001ff8007ffc001ff8003ffe001ff8001ffe001ff8001ffe001ff8000fff801ff80007ff801ff80003ff801ff80003ffc01ff80001ffc01ff80001ffe01ff80001fff01ff80000fff01ff800007ff01ff800003ff8000000000000",
+      "source": "captures\\hud_20260909_084813_314087_003bd0\\table.png",
+      "roi": [
+        665,
+        886,
+        103,
+        146
+      ],
+      "crop_sha256": "f7320a42d3ac8d8c556eefe30d9de8193be480c96aad9824df81b1bc7599c94f"
+    },
+    "2": {
+      "bits": "0000000000000003ffff8000001ffffff000003ffffff800007ffffffe0000fffffffe0000fffffffe0000ffffffff8001ffffffffc003ffffffffc003ffffffffc003ffe00fffc003ffe00fffc007ffc001ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc003fe0000ffc001fc0000ffc000000001ffc000000001ffc000000003ffc000000007ffc00000000fff800000001fff800000003fff000000007ffe00000003fffe00000003fffe00000007fff00000001fffe00000001fffc00000003fff800000007fff00000003fffe00000007fffc0000000ffff80000001fffe00000003fffc00000007fff80000000ffff00000001fffe00000003fffc00000003fff800000003fff000000003ffe000000007ffc000000007ffc000000007ffc000000007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc007ffffffffc0000000000000",
+      "source": "captures\\hud_20260909_225454_223431_66f9de\\table.png",
+      "roi": [
+        537,
+        467,
+        102,
+        148
+      ],
+      "crop_sha256": "2fc82a328a70178dbea9967ea2ba0a65904f304ee4bda5c4c08a36f98121598d"
+    },
+    "9": {
+      "bits": "0000000000000000ffff80000007ffffc000000fffffe000001ffffff80000fffffffc0000fffffffe0000ffffffff0001ffffffff0003ffffffff8003ffffffffc003ffffffffc007ffe007ffc007ffe007ffc007ffc003ffc007ff0003ffc007ff0001ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffc007ff0000ffe007ff0000ffe007ff8000ffe007ffc000ffc003ffffffffc003ffffffffc003ffffffffe003ffffffffe001ffffffffe000ffffffffe000ffffffffc0007fffffffc0003fffffffc0000fffffffc00001ffffffc000000001ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffe000000001ffe000000003ffe000000003ffe000000007ffc000000007ffc00000001fffc0007fffffffc0007fffffffc000ffffffff80007fffffff00007ffffffe00007ffffffe00007ffffffe00007ffffff000007fffffe000007fffff8000000000000000",
+      "source": "artifacts\\hud\\sessions\\session_20260910_073154_ab5926\\frames\\00000398.jpg",
+      "roi": [
+        647,
+        470,
+        102,
+        147
+      ],
+      "crop_sha256": "9d3e30aeec526d1afe091ae449a47b00565ca260a4d7cebfb3536567654cc560"
+    }
+  },
+  "alternate_templates": [
+    {
+      "rank": "T",
+      "bits": "0000000000007ff003ffffc07ff003ffffc07ff007ffffe07ff00ffffff07ff01ffffffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff03ff81ffc7ff03ff01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe007fc7ff03fe007fc7ff03fe007fc7ff03fe007fc7ff03fe00ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03fe01ffc7ff03ff01ffc7ff03ff81ffc7ff03ff81ffc7ff03ff81ffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff03ffffffc7ff01ffffffc7ff00ffffff07fe007ffffe01fc000ffff001fc0007fff00000000000000",
+      "source": "artifacts/hud/sessions/session_20261005_035204_be9e45/ocr_frames/00000082.png",
+      "roi": [
+        389,
+        340,
+        70,
+        97
+      ],
+      "card_width_range": [
+        65,
+        80
+      ],
+      "card_height_range": [
+        90,
+        115
+      ]
+    },
+    {
+      "rank": "9",
+      "source": "artifacts/hud/sessions/session_20261014_041306_74a3f9/ocr_frames/00001404.png",
+      "source_sha256": "078b89e306bab5e1f0b1513eb8ddc89f99b9c43361dc1cd777d9f1ee70df4b6e",
+      "roi": [
+        512,
+        376,
+        69,
+        97
+      ],
+      "card_width_range": [
+        65,
+        80
+      ],
+      "card_height_range": [
+        90,
+        115
+      ],
+      "bits": "0000000000000003ffffc0000003ffffc000001fffffe000003ffffff000007ffffff80000fffffffc0000fffffffe0000ffffffff0001ffffffff8003ffffffffc003ffffffffc003ff8007ffc003ff8003ffc003ff8001ffc003ff0001ffc003fe0001ffc003fc0001ffc003fc0001ffc003fc0001ffc003fc0001ffc003fc0001ffc003fc0001ffc003fc0001ffc003fe0001ffc003ff8001ffc003ff8001ffc003ffe001ffc003ffe001ffc003ffffffffc003ffffffffc000ffffffffc000ffffffffc000ffffffffc000ffffffffc0000fffffffc0000fffffffc000000007ffc000000007ffc000000003ffc000000001ffc000000001ffc000000001ffc000000001ffc000000001ffc000000001ffc000000001ffc000000001ffc000000001ffc000000001ffc000000003ffc000000007ffc0007fffffffc000ffffffffc000ffffffff8000ffffffff0000fffffffe0000fffffffc0000fffffff80000fffffff00000ffffffe00000ffffff000000fffffe0000000000000000"
+    },
+    {
+      "rank": "T",
+      "source": "artifacts/hud/sessions/session_20261015_090831_f9d6b3/ocr_frames/00001562.png",
+      "source_sha256": "b42a5d09b814f15f290dfd54a8d0b6f655c62fd09a87df7a4196c59b2ca93e7d",
+      "roi": [
+        597,
+        435,
+        84,
+        125
+      ],
+      "card_width_range": [
+        81,
+        90
+      ],
+      "card_height_range": [
+        116,
+        132
+      ],
+      "bits": "0000000000000000000000007f8007ffffc07fc00fffffe07fe01ffffff87fe03ffffff87fe07ffffffc7fe07ffffffe7fe07ffffffe7fe07ffffffe7fe07ffffffe7fe07ffffffe7fe07ff81ffe7fe07ff00ffe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07fe007fe7fe07ff00ffe7fe07ff81ffe7fe07ffffffe7fe07ffffffe7fe07ffffffe7fe07ffffffe7fe07ffffffe7fe07ffffffc7fe03ffffff87fe01ffffff87fc00fffffe07f8007ffffc0000000000000000000000000000000000000"
+    },
+    {
+      "rank": "6",
+      "source": "artifacts/hud/sessions/session_20261015_110216_51a6bd/ocr_frames/00001195.png",
+      "source_sha256": "7b12e2c6830d89eb9c11042d3473d8d583593536eedb64b1a11cf9e2d544d5f3",
+      "roi": [
+        687,
+        435,
+        84,
+        124
+      ],
+      "card_width_range": [
+        81,
+        90
+      ],
+      "card_height_range": [
+        116,
+        132
+      ],
+      "bits": "0000000000000007ffffffc0000fffffffc0007fffffffc000ffffffffc001ffffffffc003ffffffffc003ffffffffc003ffffffffc007ffffffffc00fffffffffc00fff800000000fff000000000ffe000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffc000000000ffe000000000ffffffff8000ffffffff8000ffffffffe000fffffffff000fffffffffc00fffffffffc00fffffffffc00ffffffffff00ffffffffff00ffffffffff00ffe0001fff00ffc0000fff00ffc00007ff00ffc00003ff00ffc00003ff00ffc00003ff00ffc00003ff00ffc00003ff00ffc00003ff00ffc00003ff00ffc00003ff00ffc00003ff00ffc00003ff00ffe00003ff00fff00003ff00fff00007ff00fffc003fff00fffc003fff00ffffffffff007ffffffffe003ffffffffc003ffffffffc003ffffffffc001ffffffff8000ffffffff00001ffffffe00000ffffff0000007ffffe000000000000000"
+    }
+  ]
+}

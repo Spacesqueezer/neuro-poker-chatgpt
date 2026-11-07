@@ -9,17 +9,22 @@ from poker.game.round_manager import GameStreet
 
 
 class HandController:
-	def __init__(self, dealer, action_resolver=None, small_blind=1, big_blind=2):
+	def __init__(
+		self, dealer, action_resolver=None, small_blind=1, big_blind=2, bomb_pot_ante=None,
+	):
 		if small_blind <= 0:
 			raise ValueError("Small blind must be positive")
 		if big_blind <= small_blind:
 			raise ValueError("Big blind must exceed small blind")
+		if bomb_pot_ante is not None and (type(bomb_pot_ante) is not int or bomb_pot_ante <= 0):
+			raise ValueError("Bomb pot ante must be a positive integer number of chips")
 
 		self.dealer = dealer
 		self.pot_manager = PotManager()
 		self.action_resolver = action_resolver or ActionResolver()
 		self.small_blind = small_blind
 		self.big_blind = big_blind
+		self.bomb_pot_ante = bomb_pot_ante
 		self.minimum_raise = big_blind
 		self.betting_round = None
 		self.small_blind_index = None
@@ -50,9 +55,18 @@ class HandController:
 		game_state.advance_dealer_button()
 		self.dealer.start_hand(game_state)
 		self._assign_blinds(game_state)
-		self._post_blinds(game_state)
+		if self.bomb_pot_ante is None:
+			self._post_blinds(game_state)
+		else:
+			# Forced dead money: collected before the first flop action. No blinds
+			# or voluntary preflop actions are added on top of this contribution.
+			for player in game_state.players:
+				player.bet(min(self.bomb_pot_ante, player.chips))
 		self._start_history(game_state)
 		self.betting_round = BettingRound(game_state.players)
+		if self.bomb_pot_ante is not None:
+			self._finish_betting_round(game_state)
+			return
 		self._set_preflop_first_player(game_state)
 
 		if self._betting_is_closed_by_all_in(self.betting_round.active_players()):
@@ -355,6 +369,17 @@ class HandController:
 			big_blind=self.big_blind,
 			seed=getattr(self.dealer, "current_seed", None),
 		)
+		if self.bomb_pot_ante is not None:
+			self.hand_history.add_event(
+				"bomb_pot_start",
+				schema_version="bomb-pot-start/1",
+				ante=self.bomb_pot_ante,
+				contributions={p.name: p.current_bet for p in game_state.players},
+				pot=self.total_pot(game_state),
+				target=0,
+				opening_street="flop",
+			)
+			return
 		small_blind_player = game_state.players[self.small_blind_index]
 		big_blind_player = game_state.players[self.big_blind_index]
 		self.hand_history.add_event(

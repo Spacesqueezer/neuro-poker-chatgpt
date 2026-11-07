@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-vision = [
+hud = [
 	"mss>=9.0",
 	"opencv-python>=4.10",
 	"pytesseract>=0.3.10",

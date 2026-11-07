@@ -40,6 +40,8 @@ class HandStateView:
 	big_blind: str
 	players: tuple[PublicPlayerView, ...]
 	action_history: tuple[PublicActionView, ...] = ()
+	hand_variant: str = "standard"
+	forced_ante: int | None = None
 
 
 @dataclass(frozen=True)
@@ -114,6 +116,10 @@ def build_hand_state_view(game_state, controller, player=None):
 			for item in game_state.players
 		),
 		action_history=action_history,
+		hand_variant=(
+			"bomb-pot-single-board/1" if controller.bomb_pot_ante is not None else "standard"
+		),
+		forced_ante=controller.bomb_pot_ante,
 	)
 
 

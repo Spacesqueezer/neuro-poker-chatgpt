@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from poker.statistics.database.hud_schema import register_hud_tables
+
 from sqlalchemy import Float, ForeignKey, Integer, String
 from sqlalchemy.orm import (
 	DeclarativeBase as SQLAlchemyDeclarativeBase,
@@ -13,6 +15,9 @@ from sqlalchemy.orm import (
 
 class DeclarativeBase(SQLAlchemyDeclarativeBase):
 	pass
+
+
+register_hud_tables(DeclarativeBase.metadata)
 
 
 class PlayerModel(DeclarativeBase):

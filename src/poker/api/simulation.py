@@ -18,6 +18,7 @@ def play_hand(
 	dealer_name=None,
 	starting_stacks=None,
 	decision_observer=None,
+	bomb_pot_ante=None,
 ):
 	if len(agents) < 2:
 		raise ValueError("At least two agents are required")
@@ -48,6 +49,7 @@ def play_hand(
 		Dealer(seed=seed),
 		small_blind=small_blind,
 		big_blind=big_blind,
+		bomb_pot_ante=bomb_pot_ante,
 	)
 	controller.start_hand(state)
 
